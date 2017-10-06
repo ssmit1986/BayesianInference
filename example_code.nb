@@ -7,7 +7,7 @@ Cell[BoxData[{
  RowBox[{
   RowBox[{"$HistoryLength", "=", "10"}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"<<", "BayesianStatistics`"}], 
+  RowBox[{"<<", "BayesianInference`"}], 
   ";"}]}], "Input",ExpressionUUID->"eb85e812-1230-459b-a047-9a2e3bad79eb"],
 
 Cell[CellGroupData[{
