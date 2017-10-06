@@ -1,0 +1,957 @@
+Notebook[{
+Cell[BoxData[
+ RowBox[{"Quit", "[", 
+  "]"}]], "Input",ExpressionUUID->"ffa68532-e74c-496f-a661-bc7bbf19a132"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"$HistoryLength", "=", "10"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"<<", "BayesianStatistics`"}], 
+  ";"}]}], "Input",ExpressionUUID->"eb85e812-1230-459b-a047-9a2e3bad79eb"],
+
+Cell[CellGroupData[{
+
+Cell["Gaussian process", \
+"Subsection",ExpressionUUID->"b61ec9d9-957c-4b6a-a30c-cd85ce37de98"],
+
+Cell[CellGroupData[{
+
+Cell["1D", \
+"Subsubsection",ExpressionUUID->"96229166-9049-4c5e-955c-f84582fb9961"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"With", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"x", "=", 
+       RowBox[{"RandomReal", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"0", ",", "10"}], "}"}], ",", "100"}], "]"}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"x", "\[Rule]", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"Function", "[", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"Sin", "[", 
+          RowBox[{"0.5", " ", "#"}], "]"}], "+", 
+         RowBox[{"0.4", 
+          RowBox[{"Sin", "[", 
+           RowBox[{"2", " ", "#"}], "]"}]}], "+", 
+         RowBox[{"0.4", "#"}], "+", "1", "+", 
+         RowBox[{"0.3", "*", 
+          RowBox[{"RandomVariate", "[", 
+           RowBox[{
+            RowBox[{"NormalDistribution", "[", "]"}], ",", 
+            RowBox[{"Length", "[", "x", "]"}]}], "]"}]}]}], 
+        "\[IndentingNewLine]", "]"}], "[", 
+       RowBox[{"x", "+", 
+        RowBox[{"0.2", "*", 
+         RowBox[{"RandomVariate", "[", 
+          RowBox[{
+           RowBox[{"NormalDistribution", "[", "]"}], ",", 
+           RowBox[{"Length", "[", "x", "]"}]}], "]"}]}]}], 
+       "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"ListPlot", "[", 
+  RowBox[{"List", "@@@", 
+   RowBox[{"Thread", "[", "testdata", "]"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"80d48443-5e1c-4a65-a617-ae2b51124942"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"result", "=", "\[IndentingNewLine]", 
+   RowBox[{"With", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"vars", "=", 
+       RowBox[{"{", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"s1", ",", "0.01", ",", "100"}], "}"}], ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"l", ",", "0.05", ",", " ", "30"}], "}"}], ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"s0", ",", "0.02", ",", "20"}], "}"}], ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"m", ",", " ", 
+           RowBox[{"-", "10"}], ",", "10"}], "}"}]}], "\[IndentingNewLine]", 
+        "}"}]}], "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"gaussianProcessNestedSampling", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"normalizeData", "[", "testdata", "]"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Function", "[", 
+        RowBox[{"s1", " ", "*", 
+         RowBox[{"Boole", "[", 
+          RowBox[{
+           SuperscriptBox[
+            RowBox[{"Subtract", "[", 
+             RowBox[{"#1", ",", "#2"}], "]"}], "2"], "<", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"6", " ", "l"}], ")"}], "2"]}], "]"}], " ", 
+         RowBox[{"Exp", "[", 
+          RowBox[{"-", 
+           RowBox[{"Divide", "[", 
+            RowBox[{
+             SuperscriptBox[
+              RowBox[{"Subtract", "[", 
+               RowBox[{"#1", ",", "#2"}], "]"}], "2"], ",", 
+             SuperscriptBox["l", "2"]}], "]"}]}], "]"}]}], "]"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Function", "[", "s0", "]"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"Function", "[", "m", "]"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{
+        "\"\<ScaleParameter\>\"", ",", " ", "\"\<ScaleParameter\>\"", ",", 
+         "\"\<ScaleParameter\>\"", ",", " ", "\"\<LocationParameter\>\""}], 
+        "}"}], ",", "\[IndentingNewLine]", "vars", ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "25"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "10000"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MinIterations\>\"", "\[Rule]", "20"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "100"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{
+       "\"\<MonteCarloStepDistribution\>\"", " ", "\[Rule]", 
+        "NormalDistribution"}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+       "\"\<InitialMonteCarloStepSize\>\"", " ", "\[Rule]", " ", "0.075"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<Monitor\>\"", " ", "\[Rule]", " ", "True"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<Likelihood\>\"", " ", "\[Rule]", " ", "\"\<Custom\>\""}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<LikelihoodMaximum\>\"", "\[Rule]", "Automatic"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MinAcceptanceRate\>\"", " ", "\[Rule]", " ", "0.05"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<MonteCarloStepSizeAdjustment\>\"", " ", "\[Rule]", " ", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"\"\<Order\>\"", " ", "\[Rule]", " ", "2"}], ",", " ", 
+          RowBox[{"\"\<HistoryLength\>\"", "\[Rule]", "10"}]}], "}"}]}]}], 
+      "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Dataset", "[", "result", 
+  "]"}]}], "Input",ExpressionUUID->"1aa21abf-8a3e-4e4e-9f6a-1625bab22d65"],
+
+Cell[BoxData[
+ RowBox[{"covarianceMatrixPlot", "[", "result", 
+  "]"}]], "Input",ExpressionUUID->"93091536-6b82-464c-9ddd-e795673cb45c"],
+
+Cell[BoxData[
+ RowBox[{"posteriorMarginalCDFPlot1D", "[", 
+  RowBox[{"result", ",", "1"}], 
+  "]"}]], "Input",ExpressionUUID->"18ae8199-2107-4391-b68a-896a376e71fb"],
+
+Cell[BoxData[
+ RowBox[{"posteriorMarginalCDFDensityPlot2D", "[", 
+  RowBox[{"result", ",", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "2"}], "}"}]}], 
+  "]"}]], "Input",ExpressionUUID->"a99c7639-9107-49b2-8e21-61663afefbed"],
+
+Cell[BoxData[
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{"result", ",", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "2", ",", "3"}], "}"}], ",", "0.99"}], 
+  "]"}]], "Input",ExpressionUUID->"ec0824d4-d056-48d2-80aa-9a702f192364"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"predictions", " ", "=", " ", 
+   RowBox[{"predictFromGaussianProcess", "[", 
+    RowBox[{"result", ",", " ", 
+     RowBox[{"Range", "[", 
+      RowBox[{
+       RowBox[{"-", "3"}], ",", "3", ",", "0.2"}], "]"}], ",", "0.99"}], 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"gaussianProcessPredictionPlot", "[", 
+  RowBox[{"result", ",", " ", "predictions", ",", " ", 
+   RowBox[{"\"\<DistributionPercentiles\>\"", " ", "\[Rule]", " ", 
+    RowBox[{"{", 
+     RowBox[{"0.01", ",", " ", "0.5", ",", " ", "0.99"}], "}"}]}]}], 
+  "]"}]}], "Input",ExpressionUUID->"18f7fd72-b160-4bdb-9712-01cd3a87a018"],
+
+Cell[BoxData[
+ RowBox[{"calculationReport", "[", "result", 
+  "]"}]], "Input",ExpressionUUID->"1ad9895f-d50c-4eb6-ab16-e35bc4035b66"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Polynomial fitting", \
+"Subsubsection",ExpressionUUID->"49bdc88f-3bd7-46d7-af5f-15f934a06149"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"With", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"x", "=", 
+       RowBox[{"RandomReal", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"0", ",", "10"}], "}"}], ",", "20"}], "]"}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"x", "\[Rule]", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"Function", "[", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"0.4", "#"}], "+", "1", "+", 
+         RowBox[{"1", "*", 
+          RowBox[{"RandomVariate", "[", 
+           RowBox[{
+            RowBox[{"CauchyDistribution", "[", "]"}], ",", 
+            RowBox[{"Length", "[", "x", "]"}]}], "]"}]}]}], 
+        "\[IndentingNewLine]", "]"}], "[", "x", "]"}]}]}], 
+    "\[IndentingNewLine]", "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"result", "=", 
+   RowBox[{"<|", "|>"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"ListPlot", "[", 
+  RowBox[{"List", "@@@", 
+   RowBox[{"Thread", "[", "testdata", "]"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"385f3733-4b0d-43c0-9ec8-ecdb4fd55572"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"result", "=", "\[IndentingNewLine]", 
+   RowBox[{"Association", "@", 
+    RowBox[{"Table", "[", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"order", "->", " ", 
+       RowBox[{"With", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"vars", "=", 
+           RowBox[{"{", "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"Sequence", "@@", 
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{
+                  RowBox[{"Symbol", "[", 
+                   RowBox[{"\"\<x\>\"", "<>", 
+                    RowBox[{"ToString", "[", "i", "]"}]}], "]"}], ",", 
+                  RowBox[{"-", "100"}], ",", "100"}], "}"}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "0", ",", "order"}], "}"}]}], "]"}]}], ",",
+              "\[IndentingNewLine]", 
+             RowBox[{"{", 
+              RowBox[{"s0", ",", "0.01", ",", "100"}], "}"}]}], 
+            "\[IndentingNewLine]", "}"}]}], "\[IndentingNewLine]", "}"}], ",",
+          "\[IndentingNewLine]", 
+         RowBox[{"gaussianProcessNestedSampling", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"normalizeData", "[", "testdata", "]"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"Function", "[", "0", "]"}], ",", "\[IndentingNewLine]", 
+           RowBox[{"Function", "[", "s0", "]"}], ",", "\[IndentingNewLine]", 
+           RowBox[{"Function", "[", 
+            RowBox[{"Evaluate", "[", 
+             RowBox[{"Total", "@", 
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{
+                 RowBox[{"vars", "[", 
+                  RowBox[{"[", 
+                   RowBox[{"i", ",", "1"}], "]"}], "]"}], " ", 
+                 SuperscriptBox["#", 
+                  RowBox[{"i", "-", "1"}]]}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "1", ",", 
+                  RowBox[{
+                   RowBox[{"Length", "[", "vars", "]"}], "-", "1"}]}], 
+                 "}"}]}], "]"}]}], "]"}], "]"}], ",", "\[IndentingNewLine]", 
+           RowBox[{"Flatten", "@", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"ConstantArray", "[", 
+               RowBox[{"\"\<LocationParameter\>\"", ",", 
+                RowBox[{
+                 RowBox[{"Length", "[", "vars", "]"}], "-", "1"}]}], "]"}], 
+              ",", " ", "\"\<ScaleParameter\>\""}], "}"}]}], ",", 
+           "\[IndentingNewLine]", "vars", ",", "\[IndentingNewLine]", 
+           RowBox[{
+           "\"\<Likelihood\>\"", " ", "\[Rule]", " ", "\"\<Custom\>\""}], ",",
+            "\[IndentingNewLine]", 
+           RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}]}], 
+          "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], ",",
+       "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"order", ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "3", ",", "4"}], "}"}]}], "}"}]}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Dataset", "[", 
+  RowBox[{"result", "[", 
+   RowBox[{"[", 
+    RowBox[{"All", ",", "\"\<LogEvidence\>\""}], "]"}], "]"}], 
+  "]"}]}], "Input",ExpressionUUID->"fb4dd365-b2ee-48be-afdc-5769d0def199"],
+
+Cell[BoxData[
+ RowBox[{"Column", "[", 
+  RowBox[{"Table", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"posteriorBubbleChart", "[", 
+     RowBox[{
+      RowBox[{"result", "[", 
+       RowBox[{"[", "i", "]"}], "]"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "2", ",", 
+        RowBox[{"-", "1"}]}], "}"}], ",", "0.99"}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{"i", ",", 
+      RowBox[{"Length", "[", "result", "]"}]}], "}"}]}], 
+   "\[IndentingNewLine]", "]"}], 
+  "]"}]], "Input",ExpressionUUID->"15f8dad7-22c1-4236-8541-d14249b6a5a3"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"predictions", " ", "=", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"predictFromGaussianProcess", "[", 
+      RowBox[{"#", ",", " ", 
+       RowBox[{"Range", "[", 
+        RowBox[{
+         RowBox[{"-", "3"}], ",", "3", ",", "0.2"}], "]"}], ",", "0.99"}], 
+      "]"}], "&"}], "/@", "result"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Column", "[", 
+  RowBox[{"Table", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"gaussianProcessPredictionPlot", "[", 
+     RowBox[{
+      RowBox[{"result", "[", 
+       RowBox[{"[", "i", "]"}], "]"}], ",", " ", 
+      RowBox[{"predictions", "[", 
+       RowBox[{"[", "i", "]"}], "]"}], ",", " ", 
+      RowBox[{"\"\<DistributionPercentiles\>\"", " ", "\[Rule]", " ", 
+       RowBox[{"{", 
+        RowBox[{"0.01", ",", "0.5", ",", "0.99"}], "}"}]}]}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{"i", ",", 
+      RowBox[{"Length", "[", "result", "]"}]}], "}"}]}], 
+   "\[IndentingNewLine]", "]"}], 
+  "]"}]}], "Input",ExpressionUUID->"80c90c0d-fcc3-4c83-bacb-a1198abe2346"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["With trend in noise level", \
+"Subsubsection",ExpressionUUID->"6bf01131-4c0f-443b-8a26-c859b624723c"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"result", "=", "\[IndentingNewLine]", 
+   RowBox[{"Association", "@", 
+    RowBox[{"Table", "[", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"order", "->", " ", 
+       RowBox[{"With", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"vars", "=", 
+           RowBox[{"{", "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"Sequence", "@@", 
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{
+                  RowBox[{"Symbol", "[", 
+                   RowBox[{"\"\<x\>\"", "<>", 
+                    RowBox[{"ToString", "[", "i", "]"}]}], "]"}], ",", 
+                  RowBox[{"-", "100"}], ",", "100"}], "}"}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "0", ",", "order"}], "}"}]}], "]"}]}], ",",
+              "\[IndentingNewLine]", 
+             RowBox[{"{", 
+              RowBox[{"s0", ",", "0.01", ",", "100"}], "}"}], ",", 
+             "\[IndentingNewLine]", 
+             RowBox[{"{", 
+              RowBox[{"s1", ",", "0.01", ",", "100"}], "}"}]}], 
+            "\[IndentingNewLine]", "}"}]}], "\[IndentingNewLine]", "}"}], ",",
+          "\[IndentingNewLine]", 
+         RowBox[{"gaussianProcessNestedSampling", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"normalizeData", "[", "testdata", "]"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"Function", "[", "0", "]"}], ",", "\[IndentingNewLine]", 
+           RowBox[{"Function", "[", 
+            SuperscriptBox[
+             RowBox[{"(", 
+              RowBox[{"s0", " ", "+", " ", 
+               RowBox[{"#", " ", "s1"}]}], ")"}], "2"], "]"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"Function", "[", 
+            RowBox[{"Evaluate", "[", 
+             RowBox[{"Total", "@", 
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{
+                 RowBox[{"vars", "[", 
+                  RowBox[{"[", 
+                   RowBox[{"i", ",", "1"}], "]"}], "]"}], " ", 
+                 SuperscriptBox["#", 
+                  RowBox[{"i", "-", "1"}]]}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "1", ",", 
+                  RowBox[{
+                   RowBox[{"Length", "[", "vars", "]"}], "-", "2"}]}], 
+                 "}"}]}], "]"}]}], "]"}], "]"}], ",", "\[IndentingNewLine]", 
+           RowBox[{"Flatten", "@", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"ConstantArray", "[", 
+               RowBox[{"\"\<LocationParameter\>\"", ",", 
+                RowBox[{
+                 RowBox[{"Length", "[", "vars", "]"}], "-", "1"}]}], "]"}], 
+              ",", " ", "\"\<ScaleParameter\>\""}], "}"}]}], ",", 
+           "\[IndentingNewLine]", "vars", ",", "\[IndentingNewLine]", 
+           RowBox[{"\"\<Likelihood\>\"", " ", "\[Rule]", " ", "Automatic"}], 
+           ",", "\[IndentingNewLine]", 
+           RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}]}], 
+          "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], ",",
+       "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"order", ",", 
+        RowBox[{"{", "1", "}"}]}], "}"}]}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Dataset", "[", 
+  RowBox[{"result", "[", 
+   RowBox[{"[", 
+    RowBox[{"All", ",", "\"\<LogEvidence\>\""}], "]"}], "]"}], 
+  "]"}]}], "Input",ExpressionUUID->"b988cd55-80f8-4dc7-9e51-bacdbc2f1740"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"predictions", " ", "=", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"predictFromGaussianProcess", "[", 
+      RowBox[{"#", ",", " ", 
+       RowBox[{"Range", "[", 
+        RowBox[{
+         RowBox[{"-", "3"}], ",", "3", ",", "0.2"}], "]"}], ",", "0.99"}], 
+      "]"}], "&"}], "/@", "result"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Column", "[", 
+  RowBox[{"Table", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"gaussianProcessPredictionPlot", "[", 
+     RowBox[{
+      RowBox[{"result", "[", 
+       RowBox[{"[", "i", "]"}], "]"}], ",", " ", 
+      RowBox[{"predictions", "[", 
+       RowBox[{"[", "i", "]"}], "]"}], ",", " ", 
+      RowBox[{"\"\<DistributionPercentiles\>\"", " ", "\[Rule]", " ", 
+       RowBox[{"{", 
+        RowBox[{"0.01", ",", "0.5", ",", "0.99"}], "}"}]}]}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{"i", ",", 
+      RowBox[{"Length", "[", "result", "]"}]}], "}"}]}], 
+   "\[IndentingNewLine]", "]"}], 
+  "]"}]}], "Input",ExpressionUUID->"af3e4814-7a66-492d-afb0-88745a124164"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["2D", \
+"Subsubsection",ExpressionUUID->"1f539c70-5a79-4bee-bd88-cd7241252ff7"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"#", "\[Rule]", 
+      RowBox[{"(", 
+       RowBox[{
+        SuperscriptBox[
+         RowBox[{"#", "[", 
+          RowBox[{"[", 
+           RowBox[{"All", ",", "1"}], "]"}], "]"}], "2"], "-", 
+        SuperscriptBox[
+         RowBox[{"#", "[", 
+          RowBox[{"[", 
+           RowBox[{"All", ",", "2"}], "]"}], "]"}], "2"]}], ")"}]}], "&"}], 
+    " ", "@", " ", 
+    RowBox[{"RandomReal", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"100", ",", "2"}], "}"}]}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"ListPlot3D", "[", 
+  RowBox[{"Transpose", "@", 
+   RowBox[{"Join", "[", 
+    RowBox[{
+     RowBox[{"Transpose", "@", 
+      RowBox[{"testdata", "[", 
+       RowBox[{"[", "1", "]"}], "]"}]}], ",", 
+     RowBox[{"{", 
+      RowBox[{"testdata", "[", 
+       RowBox[{"[", "2", "]"}], "]"}], "}"}]}], "]"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"c9b08ba6-420b-4df9-aab6-fd8f1d663c3c"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"result", "=", "\[IndentingNewLine]", 
+   RowBox[{"With", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"vars", "=", 
+       RowBox[{"{", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"s1", ",", "0.01", ",", "100"}], "}"}], ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"l", ",", "0.05", ",", " ", "30"}], "}"}], ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"s0", ",", "0.02", ",", "20"}], "}"}], ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"m", ",", " ", 
+           RowBox[{"-", "10"}], ",", "10"}], "}"}]}], "\[IndentingNewLine]", 
+        "}"}]}], "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"gaussianProcessNestedSampling", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"normalizeData", "[", "testdata", "]"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Function", "[", "\[IndentingNewLine]", 
+        RowBox[{"With", "[", 
+         RowBox[{
+          RowBox[{"{", 
+           RowBox[{"dist", " ", "=", " ", 
+            RowBox[{"Norm", "[", 
+             RowBox[{"Subtract", "[", 
+              RowBox[{"#1", ",", "#2"}], "]"}], "]"}]}], "}"}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{"s1", " ", "*", 
+           RowBox[{"Boole", "[", 
+            RowBox[{"dist", "<", 
+             SuperscriptBox[
+              RowBox[{"(", 
+               RowBox[{"6", " ", "l"}], ")"}], "2"]}], "]"}], " ", 
+           RowBox[{"Exp", "[", 
+            RowBox[{"-", 
+             SuperscriptBox[
+              RowBox[{"Divide", "[", 
+               RowBox[{"dist", ",", "l"}], "]"}], "2"]}], "]"}]}]}], 
+         "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", "]"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Function", "[", "s0", "]"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"Function", "[", "m", "]"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{
+        "\"\<ScaleParameter\>\"", ",", " ", "\"\<ScaleParameter\>\"", ",", 
+         "\"\<ScaleParameter\>\"", ",", " ", "\"\<LocationParameter\>\""}], 
+        "}"}], ",", "\[IndentingNewLine]", "vars", ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "25"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "10000"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MinIterations\>\"", "\[Rule]", "20"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "100"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{
+       "\"\<InitialMonteCarloStepSize\>\"", " ", "\[Rule]", " ", "0.075"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<Monitor\>\"", " ", "\[Rule]", " ", "True"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<Likelihood\>\"", " ", "\[Rule]", " ", "\"\<Custom\>\""}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<LikelihoodMaximum\>\"", "\[Rule]", "Automatic"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MinAcceptanceRate\>\"", " ", "\[Rule]", " ", "0.05"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<MonteCarloStepSizeAdjustment\>\"", " ", "\[Rule]", " ", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"\"\<Order\>\"", " ", "\[Rule]", " ", "2"}], ",", " ", 
+          RowBox[{"\"\<HistoryLength\>\"", "\[Rule]", "10"}]}], "}"}]}]}], 
+      "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Dataset", "[", "result", 
+  "]"}]}], "Input",ExpressionUUID->"308cd261-e803-4cd2-b5eb-9d4405f75d76"],
+
+Cell[BoxData[
+ RowBox[{"predictFromGaussianProcess", "[", 
+  RowBox[{"result", ",", " ", "10", ",", "1"}], 
+  "]"}]], "Input",ExpressionUUID->"6fa08671-00fe-4c55-988c-dfabc4aec585"]
+}, Closed]]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["General nested sampling", \
+"Subsection",ExpressionUUID->"9c6d33f5-ad36-4bd4-aeec-91b49adb4607"],
+
+Cell[CellGroupData[{
+
+Cell["Cauchy distribution", \
+"Subsubsection",ExpressionUUID->"d999f0a5-3322-4d46-9a9d-41c72825f113"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dist", "=", 
+   RowBox[{"CauchyDistribution", "[", 
+    RowBox[{"0", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"RandomVariate", "[", 
+    RowBox[{"dist", ",", "10"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"With", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"vars", "=", 
+      RowBox[{"{", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"loc", ",", 
+          RowBox[{"-", "20"}], ",", "20"}], "}"}], ",", "\[IndentingNewLine]", 
+        RowBox[{"{", 
+         RowBox[{"scale", ",", "0.01", ",", "100"}], "}"}]}], 
+       "\[IndentingNewLine]", "}"}]}], "\[IndentingNewLine]", "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"result", " ", "=", " ", 
+     RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"LogLikelihood", "[", 
+         RowBox[{
+          RowBox[{"CauchyDistribution", "[", "##", "]"}], ",", "testdata"}], 
+         "]"}], "&"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{
+        "\"\<LocationParameter\>\"", ",", " ", "\"\<ScaleParameter\>\""}], 
+        "}"}], ",", "\[IndentingNewLine]", "vars", ",", "\[IndentingNewLine]", 
+       RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "100"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "3000"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MinIterations\>\"", "\[Rule]", "10"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{
+       "\"\<InitialMonteCarloStepSize\>\"", " ", "\[Rule]", " ", "0.075"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{
+       "\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.001"}]}], 
+      "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Dataset", "[", "result", 
+  "]"}]}], "Input",ExpressionUUID->"33149dec-34c7-4139-87a2-76f858ceeb2c"],
+
+Cell[BoxData[
+ RowBox[{"covarianceMatrixPlot", "[", "result", 
+  "]"}]], "Input",ExpressionUUID->"9c0debae-f1cb-4649-b732-e29c215d0bcb"],
+
+Cell[BoxData[
+ RowBox[{"posteriorMarginalCDFPlot1D", "[", 
+  RowBox[{"result", ",", "1"}], 
+  "]"}]], "Input",ExpressionUUID->"31d8b5b0-922e-4a8c-9259-fd11e9f321e9"],
+
+Cell[BoxData[
+ RowBox[{"posteriorMarginalCDFPlot1D", "[", 
+  RowBox[{"result", ",", "2", ",", " ", 
+   RowBox[{"ScalingFunctions", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<Log\>\"", ",", "None"}], "}"}]}]}], 
+  "]"}]], "Input",ExpressionUUID->"a3b11e56-936c-41bb-b418-7044d424e4d9"],
+
+Cell[BoxData[
+ RowBox[{"posteriorMarginalCDFDensityPlot2D", "[", 
+  RowBox[{"result", ",", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "2"}], "}"}], ",", 
+   RowBox[{"ScalingFunctions", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"None", ",", " ", "\"\<Log\>\"", ",", 
+      RowBox[{"{", 
+       RowBox[{"Sqrt", ",", 
+        RowBox[{
+         SuperscriptBox["#", "2"], "&"}]}], "}"}]}], "}"}]}], ",", 
+   RowBox[{"PlotPoints", "\[Rule]", "20"}]}], 
+  "]"}]], "Input",ExpressionUUID->"4060bc61-18ed-4b9c-8b75-f3ae5a040796"],
+
+Cell[BoxData[
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{"result", ",", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "2"}], "}"}], ",", "0.99", ",", 
+   RowBox[{"ScalingFunctions", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"None", ",", "\"\<Log\>\"", ",", "None"}], "}"}]}]}], 
+  "]"}]], "Input",ExpressionUUID->"ca397733-906b-41fd-9dc4-f93ed0e41eb2"],
+
+Cell[BoxData[
+ RowBox[{"LogPlot", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"Evaluate", "[", 
+    RowBox[{"{", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PDF", "[", 
+       RowBox[{
+        RowBox[{"predictiveDistribution", "[", "result", "]"}], ",", "x"}], 
+       "]"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"PDF", "[", 
+       RowBox[{
+        RowBox[{"EstimatedDistribution", "[", 
+         RowBox[{"testdata", ",", 
+          RowBox[{
+           RowBox[{"result", "[", "\"\<GeneratingDistribution\>\"", "]"}], 
+           "[", 
+           RowBox[{"\[FormalX]", ",", "\[FormalY]"}], "]"}], ",", 
+          RowBox[{"ParameterEstimator", "->", 
+           RowBox[{"{", 
+            RowBox[{"\"\<MaximumLikelihood\>\"", ",", " ", 
+             RowBox[{"Method", " ", "->", " ", "\"\<FindMaximum\>\""}]}], 
+            "}"}]}]}], "]"}], ",", " ", "x"}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"PDF", "[", 
+       RowBox[{"dist", ",", "x"}], "]"}]}], "\[IndentingNewLine]", "}"}], 
+    "]"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{"x", ",", 
+     RowBox[{"-", "10"}], ",", "10"}], "}"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"PlotRange", "\[Rule]", "All"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"PlotLegends", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{
+     "\"\<Posterior predictive PDF\>\"", ",", " ", 
+      "\"\<PDF based on maximum likelihood estimate\>\"", ",", " ", 
+      "\"\<Original distribution\>\""}], "}"}]}]}], "\[IndentingNewLine]", 
+  "]"}]], "Input",ExpressionUUID->"ffffda53-b3ce-4403-bca8-70434e4eec31"],
+
+Cell[BoxData[
+ RowBox[{"calculationReport", "[", "result", 
+  "]"}]], "Input",ExpressionUUID->"4247df12-d3dd-4ff4-bd1d-49e90a3fb012"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Fitting Normal data with a SkewNormal distribution", \
+"Subsubsection",ExpressionUUID->"016c2ace-24ef-40c8-bc76-9fa490bc7769"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dist", "=", 
+   RowBox[{"NormalDistribution", "[", 
+    RowBox[{"0", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"RandomVariate", "[", 
+    RowBox[{"dist", ",", "20"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"result", "=", 
+   RowBox[{"<|", "|>"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"38adc9dc-eac0-479c-a54d-6998a43e56c4"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dist", "=", 
+   RowBox[{"SkewNormalDistribution", "[", 
+    RowBox[{"0", ",", "1", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"RandomVariate", "[", 
+    RowBox[{"dist", ",", "20"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"result", "=", 
+   RowBox[{"<|", "|>"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"05405bfa-ea1b-4ef9-954c-3eed34b6cc52"],
+
+Cell[BoxData[
+ RowBox[{"Plot", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"Evaluate", "[", 
+    RowBox[{"{", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"PDF", "[", 
+       RowBox[{
+        RowBox[{"NormalDistribution", "[", 
+         RowBox[{"0", ",", "1"}], "]"}], ",", "x"}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"PDF", "[", 
+       RowBox[{
+        RowBox[{"SkewNormalDistribution", "[", 
+         RowBox[{"0", ",", "1", ",", "1"}], "]"}], ",", "x"}], "]"}]}], 
+     "\[IndentingNewLine]", "}"}], "]"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{"x", ",", 
+     RowBox[{"-", "3"}], ",", "3"}], "}"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"Filling", "\[Rule]", "Axis"}]}], "\[IndentingNewLine]", 
+  "]"}]], "Input",ExpressionUUID->"73c88b0a-8a29-44a0-a23f-749ae325f129"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"With", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"vars", "=", 
+      RowBox[{"{", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"loc", ",", 
+          RowBox[{"-", "20"}], ",", "20"}], "}"}], ",", "\[IndentingNewLine]", 
+        RowBox[{"{", 
+         RowBox[{"scale", ",", "0.01", ",", "100"}], "}"}]}], 
+       "\[IndentingNewLine]", "}"}]}], "\[IndentingNewLine]", "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"result", "[", "\"\<Normal\>\"", "]"}], " ", "=", " ", 
+     RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"LogLikelihood", "[", 
+         RowBox[{
+          RowBox[{"NormalDistribution", "[", "##", "]"}], ",", "testdata"}], 
+         "]"}], "&"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{
+        "\"\<LocationParameter\>\"", ",", " ", "\"\<ScaleParameter\>\""}], 
+        "}"}], ",", "\[IndentingNewLine]", "vars"}], "\[IndentingNewLine]", 
+      "]"}]}]}], "\[IndentingNewLine]", "]"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"With", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"vars", "=", 
+      RowBox[{"{", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"loc", ",", 
+          RowBox[{"-", "20"}], ",", "20"}], "}"}], ",", "\[IndentingNewLine]", 
+        RowBox[{"{", 
+         RowBox[{"scale", ",", "0.01", ",", "100"}], "}"}], ",", 
+        "\[IndentingNewLine]", 
+        RowBox[{"{", 
+         RowBox[{"scew", ",", " ", 
+          RowBox[{"-", "20"}], ",", "20"}], "}"}]}], "\[IndentingNewLine]", 
+       "}"}]}], "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"result", "[", "\"\<SkewNormal\>\"", "]"}], " ", "=", " ", 
+     RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"LogLikelihood", "[", 
+         RowBox[{
+          RowBox[{"SkewNormalDistribution", "[", "##", "]"}], ",", 
+          "testdata"}], "]"}], "&"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{
+        "\"\<LocationParameter\>\"", ",", " ", "\"\<ScaleParameter\>\"", ",", 
+         "\"\<LocationParameter\>\""}], "}"}], ",", "\[IndentingNewLine]", 
+       "vars"}], "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", 
+   "]"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Dataset", "[", 
+  RowBox[{"result", "[", 
+   RowBox[{"[", 
+    RowBox[{"All", ",", "\"\<LogEvidence\>\""}], "]"}], "]"}], 
+  "]"}]}], "Input",ExpressionUUID->"d2028e80-3d63-4c29-8f38-87b677d35f29"],
+
+Cell[BoxData[{
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{
+   RowBox[{"result", "[", 
+    RowBox[{"[", "\"\<Normal\>\"", "]"}], "]"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "2"}], "}"}], ",", "0.99"}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{
+   RowBox[{"result", "[", 
+    RowBox[{"[", "\"\<SkewNormal\>\"", "]"}], "]"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "2"}], "}"}], ",", "0.99"}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{
+   RowBox[{"result", "[", 
+    RowBox[{"[", "\"\<SkewNormal\>\"", "]"}], "]"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "2", ",", "3"}], "}"}], ",", "0.99"}], 
+  "]"}]}], "Input",ExpressionUUID->"f1c4d1a3-c23d-4a42-a171-307b2577dd7d"],
+
+Cell[BoxData[
+ RowBox[{"Show", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"Histogram", "[", 
+    RowBox[{"testdata", ",", 
+     RowBox[{"Length", "[", "testdata", "]"}], ",", "\"\<PDF\>\""}], "]"}], 
+   ",", "\[IndentingNewLine]", 
+   RowBox[{"Plot", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"Evaluate", "[", 
+      RowBox[{"{", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"PDF", "[", 
+         RowBox[{
+          RowBox[{"predictiveDistribution", "[", 
+           RowBox[{
+            RowBox[{"result", "[", 
+             RowBox[{"[", "\"\<Normal\>\"", "]"}], "]"}], ",", 
+            "NormalDistribution", ",", "0.99"}], "]"}], ",", "x"}], "]"}], 
+        ",", "\[IndentingNewLine]", 
+        RowBox[{"PDF", "[", 
+         RowBox[{
+          RowBox[{"predictiveDistribution", "[", 
+           RowBox[{
+            RowBox[{"result", "[", 
+             RowBox[{"[", "\"\<SkewNormal\>\"", "]"}], "]"}], ",", 
+            "SkewNormalDistribution", ",", "0.99"}], "]"}], ",", "x"}], 
+         "]"}]}], "\[IndentingNewLine]", "}"}], "]"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{"x", ",", 
+       RowBox[{"-", "4"}], ",", "4"}], "}"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"PlotRange", "\[Rule]", "All"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"Filling", "\[Rule]", "Axis"}]}], "\[IndentingNewLine]", "]"}], 
+   ",", "\[IndentingNewLine]", 
+   RowBox[{"PlotRange", "\[Rule]", "All"}]}], "\[IndentingNewLine]", 
+  "]"}]], "Input",ExpressionUUID->"cb413159-1ef0-4b82-bad8-056199db4cb0"]
+}, Closed]]
+}, Closed]]
+},
+WindowSize->{1595, 861},
+WindowMargins->{{Automatic, 124}, {Automatic, 46}},
+PrivateNotebookOptions->{"FileOutlineCache"->False},
+ShowGroupOpener->True,
+TrackCellChangeTimes->False,
+Magnification:>1.3 Inherited,
+FrontEndVersion->"11.2 for Microsoft Windows (64-bit) (September 10, 2017)",
+StyleDefinitions->"Default.nb"
+]
+
