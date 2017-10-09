@@ -51,8 +51,8 @@ compiledCovarianceMatrix[points_List, kernel_Function, nugget : _Function, vars 
                 }]
             ],
             matrix,
-            opts,
-            RuntimeAttributes -> {Listable}
+            RuntimeAttributes -> {Listable},
+            opts
         ]
     ];
 Options[compiledCovarianceMatrix] = Options[Compile];
@@ -73,8 +73,8 @@ compiledKandKappa[
             {points2, _Real, rank}
         },
             nugget[points2],
-            opts,
-            RuntimeAttributes -> {Listable}
+            RuntimeAttributes -> {Listable},
+            opts
         ]
     },
         Function[
@@ -104,15 +104,15 @@ compiledKandKappa[
                 {i, points1},
                 {j, points2}
             ],
-            opts,
-            RuntimeAttributes -> {Listable}
+            RuntimeAttributes -> {Listable},
+            opts
         ],
         cf2 = Compile[{
             {points2, _Real, rank2}
         },
             kernel[points2, points2] + nugget[points2],
-            opts,
-            RuntimeAttributes -> {Listable}
+            RuntimeAttributes -> {Listable},
+            opts
         ]
     },
         Function[
@@ -215,7 +215,8 @@ gaussianProcessNestedSampling[
 ] := With[{
     vars = variables[[All, 1]],
     inputData = Developer`ToPackedArray[dataIn],
-    outputData = Developer`ToPackedArray[dataOut]
+    outputData = Developer`ToPackedArray[dataOut],
+    parallelRuns = OptionValue["ParallelRuns"]
 },
     Module[{
         nullKernelQ = MatchQ[kernelFunction, nullKernelPattern],
@@ -244,7 +245,7 @@ gaussianProcessNestedSampling[
             kernelFunction,
             nuggetFunction,
             vars,
-            Sequence @@ FilterRules[{opts}, Options[Compile]]
+            Sequence @@ passOptionsDown[gaussianProcessNestedSampling, compiledCovarianceMatrix, {opts}]
         ];
         
         logLikelihood = Switch[OptionValue["Likelihood"],
@@ -276,11 +277,20 @@ gaussianProcessNestedSampling[
                 ]
         ];
         invCovFun = Function[matrixInverseAndDet[covarianceFunction[##]]];
-        output = BayesianStatistics`nestedSampling[
-            logLikelihood,
-            variablePrior,
-            variables,
-            Sequence @@ FilterRules[{opts}, Options[BayesianStatistics`nestedSampling]]
+        If[ TrueQ[IntegerQ[parallelRuns] && parallelRuns > 0],
+            output = parallelNestedSampling[
+                logLikelihood,
+                variablePrior,
+                variables,
+                Sequence @@ passOptionsDown[gaussianProcessNestedSampling, parallelNestedSampling, {opts}]
+            ]
+            ,
+            output = nestedSampling[
+                logLikelihood,
+                variablePrior,
+                variables,
+                Sequence @@ passOptionsDown[gaussianProcessNestedSampling, nestedSampling, {opts}]
+            ]
         ];
         
         kAndKappa[args___] := With[{
@@ -291,7 +301,7 @@ gaussianProcessNestedSampling[
                 inputData,
                 ker,
                 nug,
-                Sequence @@ FilterRules[{opts}, Options[Compile]]
+                Sequence @@ passOptionsDown[gaussianProcessNestedSampling, compiledKandKappa, {opts}]
             ]
         ];
         
@@ -356,9 +366,10 @@ Options[gaussianProcessNestedSampling] = Join[
     {
         "Likelihood" -> Automatic
     },
-    Options[BayesianStatistics`nestedSampling],
+    Options[parallelNestedSampling],
     Options[Compile]
 ];
+SetOptions[gaussianProcessNestedSampling, "ParallelRuns" -> None];
 
 predictFromGaussianProcess[
     result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"]&),

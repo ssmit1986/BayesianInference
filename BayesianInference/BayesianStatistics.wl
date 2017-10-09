@@ -8,7 +8,7 @@ posteriorDistribution;
 combineRuns;
 predictiveDistribution;
 calculationReport;
-
+parallelNestedSampling;
 
 Begin["`Private`"];
 
@@ -19,7 +19,7 @@ Unprotect[MixtureDistribution];
 Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution["Mixture of " <> ToString @ Length[list1] <> " distributions"];
 Protect[MixtureDistribution];
 
-(* 
+(*
     If the prior is a list, convert all strings "LocationParameter" and "ScaleParameter" to distributions automatically
     and convert the List to a ProductDistribution
 *)
@@ -181,6 +181,29 @@ trapezoidWeigths = Compile[{
     RuntimeAttributes -> {Listable}
 ];
 
+calculateXValues = Compile[{
+    {nSamplePool, _Real},
+    {nDeleted, _Real}
+},
+    Join[
+        Exp[-Divide[#, nSamplePool]]& /@ Range[nDeleted],
+        Reverse @ Rest @ Most @ Subdivide[Exp[-Divide[nDeleted, nSamplePool]], nSamplePool + 1]
+    ],
+    {
+        {Subdivide[_, _], _Real, 1}
+    }
+];
+
+calculateEntropy[samples_Association, evidence_] := Subtract[
+    Dot[
+        Divide[
+            Values[samples[[All, "CrudePosteriorWeight"]]],
+            evidence
+        ],
+        Replace[Values[samples[[All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}]
+    ],
+    Log[evidence]
+];
 
 calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
     nDeleted = Length[samplePoints] - nSamplePool,
@@ -190,10 +213,7 @@ calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
     keys
 },
     keys = Keys[sorted];
-    xValues = Join[
-        N[Exp[-Divide[#, nSamplePool]]]& /@ Range[nDeleted],
-        Reverse @ Rest @ Most @ Subdivide[N[Exp[-Divide[nDeleted, nSamplePool]]], nSamplePool + 1]
-    ];
+    xValues = calculateXValues[nSamplePool, nDeleted];
     weights = trapezoidWeigths[xValues];
     Merge[
         {
@@ -231,7 +251,7 @@ nestedSampling[
     mcSteps = OptionValue["MonteCarloSteps"],
     termination = OptionValue["TerminationFraction"],
     nSamples = OptionValue["SamplePoolSize"],
-    minAcceptanceRate = OptionValue["MinAcceptanceRate"],
+    minMaxAcceptanceRate = OptionValue["MinMaxAcceptanceRate"],
     mcAdjustment = OptionValue["MonteCarloStepSizeAdjustment"],
     mcStepDistribution = Function[
         Evaluate[
@@ -326,7 +346,7 @@ nestedSampling[
                                 ],
                                 SpanFromLeft
                             }
-                            
+
                         },
                         Alignment -> Left,
                         BaseStyle -> "Text"
@@ -405,7 +425,7 @@ nestedSampling[
                 ]
             ];
 
-            If[ TrueQ[Divide[#1, (#1 + #2)] & @@ acceptReject > minAcceptanceRate]
+            If[ TrueQ @ Between[Divide[#1, #1 + #2]& @@ acceptReject, minMaxAcceptanceRate]
                 ,
                 variableSamplePoints = calculateWeightsCrude[
                     Append[
@@ -423,13 +443,7 @@ nestedSampling[
                     nSamples
                 ];
                 evidence = Total[variableSamplePoints[[All, "CrudePosteriorWeight"]]];
-                entropy = Dot[
-                    Divide[
-                        Values[variableSamplePoints[[All, "CrudePosteriorWeight"]]],
-                        evidence
-                    ],
-                    Replace[Values[variableSamplePoints[[All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}]
-                ] - Log[evidence]
+                entropy = calculateEntropy[variableSamplePoints, evidence];
             ];
             PreIncrement[iteration];
         ];
@@ -442,12 +456,6 @@ nestedSampling[
                 "ParameterRanges" -> variables[[All, {2, 3}]],
                 "PriorFunction" -> priorPDF,
                 "LogLikelihoodFunction" -> logLikelihoodFunction,
-                "CrudeLogEvidence" -> Log[evidence],
-                "LogLikelihoodMaximum" -> Max[variableSamplePoints[[All, "LogLikelihood"]]],
-                "LogEstimatedMissingEvidence" -> Log @ Times[
-                    Min[DeleteMissing @ variableSamplePoints[[All, "X"]]],
-                    Exp @ Max[variableSamplePoints[[All, "LogLikelihood"]]]
-                ],
                 "SamplePoolSize" -> nSamples,
                 "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples,
                 "GeneratingDistribution" -> Quiet @ Replace[
@@ -458,7 +466,7 @@ nestedSampling[
                             LogLikelihood[dist_, ___],
                             rest : Repeated[_, {0, 1}]
                         ] :> Function[first, dist, rest],
-                        _ :> Missing["NoData"] 
+                        _ :> Missing["NoData"]
                     }
                 ]
             |>,
@@ -469,28 +477,6 @@ nestedSampling[
     ]
 ];
 
-Options[nestedSampling] = Join[
-    {
-        "SamplePoolSize" -> 25,
-        "MaxIterations" -> 1000,
-        "MinIterations" -> 100,
-        "MonteCarloMethod" -> Automatic,
-        "MonteCarloSteps" -> 200,
-        "InitialMonteCarloStepSize" -> 0.05,
-        "MonteCarloStepSizeAdjustment" -> <|"Order" -> 3, "HistoryLength" -> 10, "MinMax" -> {0.001, 0.5}|>,
-        "MonteCarloStepDistribution" -> NormalDistribution,
-        "LocalOptimumHandling" -> <|
-            "RangeExtension" -> 1.5,
-            "BackTracking" -> 2
-        |>,
-        "TerminationFraction" -> 0.01,
-        "Monitor" -> True,
-        "LikelihoodMaximum" -> Automatic,
-        "MinAcceptanceRate" -> 0.05
-    },
-    Options[evidenceSampling]
-];
-
 meanAndError[data : Except[{___?NumericQ}]] := Map[
     <|
         "Mean" -> Mean[#],
@@ -499,12 +485,11 @@ meanAndError[data : Except[{___?NumericQ}]] := Map[
     data
 ];
 
-meanAndError[data : {___?NumericQ}] := Function[
+meanAndError[data : {___?NumericQ}] :=
     <|
-        "Mean" -> Mean[#],
-        "StandardError" -> StandardDeviation[#]
-    |>
-][data];
+        "Mean" -> Mean[data],
+        "StandardError" -> StandardDeviation[data]
+    |>;
 
 evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     result = MapAt[
@@ -520,10 +505,28 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     parameterSamples,
     zSamples,
     output,
-    crudeEvidence
+    crudeEvidence,
+    crudeEntropy
 },
-    keys = Keys[result["Samples"]];
     crudeEvidence = Total[result[["Samples", All, "CrudePosteriorWeight"]]];
+    crudeEntropy = calculateEntropy[result["Samples"], crudeEvidence];
+    output = Join[
+        result,
+        <|
+            "CrudeLogEvidence" -> Log[crudeEvidence],
+            "LogLikelihoodMaximum" -> Max[result[["Samples", All, "LogLikelihood"]]],
+            "LogEstimatedMissingEvidence" -> Log @ Times[
+                Min[DeleteMissing @ result[["Samples", All, "X"]]],
+                Exp @ Max[result[["Samples", All, "LogLikelihood"]]]
+            ],
+            "CrudeRelativeEntropy" -> crudeEntropy
+        |>
+    ];
+    If[ !TrueQ[IntegerQ[nRuns] && nRuns > 0],
+        Return[output]
+    ];
+
+    keys = Keys[result["Samples"]];
     evidenceWeigths = Transpose[
         trapezoidWeigths[
             sampledX = Map[
@@ -551,7 +554,8 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
             Values[result[["Samples", All, "Point"]]]
         ]
     ];
-    output = Join[
+    Join[
+        output,
         <|
             "Samples" -> SortBy[-#CrudePosteriorWeight &] @ Merge[
                 {
@@ -573,10 +577,7 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                     ]
                 },
                 Join @@ # &
-            ]
-        |>,
-        KeyDrop[result, {"Samples"}],
-        <|
+            ],
             "LogEvidence" -> meanAndError[zSamples],
             "ParameterValues" -> meanAndError[parameterSamples],
             "RelativeEntropy" -> meanAndError[
@@ -584,29 +585,28 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                     posteriorWeights . Replace[Values[result[["Samples", All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}],
                     zSamples
                 ]
+            ],
+            "PosteriorDistribution" -> If[
+                OptionValue["PosteriorDistributionType"] === "Simple"
+                ,
+                EmpiricalDistribution[ (* use the averaged weights *)
+                    Rule[
+                        Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+                        Values @ result[["Samples", All, "Point"]]
+                    ]
+                ]
+                ,
+                MixtureDistribution[ (* use all sampled weights *)
+                    ConstantArray[Divide[1, nRuns], nRuns],
+                    Map[
+                        EmpiricalDistribution[
+                            # -> Values @ result[["Samples", All, "Point"]]
+                        ]&,
+                        posteriorWeights
+                    ]
+                ]
             ]
         |>
-    ];
-    Append[
-        output,
-        "PosteriorDistribution" -> If[
-            OptionValue["PosteriorDistributionType"] === "Simple",
-            EmpiricalDistribution[ (* use the averaged weights *)
-                Rule[
-                    Values @ result[["Samples", All, "CrudePosteriorWeight"]],
-                    Values @ result[["Samples", All, "Point"]]
-                ]
-            ],
-            MixtureDistribution[ (* use all sampled weights *)
-                ConstantArray[Divide[1, nRuns], nRuns],
-                Map[
-                    EmpiricalDistribution[
-                        # -> Values @ result[["Samples", All, "Point"]]
-                    ]&,
-                    posteriorWeights
-                ]
-            ]
-        ]
     ]
 ];
 
@@ -614,6 +614,28 @@ Options[evidenceSampling] = {
     "PostProcessSamplingRuns" -> 100,
     "PosteriorDistributionType" -> "Simple"
 };
+
+Options[nestedSampling] = Join[
+    {
+        "SamplePoolSize" -> 25,
+        "MaxIterations" -> 1000,
+        "MinIterations" -> 100,
+        "MonteCarloMethod" -> Automatic,
+        "MonteCarloSteps" -> 200,
+        "InitialMonteCarloStepSize" -> 0.05,
+        "MonteCarloStepSizeAdjustment" -> <|"Order" -> 3, "HistoryLength" -> 10, "MinMax" -> {0.001, 0.5}|>,
+        "MonteCarloStepDistribution" -> NormalDistribution,
+        "LocalOptimumHandling" -> <|
+            "RangeExtension" -> 1.5,
+            "BackTracking" -> 2
+        |>,
+        "TerminationFraction" -> 0.01,
+        "Monitor" -> True,
+        "LikelihoodMaximum" -> Automatic,
+        "MinMaxAcceptanceRate" -> {0.05, 0.95}
+    },
+    Options[evidenceSampling]
+];
 
 combineRuns[results__?AssociationQ, opts : OptionsPattern[]] /; UnsameQ[results] := With[{
     mergedResults = SortBy[{#LogLikelihood, #Point}&] @ DeleteDuplicatesBy[
@@ -623,6 +645,7 @@ combineRuns[results__?AssociationQ, opts : OptionsPattern[]] /; UnsameQ[results]
 },
     evidenceSampling[
         <|
+            {results}[[1]],
             "Samples" -> AssociationThread[
                 Range[Length @ mergedResults],
                 mergedResults
@@ -635,6 +658,41 @@ combineRuns[results__?AssociationQ, opts : OptionsPattern[]] /; UnsameQ[results]
     ]
 ];
 Options[combineRuns] = Options[evidenceSampling];
+
+parallelNestedSampling[logLikelihood_, prior_, variables_, opts : OptionsPattern[]] := Module[{
+    resultTable,
+    parallelRuns = OptionValue["ParallelRuns"],
+    nestedSamplingOptions = Join[
+        {
+            "PostProcessSamplingRuns" -> None,
+            "Monitor" -> False
+        },
+        passOptionsDown[parallelNestedSampling, nestedSampling, {opts}]
+    ]
+},
+
+    resultTable = ParallelTable[
+        nestedSampling[
+            logLikelihood,
+            prior,
+            variables,
+            Sequence @@ nestedSamplingOptions
+        ],
+        {parallelRuns},
+        Evaluate[Sequence @@ passOptionsDown[parallelNestedSampling, ParallelTable, {opts}]]
+    ];
+    combineRuns[
+        ##,
+        Sequence @@ passOptionsDown[parallelNestedSampling, combineRuns, {opts}]
+    ]& @@ resultTable
+];
+
+Options[parallelNestedSampling] = Join[
+    Options[nestedSampling],
+    Options[ParallelTable],
+    {"ParallelRuns" :> 4}
+];
+SetOptions[parallelNestedSampling, DistributedContexts :> $BayesianContexts];
 
 predictiveDistribution[
     result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&),
