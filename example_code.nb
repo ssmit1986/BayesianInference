@@ -135,13 +135,13 @@ Cell[BoxData[{
        ",", "\[IndentingNewLine]", 
        RowBox[{"\"\<LikelihoodMaximum\>\"", "\[Rule]", "Automatic"}], ",", 
        "\[IndentingNewLine]", 
-       RowBox[{"\"\<MinAcceptanceRate\>\"", " ", "\[Rule]", " ", "0.05"}], 
-       ",", "\[IndentingNewLine]", 
        RowBox[{"\"\<MonteCarloStepSizeAdjustment\>\"", " ", "\[Rule]", " ", 
         RowBox[{"{", 
          RowBox[{
           RowBox[{"\"\<Order\>\"", " ", "\[Rule]", " ", "2"}], ",", " ", 
-          RowBox[{"\"\<HistoryLength\>\"", "\[Rule]", "10"}]}], "}"}]}]}], 
+          RowBox[{"\"\<HistoryLength\>\"", "\[Rule]", "10"}]}], "}"}]}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], 
       "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"Dataset", "[", "result", 
@@ -589,8 +589,6 @@ Cell[BoxData[{
        ",", "\[IndentingNewLine]", 
        RowBox[{"\"\<LikelihoodMaximum\>\"", "\[Rule]", "Automatic"}], ",", 
        "\[IndentingNewLine]", 
-       RowBox[{"\"\<MinAcceptanceRate\>\"", " ", "\[Rule]", " ", "0.05"}], 
-       ",", "\[IndentingNewLine]", 
        RowBox[{"\"\<MonteCarloStepSizeAdjustment\>\"", " ", "\[Rule]", " ", 
         RowBox[{"{", 
          RowBox[{
@@ -645,7 +643,7 @@ Cell[BoxData[{
        "\[IndentingNewLine]", "}"}]}], "\[IndentingNewLine]", "}"}], ",", 
     "\[IndentingNewLine]", 
     RowBox[{"result", " ", "=", " ", 
-     RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
+     RowBox[{"parallelNestedSampling", "[", "\[IndentingNewLine]", 
       RowBox[{
        RowBox[{
         RowBox[{"LogLikelihood", "[", 
@@ -656,27 +654,24 @@ Cell[BoxData[{
         RowBox[{
         "\"\<LocationParameter\>\"", ",", " ", "\"\<ScaleParameter\>\""}], 
         "}"}], ",", "\[IndentingNewLine]", "vars", ",", "\[IndentingNewLine]", 
-       RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "100"}], ",", 
+       RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "25"}], ",", 
        "\[IndentingNewLine]", 
        RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "3000"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"\"\<MinIterations\>\"", "\[Rule]", "10"}], ",", 
        "\[IndentingNewLine]", 
        RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
        "\[IndentingNewLine]", 
        RowBox[{
        "\"\<InitialMonteCarloStepSize\>\"", " ", "\[Rule]", " ", "0.075"}], 
        ",", "\[IndentingNewLine]", 
-       RowBox[{
-       "\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.001"}]}], 
-      "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", "]"}], 
+       RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}]}],
+       "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", "]"}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"Dataset", "[", "result", 
   "]"}]}], "Input",ExpressionUUID->"33149dec-34c7-4139-87a2-76f858ceeb2c"],
 
 Cell[BoxData[
  RowBox[{"covarianceMatrixPlot", "[", "result", 
-  "]"}]], "Input",ExpressionUUID->"9c0debae-f1cb-4649-b732-e29c215d0bcb"],
+  "]"}]], "Input",ExpressionUUID->"69abf6dd-4b64-4661-aa04-633e5b0ac62b"],
 
 Cell[BoxData[
  RowBox[{"posteriorMarginalCDFPlot1D", "[", 

@@ -4,11 +4,26 @@ BeginPackage["BayesianUtilities`"]
 (* Exported symbols added here with SymbolName::usage *)
 passOptionsDown::usage = "passOptionsDown[mainFunction, subFunction, {opts}] passes options down correctly from the main function into a sub function, even when the default options for both functions are different";
 quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the functionalities of Quiet and Check";
-xLogx;
 normalizeData;
 takePosteriorFraction;
+$BayesianContexts;
 
 Begin["`Private`"] (* Begin Private Context *)
+
+$BayesianContexts = Flatten[
+    {
+        Map[
+            {#, # <> "Private`"}&,
+            {
+                "BayesianUtilities`",
+                "BayesianStatistics`",
+                "BayesianGaussianProcess`",
+                "BayesianVisualisations`"
+            }
+        ],
+        "Global`"
+    }
+];
 
 quietCheck[expr_, failexpr_, msgs : {__MessageName}] :=
     Quiet[
@@ -48,14 +63,30 @@ passOptionsDown[mainFunctionName_Symbol, subFunctionName_Symbol, {opts : Options
         Options[subFunctionName]
     ];
 
-xLogx[data_List] := xLogx[Length[Dimensions[data]]][data];
-xLogx[n_Integer] := (
-    xLogx[n] = Compile[{
-        {matrix, _Real, n}
-    },
-        # * Log[#]& @ Replace[matrix, 0. -> 1., {n}]
-    ]
-);
+xLogx := Compile[{
+    {x, _Real}
+},
+    If[ x == 0. || x == 1.,
+        0.,
+        x * Log[x]
+    ],
+    RuntimeAttributes -> {Listable}
+];
+
+xLogy := Compile[{
+    {x, _Real},
+    {y, _Real}
+},
+    Which[
+        x == 0.,
+            0.,
+        y == 0.,
+            - Sign[x] * $MaxMachineNumber,
+        True,
+            x * Log[y]
+    ],
+    RuntimeAttributes -> {Listable}
+];
 
 normalizeData[data : {__Rule}, opts : OptionsPattern[]] := normalizeData[
     Developer`ToPackedArray[data[[All, 1]]],
