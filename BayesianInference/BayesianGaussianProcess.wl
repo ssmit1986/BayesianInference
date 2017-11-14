@@ -22,10 +22,10 @@ sym[args__] := Function[Evaluate[sym[]]][args]
 
 nullKernelPattern = HoldPattern[Function[Repeated[_, {0, 1}], 0 | 0., ___]];
 
-covarianceMatrix[points_List, kernel : nullKernelPattern, nugget : _Function] :=
+covarianceMatrix[points_List, kernel : nullKernelPattern, nugget_] :=
     nugget /@ points;
 
-covarianceMatrix[points_List, kernel : Except[nullKernelPattern, _Function], nugget : _Function] :=
+covarianceMatrix[points_List, kernel : Except[nullKernelPattern], nugget_] :=
     Plus[
         SymmetrizedArray[
             {i_, j_} :> kernel @@ points[[{i, j}]],
@@ -39,7 +39,7 @@ covarianceMatrix[points_List, kernel : Except[nullKernelPattern, _Function], nug
         ]
     ];
 
-compiledCovarianceMatrix[points_List, kernel_Function, nugget : _Function, vars : {__Symbol}, opts : OptionsPattern[]] :=
+compiledCovarianceMatrix[points_List, kernel_, nugget_, vars : {__Symbol}, opts : OptionsPattern[]] :=
     With[{
         matrix = Normal @ covarianceMatrix[points, kernel, nugget]
     },
@@ -60,14 +60,15 @@ Options[compiledCovarianceMatrix] = Options[Compile];
 compiledKandKappa[
     points1_List,
     kernel : nullKernelPattern,
-    nugget : _Function,
+    nugget_,
     opts : OptionsPattern[]
 ] := With[{
-    rank = Length[Dimensions[points1]] - 1 
+    rank = Length[Dimensions[points1]] - 1,
+    l1 = Length[points1]
 },
     With[{
         cf1 = Function[{points2},
-            SparseArray[{}, {Length[points1], Length[points2]}]
+            SparseArray[{}, {l1, Length[points2]}]
         ],
         cf2 = Compile[{
             {points2, _Real, rank}
@@ -88,8 +89,8 @@ compiledKandKappa[
 
 compiledKandKappa[
     points1_List,
-    kernel : Except[nullKernelPattern, _Function],
-    nugget : _Function,
+    kernel : Except[nullKernelPattern],
+    nugget_,
     opts : OptionsPattern[]
 ] := With[{
     rank1 = Length[Dimensions[points1]],
@@ -160,9 +161,9 @@ gaussianProcessLogLikelihood[data : {__Rule}, rest___] :=
 
 gaussianProcessLogLikelihood[
     Rule[dataIn_List, dataOut_List] /; Length[dataIn] === Length[dataOut],
-    kernel_Function, (* Kernel has to give numerical results after evaluation *)
-    nugget_Function,
-    meanFunction : _Function : Function[0]
+    kernel_, (* Kernel has to give numerical results after evaluation *)
+    nugget_,
+    meanFunction : _ : Function[0]
 ] := gaussianProcessLogLikelihood[
     dataOut - meanFunction /@ dataIn,
     matrixInverseAndDet @ covarianceMatrix[
@@ -175,13 +176,13 @@ gaussianProcessLogLikelihood[
 gaussianProcessLogLikelihood[
     meanAdjustedOutputVector_List,
     inverseCov_Association
-] := - Plus[
+] := - 0.5 * Plus[
     Length[meanAdjustedOutputVector] * Log[2. * Pi],
     Log[inverseCov["Det"]],
     meanAdjustedOutputVector . inverseCov["Inverse"][meanAdjustedOutputVector]
 ];
 
-gaussianProcessNestedSampling[data_, kernel_, nugget_Function, meanFunction_Function, variables : {_Symbol, _?NumericQ, _?NumericQ}, opts : OptionsPattern[]] :=
+gaussianProcessNestedSampling[data_, kernel_, nugget_, meanFunction_, variables : {_Symbol, _?NumericQ, _?NumericQ}, opts : OptionsPattern[]] :=
     gaussianProcessNestedSampling[data, kernel, meanFunction, {variables}, opts];
 
 gaussianProcessNestedSampling[data : {__Rule}, rest___] :=
@@ -206,9 +207,9 @@ gaussianProcessNestedSampling[data_?(AssociationQ[#] && KeyExistsQ[#, "Input"] &
 gaussianProcessNestedSampling[
     dataIn_?(MatrixQ[#, NumericQ] || VectorQ[#, NumericQ]&),
     dataOut_?(VectorQ[#, NumericQ]&),
-    kernelFunction : (_Function | nullKernelPattern),
-    nuggetFunction_Function,
-    meanFunction_Function,
+    kernelFunction_,
+    nuggetFunction_,
+    meanFunction_,
     variablePrior_,
     variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
     opts : OptionsPattern[]
@@ -223,7 +224,6 @@ gaussianProcessNestedSampling[
         kernel,
         nugget,
         mean,
-        covarianceFunction,
         kAndKappa,
         invCovFun,
         logLikelihood,
@@ -240,126 +240,131 @@ gaussianProcessNestedSampling[
             ]
         ] /@ {kernelFunction, nuggetFunction, meanFunction};
         
-        covarianceFunction = compiledCovarianceMatrix[
-            inputData,
-            kernelFunction,
-            nuggetFunction,
-            vars,
-            Sequence @@ passOptionsDown[gaussianProcessNestedSampling, compiledCovarianceMatrix, {opts}]
-        ];
-        
-        logLikelihood = Switch[OptionValue["Likelihood"],
-            Automatic,
-                With[{
-                    f = If[ nullKernelQ,
-                            SparseArray @* DiagonalMatrix,
-                            Identity
-                        ]
-                },
-                    Function[
-                        LogLikelihood[
-                            MultinormalDistribution[
-                                f[covarianceFunction[##]]
-                            ],
-                            {outputData - (mean[##]) /@ inputData}
+        With[{
+            covarianceFunction = compiledCovarianceMatrix[
+                inputData,
+                kernelFunction,
+                nuggetFunction,
+                vars,
+                Sequence @@ passOptionsDown[gaussianProcessNestedSampling, compiledCovarianceMatrix, {opts}]
+            ],
+            kernel = kernel,
+            nugget = nugget,
+            mean = mean
+        },
+            logLikelihood = Switch[OptionValue["Likelihood"],
+                Automatic,
+                    With[{
+                        f = If[ nullKernelQ,
+                                SparseArray @* DiagonalMatrix,
+                                Identity
+                            ]
+                    },
+                        Function[
+                            LogLikelihood[
+                                MultinormalDistribution[
+                                    f[covarianceFunction[##]]
+                                ],
+                                {outputData - (mean[##]) /@ inputData}
+                            ]
                         ]
                     ]
+                    ,
+                _Function,
+                    OptionValue["Likelihood"],
+                _,
+                    Function[
+                        gaussianProcessLogLikelihood[
+                            outputData - (mean[##]) /@ inputData,
+                            matrixInverseAndDet[covarianceFunction[##]]
+                        ]
+                    ]
+            ];
+            invCovFun = Function[matrixInverseAndDet[covarianceFunction[##]]];
+            If[ TrueQ[IntegerQ[parallelRuns] && parallelRuns > 0],
+                output = parallelNestedSampling[
+                    logLikelihood,
+                    variablePrior,
+                    variables,
+                    Sequence @@ passOptionsDown[gaussianProcessNestedSampling, parallelNestedSampling, {opts}]
                 ]
                 ,
-            _Function,
-                OptionValue["Likelihood"],
-            _,
-                Function[
-                    gaussianProcessLogLikelihood[
-                        outputData - (mean[##]) /@ inputData,
-                        matrixInverseAndDet[covarianceFunction[##]]
-                    ]
+                output = nestedSampling[
+                    logLikelihood,
+                    variablePrior,
+                    variables,
+                    Sequence @@ passOptionsDown[gaussianProcessNestedSampling, nestedSampling, {opts}]
                 ]
-        ];
-        invCovFun = Function[matrixInverseAndDet[covarianceFunction[##]]];
-        If[ TrueQ[IntegerQ[parallelRuns] && parallelRuns > 0],
-            output = parallelNestedSampling[
-                logLikelihood,
-                variablePrior,
-                variables,
-                Sequence @@ passOptionsDown[gaussianProcessNestedSampling, parallelNestedSampling, {opts}]
-            ]
-            ,
-            output = nestedSampling[
-                logLikelihood,
-                variablePrior,
-                variables,
-                Sequence @@ passOptionsDown[gaussianProcessNestedSampling, nestedSampling, {opts}]
-            ]
-        ];
-        
-        kAndKappa[args___] := With[{
-            ker = kernel[args],
-            nug = nugget[args]
-        },
-            compiledKandKappa[
-                inputData,
-                ker,
-                nug,
-                Sequence @@ passOptionsDown[gaussianProcessNestedSampling, compiledKandKappa, {opts}]
-            ]
-        ];
-        
-        output = Join[
-            MapAt[
-                Function[{row},
-                    Module[{
-                        Cmat = covarianceFunction @@ row["Point"],
-                        mf = mean @@ row["Point"],
-                        inv
-                    },
-                        inv = matrixInverseAndDet[Cmat]["Inverse"];
-                        Join[
-                            row,
-                            <|
-                                "PredictionParameters" ->
-                                    Join[
-                                        <|
-                                            "CovarianceMatrix" -> SparseArray[Cmat],
-                                            "InverseCovarianceMatrix" -> inv,
-                                            "CInvY" -> inv[
-                                                Subtract[
-                                                    outputData,
-                                                    mf /@ inputData
-                                                ]
-                                            ],
-                                            "KandKappaFunction" -> kAndKappa @@ row["Point"],
-                                            "MeanFunction" -> mf
-                                        |>
-                                    ]
-                            |>
+            ];
+            
+            kAndKappa[args___] := With[{
+                ker = kernel[args],
+                nug = nugget[args]
+            },
+                compiledKandKappa[
+                    inputData,
+                    ker,
+                    nug,
+                    Sequence @@ passOptionsDown[gaussianProcessNestedSampling, compiledKandKappa, {opts}]
+                ]
+            ];
+            
+            output = Join[
+                MapAt[
+                    Function[{row},
+                        Module[{
+                            Cmat = covarianceFunction @@ row["Point"],
+                            mf = mean @@ row["Point"],
+                            inv
+                        },
+                            inv = matrixInverseAndDet[Cmat]["Inverse"];
+                            Join[
+                                row,
+                                <|
+                                    "PredictionParameters" ->
+                                        Join[
+                                            <|
+                                                "CovarianceMatrix" -> SparseArray[Cmat],
+                                                "InverseCovarianceMatrix" -> inv,
+                                                "CInvY" -> inv[
+                                                    Subtract[
+                                                        outputData,
+                                                        mf /@ inputData
+                                                    ]
+                                                ],
+                                                "KandKappaFunction" -> kAndKappa @@ row["Point"],
+                                                "MeanFunction" -> mf
+                                            |>
+                                        ]
+                                |>
+                            ]
                         ]
-                    ]
+                    ],
+                    output,
+                    {"Samples", All}
                 ],
-                output,
-                {"Samples", All}
-            ],
-            <|
-                "GaussianProcessData" ->
-                    <|
-                        "ModelFunctions" -> <|
-                            "Kernel" -> kernelFunction,
-                            "Nugget" -> nuggetFunction,
-                            "MeanFunction" -> meanFunction,
-                            "CovarianceFunction" -> covarianceFunction,
-                            "InverseCovarianceFunction" -> invCovFun
-                        |>,
+                <|
+                    "GaussianProcessData" ->
                         <|
-                            "OriginalData" -> <|
-                                "Input" -> inputData,
-                                "Output" -> outputData
+                            "ModelFunctions" -> <|
+                                "Kernel" -> kernelFunction,
+                                "Nugget" -> nuggetFunction,
+                                "MeanFunction" -> meanFunction,
+                                "CovarianceFunction" -> covarianceFunction,
+                                "InverseCovarianceFunction" -> invCovFun
+                            |>,
+                            <|
+                                "OriginalData" -> <|
+                                    "Input" -> inputData,
+                                    "Output" -> outputData
+                                |>
                             |>
                         |>
-                    |>
-            |>
-        ];
-        Share[output];
-        output
+                |>
+            ];
+            Share[output];
+            output
+        ]
     ]
 ];
 Options[gaussianProcessNestedSampling] = Join[

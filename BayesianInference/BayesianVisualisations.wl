@@ -3,17 +3,17 @@
 BeginPackage["BayesianVisualisations`", { "BayesianUtilities`"}]
 (* Exported symbols added here with SymbolName::usage *)  
 covarianceMatrixPlot;
-posteriorMarginalCDFPlot1D;
-posteriorMarginalCDFDensityPlot2D;
+posteriorMarginalPDFPlot1D;
+posteriorMarginalPDFDensityPlot2D;
 posteriorBubbleChart;
 gaussianProcessPredictionPlot;
 
 
 Begin["`Private`"] (* Begin Private Context *) 
 
-covarianceMatrixPlot[result_?(AssociationQ[#] && KeyExistsQ[#, "PosteriorDistribution"]&), opts : OptionsPattern[]] :=
+covarianceMatrixPlot[result_?(AssociationQ[#] && KeyExistsQ[#, "EmpiricalPosteriorDistribution"]&), opts : OptionsPattern[]] :=
     MatrixPlot[
-        Covariance[result["PosteriorDistribution"]],
+        Covariance[result["EmpiricalPosteriorDistribution"]],
         Sequence @@ FilterRules[{opts}, Options[MatrixPlot]],
         PlotLegends -> Automatic,
         FrameTicks -> ConstantArray[
@@ -27,18 +27,115 @@ Options[covarianceMatrixPlot] = Join[
     Options[MatrixPlot]
 ];
 
+posteriorMarginalPDFPlot1D[result_?AssociationQ, parameter_Symbol, opts : OptionsPattern[]] /; MemberQ[result["Parameters"], parameter] :=
+    posteriorMarginalPDFPlot1D[result, First @ FirstPosition[result["Parameters"], parameter, Missing["Error"], {1}], opts];
+
+posteriorMarginalPDFPlot1D[result_?AssociationQ, plotIndex_Integer, range : (Automatic | {_, _}) : Automatic, opts : OptionsPattern[]] /;
+    (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && plotIndex <= Length[result["ParameterRanges"]]) :=
+    Module[{
+        x, pdf,
+        plotRange = Replace[range, Automatic :> result["ParameterRanges"][[plotIndex]]]
+    },
+        pdf = PDF[
+            SmoothKernelDistribution[
+                WeightedData @@ Map[
+                    MarginalDistribution[
+                        result["EmpiricalPosteriorDistribution"],
+                        plotIndex
+                    ],
+                    {"Domain", "Weights"}
+                ],
+                Sequence @@ OptionValue["SmoothKernelDistributionOptions"]
+            ],
+            x
+        ];
+        Plot[
+            pdf,
+            Evaluate[Flatten @ {x, plotRange}],
+            Evaluate[Sequence @@ FilterRules[{opts}, Options[Plot]]],
+            PlotRange -> All,
+            Filling -> Axis,
+            Evaluate[AxesLabel -> {result["Parameters"][[plotIndex]], "PDF"}]
+        ]
+    ];
+
+Options[posteriorMarginalPDFPlot1D] = Join[
+    {
+        "SmoothKernelDistributionOptions" -> {}
+    },
+    Options[Plot]
+];
+
+posteriorMarginalPDFDensityPlot2D[result_?AssociationQ, parameters : {_Symbol, _Symbol}, range_, opts : OptionsPattern[]] /;
+    (ListQ[result["Parameters"]] && SubsetQ[result["Parameters"], parameters]):=
+    posteriorMarginalPDFDensityPlot2D[
+        result,
+        Flatten[
+            Position[
+                result["Parameters"],
+                Alternatives @@ parameters,
+                {1},
+                Length[parameters]
+            ]
+        ],
+        range,
+        opts
+    ];
+
+posteriorMarginalPDFDensityPlot2D[result_?AssociationQ, plotIndices : {_Integer, _Integer},
+    range : (Automatic | {{_, _}, {_, _}}) : Automatic, opts : OptionsPattern[]
+] /; (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && Max[plotIndices] <= Length[result["ParameterRanges"]]):=
+    Module[{
+        x, y, pdf,
+        plotRange = Replace[range, Automatic :> result["ParameterRanges"][[plotIndices]]]
+    },
+        pdf = PDF[
+            KernelMixtureDistribution[
+                WeightedData @@ MapAt[
+                    Transpose,
+                    Map[
+                        MarginalDistribution[
+                            result["EmpiricalPosteriorDistribution"],
+                            plotIndices
+                        ],
+                        {"Domain", "Weights"}
+                    ],
+                    1
+                ],
+                Sequence @@ OptionValue["SmoothKernelDistributionOptions"]
+            ],
+            {x, y}
+        ];
+        DensityPlot[
+            pdf,
+            Evaluate[Flatten @ {x, plotRange[[1]]}],
+            Evaluate[Flatten @ {y, plotRange[[2]]}],
+            Evaluate[Sequence @@ FilterRules[{opts}, Options[DensityPlot]]],
+            PlotLegends -> Automatic,
+            Evaluate[PlotRange -> Join[plotRange, {All}]],
+            Evaluate[FrameLabel -> result["Parameters"][[plotIndices]]]
+        ]
+    ];
+
+Options[posteriorMarginalPDFDensityPlot2D] = Join[
+    {
+        "SmoothKernelDistributionOptions" -> {}
+    },
+    Options[DensityPlot]
+];
+
 posteriorMarginalCDFPlot1D[result_?AssociationQ, parameter_Symbol, opts : OptionsPattern[]] /; MemberQ[result["Parameters"], parameter] :=
     posteriorMarginalCDFPlot1D[result, First @ FirstPosition[result["Parameters"], parameter, Missing["Error"], {1}], opts];
 
 posteriorMarginalCDFPlot1D[result_?AssociationQ, plotIndex_Integer, range : (Automatic | {_, _}) : Automatic, opts : OptionsPattern[]] /;
-    (AllTrue[{"ParameterRanges", "PosteriorDistribution"}, KeyExistsQ[result, #]&] && plotIndex <= Length[result["ParameterRanges"]]) :=
+    (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && plotIndex <= Length[result["ParameterRanges"]]) :=
     Module[{
         x, cdf,
         plotRange = Replace[range, Automatic :> result["ParameterRanges"][[plotIndex]]]
     },
         cdf = CDF[
             MarginalDistribution[
-                result["PosteriorDistribution"],
+                result["EmpiricalPosteriorDistribution"],
                 plotIndex
             ],
             x
@@ -97,19 +194,19 @@ posteriorMarginalCDFDensityPlot2D[result_?AssociationQ, parameters : {_Symbol, _
 
 posteriorMarginalCDFDensityPlot2D[result_?AssociationQ, plotIndices : {_Integer, _Integer},
     range : (Automatic | {{_, _}, {_, _}}) : Automatic, opts : OptionsPattern[]
-] /; (AllTrue[{"ParameterRanges", "PosteriorDistribution"}, KeyExistsQ[result, #]&] && Max[plotIndices] <= Length[result["ParameterRanges"]]):=
+] /; (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && Max[plotIndices] <= Length[result["ParameterRanges"]]):=
     Module[{
         x, y, cdf,
         plotRange = Replace[range, Automatic :> result["ParameterRanges"][[plotIndices]]]
     },
         cdf = CDF[
             MarginalDistribution[
-                result["PosteriorDistribution"],
+                result["EmpiricalPosteriorDistribution"],
                 plotIndices
             ],
             {x, y}
         ];
-        DensityPlot[
+        ContourPlot[
             cdf,
             Evaluate[Flatten @ {x, plotRange[[1]]}],
             Evaluate[Flatten @ {y, plotRange[[2]]}],
@@ -122,7 +219,7 @@ posteriorMarginalCDFDensityPlot2D[result_?AssociationQ, plotIndices : {_Integer,
 
 Options[posteriorMarginalCDFDensityPlot2D] = Join[
     {},
-    Options[DensityPlot]
+    Options[ContourPlot]
 ];
 
 
