@@ -1,14 +1,14 @@
 Notebook[{
 Cell[BoxData[
- RowBox[{"Quit", "[", 
-  "]"}]], "Input",ExpressionUUID->"ffa68532-e74c-496f-a661-bc7bbf19a132"],
+ RowBox[{"Quit", "[", "]"}]], "Input",
+ CellLabel->"In[9]:=",ExpressionUUID->"ffa68532-e74c-496f-a661-bc7bbf19a132"],
 
 Cell[BoxData[{
  RowBox[{
   RowBox[{"$HistoryLength", "=", "10"}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"<<", "BayesianStatistics`"}], 
-  ";"}]}], "Input",ExpressionUUID->"eb85e812-1230-459b-a047-9a2e3bad79eb"],
+  RowBox[{"<<", "BayesianInference`"}], ";"}]}], "Input",
+ CellLabel->"In[7]:=",ExpressionUUID->"eb85e812-1230-459b-a047-9a2e3bad79eb"],
 
 Cell[CellGroupData[{
 
@@ -54,8 +54,8 @@ Cell[BoxData[{
           RowBox[{
            RowBox[{"NormalDistribution", "[", "]"}], ",", 
            RowBox[{"Length", "[", "x", "]"}]}], "]"}]}]}], 
-       "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
+       "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", "]"}]}], ";"}]
+  , "\[IndentingNewLine]", 
  RowBox[{"ListPlot", "[", 
   RowBox[{"List", "@@@", 
    RowBox[{"Thread", "[", "testdata", "]"}]}], 
@@ -2024,7 +2024,7 @@ fD9705ol/wKILMTI
    GridBoxItemSize->{"Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],
   "Column"]], "Output",ExpressionUUID->"d0e66731-bc48-407a-a6c2-17eb55ca325f"]
 }, Open  ]]
-}, Open  ]]
+}, Closed]]
 }, Open  ]]
 },
 WindowSize->{1600, 818},
@@ -2033,7 +2033,7 @@ PrivateNotebookOptions->{"FileOutlineCache"->False},
 ShowGroupOpener->True,
 TrackCellChangeTimes->False,
 Magnification:>1.3 Inherited,
-FrontEndVersion->"11.2 for Microsoft Windows (64-bit) (September 10, 2017)",
+FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
 StyleDefinitions->"Default.nb"
 ]
 
