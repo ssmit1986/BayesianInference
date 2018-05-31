@@ -7,6 +7,7 @@ quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the f
 normalizeData;
 takePosteriorFraction;
 $BayesianContexts;
+logSumExp;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -233,6 +234,24 @@ Options[regressionLogLikelihoodFunction] = {
     Assumptions -> True,
     "Compilation" -> False
 };
+
+logSumExp = Composition[
+    Compile[{
+        {list, _Real, 1}
+    },
+        Module[{
+            max = Max[list]
+        },
+            Plus[
+                max,
+                Log @ Total[
+                    Exp[Subtract[list, max]]
+                ]
+            ] 
+        ]
+    ],
+    Select[NumericQ] (* Get rid of -Infinity *)
+]
 
 End[] (* End Private Context *)
 

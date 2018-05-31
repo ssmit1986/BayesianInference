@@ -489,19 +489,26 @@ nestedSampling[
     ]
 ];
 
-meanAndError[data : Except[{___?NumericQ}]] := Map[
-    <|
-        "Mean" -> Mean[#],
-        "StandardError" -> StandardDeviation[#]
-    |>&,
+meanAndErrorAssociation = Function[
+    If[ MatchQ[#, {___?NumericQ}],
+        <|
+            "Mean" -> Mean[#],
+            "StandardError" -> StandardDeviation[#]
+        |>,
+        <| (* This happens for samples with such a low loglikelihood that Exp[loglike] flushes to zero *)
+            "Mean" -> DirectedInfinity[-1],
+            "StandardError" -> Indeterminate
+        |>
+    ]
+];
+
+meanAndError[data_List /; Length[Dimensions[data]] === 1] := meanAndErrorAssociation[data];
+
+meanAndError[data_List /; Length[Dimensions[data]] === 2] := Map[
+    meanAndErrorAssociation,
     data
 ];
 
-meanAndError[data : {___?NumericQ}] :=
-    <|
-        "Mean" -> Mean[data],
-        "StandardError" -> StandardDeviation[data]
-    |>;
 
 evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     result = MapAt[
@@ -582,7 +589,11 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     zSamples = Log @ Total[evidenceWeigths];
     parameterSamples = Transpose[
         Dot[
-            posteriorWeights = Normalize[#, Total]& /@ Transpose[evidenceWeigths],
+            posteriorWeights = Replace[
+                Normalize[#, Total]& /@ Transpose[evidenceWeigths],
+                0. -> 0, (* Make zero values exact so that their Log flushes to -Inf *)
+                {2}
+            ],
             Values[result[["Samples", All, "Point"]]]
         ]
     ];
@@ -604,14 +615,14 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                         keys,
                         meanAndError @ Subtract[
                             Transpose[Log[posteriorWeights]],
-                            Log @ Total[Exp @ Mean[Log @ posteriorWeights]] (* Adjust LogWeights by constant factor so that Total[Exp[meanLogweights]] == 1. *)
+                            logSumExp[Mean[Log @ posteriorWeights]] (* Adjust LogWeights by constant factor so that Total[Exp[meanLogweights]] == 1. *)
                         ]
                     ]
                 },
                 Join @@ # &
             ],
             "LogEvidence" -> meanAndError[zSamples],
-            "ParameterValues" -> meanAndError[parameterSamples],
+            "ParameterExpectedValues" -> meanAndError[parameterSamples],
             "RelativeEntropy" -> meanAndError[
                 Subtract[
                     posteriorWeights . Replace[Values[result[["Samples", All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}],
