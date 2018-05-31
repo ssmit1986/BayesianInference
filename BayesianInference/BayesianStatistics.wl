@@ -556,26 +556,29 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     ];
 
     keys = Keys[result["Samples"]];
-    evidenceWeigths = Transpose[
-        trapezoidWeigths[
-            sampledX = Map[
-                Join[
-                    #,
-                    Reverse @ Sort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
-                ]&,
-                With[{
-                    randomNumbers = RandomVariate[
-                        BetaDistribution[result["SamplePoolSize"], 1],
-                        {result["GeneratedNestedSamples"], nRuns}
-                    ]
-                },
-                    Transpose[
-                        FoldList[#1 * #2 &, First[randomNumbers], Rest[randomNumbers]]
+    evidenceWeigths = Times[
+        Exp[Values @ result[["Samples", All, "LogLikelihood"]]],
+        Transpose[
+            trapezoidWeigths[
+                sampledX = Map[
+                    Join[
+                        #,
+                        Reverse @ Sort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
+                    ]&,
+                    With[{
+                        randomNumbers = RandomVariate[
+                            BetaDistribution[result["SamplePoolSize"], 1],
+                            {result["GeneratedNestedSamples"], nRuns}
+                        ]
+                    },
+                        Transpose[
+                            FoldList[Times, randomNumbers]
+                        ]
                     ]
                 ]
             ]
         ]
-    ] * Exp[Values[result[["Samples", All, "LogLikelihood"]]]];
+    ];
     zSamples = Log @ Total[evidenceWeigths];
     parameterSamples = Transpose[
         Dot[
