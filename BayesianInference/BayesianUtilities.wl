@@ -7,6 +7,7 @@ quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the f
 normalizeData;
 takePosteriorFraction;
 $BayesianContexts;
+logSumExp;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -177,6 +178,80 @@ takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), fr
     ];
     newSamples
 ];
+
+regressionLogLikelihoodFunction[
+    (inputData : {__}) -> (outputData : {__}),
+    regressionFormula_,
+    errorDistribution_,
+    locationVariables  : {__Symbol},
+    regressionParameters : {__Symbol},
+    opts : OptionsPattern[]
+] := Assuming[
+    OptionValue[Assumptions]
+    ,
+    Module[{
+        residuals = Simplify[
+            outputData - Function[locationVariables, regressionFormula] /@ inputData
+        ],
+        locationIndependentErrorsQ = FreeQ[errorDistribution, Alternatives @@ locationVariables],
+        errors
+    },
+        errors = If[ locationIndependentErrorsQ,
+            errorDistribution,
+            ProductDistribution @@ (Function[locationVariables, errorDistribution] /@ inputData)
+        ];
+        With[{
+            logLikelihood = Simplify @ LogLikelihood[
+                errors,
+                If[locationIndependentErrorsQ, residuals, {residuals}]
+            ]
+        },
+            If[ OptionValue["Compilation"] === True,
+                Compile[
+                    Evaluate[
+                        Transpose[
+                            {
+                                Join[regressionParameters],
+                                ConstantArray[_Real, Length[regressionParameters]]
+                            }
+                        ]
+                    ],
+                    Replace[
+                        logLikelihood,
+                        {_DirectedInfinity -> -$MaxMachineNumber}
+                    ],
+                    RuntimeAttributes -> {Listable}
+                ],
+                Function[
+                    Evaluate[regressionParameters],
+                    logLikelihood
+                ]
+            ]
+        ]
+    ]
+];
+Options[regressionLogLikelihoodFunction] = {
+    Assumptions -> True,
+    "Compilation" -> False
+};
+
+logSumExp = Composition[
+    Compile[{
+        {list, _Real, 1}
+    },
+        Module[{
+            max = Max[list]
+        },
+            Plus[
+                max,
+                Log @ Total[
+                    Exp[Subtract[list, max]]
+                ]
+            ] 
+        ]
+    ],
+    Select[NumericQ] (* Get rid of -Infinity *)
+]
 
 End[] (* End Private Context *)
 

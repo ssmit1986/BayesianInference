@@ -120,11 +120,11 @@ Options[directPosteriorDistribution] = Join[
 ];
 
 constrainedMarkovChainMonteCarlo[
-    pdfFunction_Function,
+    pdfFunction_,
     livingPoints_List,
     stepDistribution_,
     numberOfSteps_Integer,
-    constraintFunction_Function,
+    constraintFunction_,
     constraintLimit : (_?NumericQ | DirectedInfinity[-1])
 ] := Module[{
     acceptReject = {0, 0},
@@ -132,7 +132,7 @@ constrainedMarkovChainMonteCarlo[
     tempConstraint
 },
     {
-        FoldList[
+        Fold[
             Function[{
                 pnt, step
             },
@@ -164,7 +164,7 @@ constrainedMarkovChainMonteCarlo[
                     ]
                 ] @@ (pnt[[1]] + step)
             ],
-            RandomChoice[livingPoints],
+            RandomChoice[livingPoints[[All, "Prior"]] -> livingPoints],
             RandomVariate[stepDistribution, numberOfSteps]
         ],
         acceptReject
@@ -241,10 +241,16 @@ nestedSampling[
 
 nestedSampling[
     logLikelihoodFunction_,
-    variablePrior_?DistributionParameterQ,
+    variablePrior : _?DistributionParameterQ | _Function,
     variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
     opts : OptionsPattern[]
 ] := With[{
+    dimensionCheck = Function[
+        And[
+            MatrixQ[#, NumericQ],
+            Dimensions[#] === {OptionValue["SamplePoolSize"], Length[variables]}
+        ]
+    ],
     maxiterations = Max[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
     miniterations = Min[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
     mcMethod = Replace[OptionValue["MonteCarloMethod"], Automatic -> constrainedMarkovChainMonteCarlo],
@@ -263,16 +269,8 @@ nestedSampling[
     ]
 },
     Module[{
-        variableSamplePoints = RandomVariate[
-            variablePrior,
-            OptionValue["SamplePoolSize"]
-        ],
-        priorPDF = Evaluate[
-            PDF[
-                variablePrior,
-                Function[{i}, Slot[i]] /@ Range[Length[variables]]
-            ]
-        ]&,
+        variableSamplePoints,
+        priorPDF,
         likelihoodThreshold = 0,
         iteration = 1,
         acceptReject,
@@ -287,8 +285,28 @@ nestedSampling[
         statusCell,
         output
     },
-        If[ !MatchQ[variableSamplePoints, {{__?NumericQ}..}],
+        variableSamplePoints = Which[ dimensionCheck[OptionValue["StartingPoints"]],
+            OptionValue["StartingPoints"]
+            ,
+            DistributionParameterQ[variablePrior],
+                RandomVariate[
+                    variablePrior,
+                    OptionValue["SamplePoolSize"]
+                ],
+            True,
+                Return["Need starting points"]
+        ];
+        If[ !dimensionCheck[variableSamplePoints],
             Return["Bad prior specification"]
+        ];
+        priorPDF = If[ DistributionParameterQ[variablePrior],
+            Evaluate[
+                PDF[
+                    variablePrior,
+                    Function[{i}, Slot[i]] /@ Range[Length[variables]]
+                ]
+            ]&,
+            variablePrior
         ];
         variableSamplePoints = SortBy[{#LogLikelihood, #Point}&] @ Association @ MapIndexed[
             Function[
@@ -372,24 +390,18 @@ nestedSampling[
             bestPoints = Take[variableSamplePoints, -nSamples];
             likelihoodThreshold = Min[bestPoints[[All, "LogLikelihood"]]];
 
-            {newPoint, acceptReject} = Extract[
-                mcMethod[
-                    priorPDF,
-                    Values @ bestPoints,
-                    mcStepDistribution @@ (
-                        Last[mcStepSize] * Map[
-                            Abs[Subtract @@ MinMax[#]]&,
-                            Transpose[Values @ bestPoints[[All , "Point"]]]
-                        ]
-                    ),
-                    mcSteps,
-                    logLikelihoodFunction,
-                    likelihoodThreshold
-                ],
-                {
-                    {1, -1},
-                    {-1}
-                }
+            {newPoint, acceptReject} = mcMethod[
+                priorPDF,
+                Values @ bestPoints,
+                mcStepDistribution @@ (
+                    Last[mcStepSize] * Map[
+                        Abs[Subtract @@ MinMax[#]]&,
+                        Transpose[Values @ bestPoints[[All , "Point"]]]
+                    ]
+                ),
+                mcSteps,
+                logLikelihoodFunction,
+                likelihoodThreshold
             ];
 
             If[ mcAdjustment =!= None,
@@ -477,19 +489,26 @@ nestedSampling[
     ]
 ];
 
-meanAndError[data : Except[{___?NumericQ}]] := Map[
-    <|
-        "Mean" -> Mean[#],
-        "StandardError" -> StandardDeviation[#]
-    |>&,
+meanAndErrorAssociation = Function[
+    If[ MatchQ[#, {___?NumericQ}],
+        <|
+            "Mean" -> Mean[#],
+            "StandardError" -> StandardDeviation[#]
+        |>,
+        <| (* This happens for samples with such a low loglikelihood that Exp[loglike] flushes to zero *)
+            "Mean" -> DirectedInfinity[-1],
+            "StandardError" -> Indeterminate
+        |>
+    ]
+];
+
+meanAndError[data_List /; Length[Dimensions[data]] === 1] := meanAndErrorAssociation[data];
+
+meanAndError[data_List /; Length[Dimensions[data]] === 2] := Map[
+    meanAndErrorAssociation,
     data
 ];
 
-meanAndError[data : {___?NumericQ}] :=
-    <|
-        "Mean" -> Mean[data],
-        "StandardError" -> StandardDeviation[data]
-    |>;
 
 evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     result = MapAt[
@@ -519,7 +538,24 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                 Min[DeleteMissing @ result[["Samples", All, "X"]]],
                 Exp @ Max[result[["Samples", All, "LogLikelihood"]]]
             ],
-            "CrudeRelativeEntropy" -> crudeEntropy
+            "CrudeRelativeEntropy" -> crudeEntropy,
+            "PosteriorPDF" -> With[{
+                prior = result["PriorFunction"],
+                loglike = result["LogLikelihoodFunction"],
+                ev = crudeEvidence
+            },
+                Function[
+                    Null,
+                    Divide[
+                        Times[
+                            prior[##],
+                            Exp[loglike[##]]
+                        ],
+                        ev
+                    ],
+                    {Listable}
+                ]
+            ]
         |>
     ];
     If[ !TrueQ[IntegerQ[nRuns] && nRuns > 0],
@@ -527,30 +563,37 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     ];
 
     keys = Keys[result["Samples"]];
-    evidenceWeigths = Transpose[
-        trapezoidWeigths[
-            sampledX = Map[
-                Join[
-                    #,
-                    Reverse @ Sort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
-                ]&,
-                With[{
-                    randomNumbers = RandomVariate[
-                        BetaDistribution[result["SamplePoolSize"], 1],
-                        {result["GeneratedNestedSamples"], nRuns}
-                    ]
-                },
-                    Transpose[
-                        FoldList[#1 * #2 &, First[randomNumbers], Rest[randomNumbers]]
+    evidenceWeigths = Times[
+        Exp[Values @ result[["Samples", All, "LogLikelihood"]]],
+        Transpose[
+            trapezoidWeigths[
+                sampledX = Map[
+                    Join[
+                        #,
+                        Reverse @ Sort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
+                    ]&,
+                    With[{
+                        randomNumbers = RandomVariate[
+                            BetaDistribution[result["SamplePoolSize"], 1],
+                            {result["GeneratedNestedSamples"], nRuns}
+                        ]
+                    },
+                        Transpose[
+                            FoldList[Times, randomNumbers]
+                        ]
                     ]
                 ]
             ]
         ]
-    ] * Exp[Values[result[["Samples", All, "LogLikelihood"]]]];
+    ];
     zSamples = Log @ Total[evidenceWeigths];
     parameterSamples = Transpose[
         Dot[
-            posteriorWeights = Normalize[#, Total]& /@ Transpose[evidenceWeigths],
+            posteriorWeights = Replace[
+                Normalize[#, Total]& /@ Transpose[evidenceWeigths],
+                0. -> 0, (* Make zero values exact so that their Log flushes to -Inf *)
+                {2}
+            ],
             Values[result[["Samples", All, "Point"]]]
         ]
     ];
@@ -572,22 +615,22 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                         keys,
                         meanAndError @ Subtract[
                             Transpose[Log[posteriorWeights]],
-                            Log @ Total[Exp @ Mean[Log @ posteriorWeights]] (* Adjust LogWeights by constant factor so that Total[Exp[meanLogweights]] == 1. *)
+                            logSumExp[Mean[Log @ posteriorWeights]] (* Adjust LogWeights by constant factor so that Total[Exp[meanLogweights]] == 1. *)
                         ]
                     ]
                 },
                 Join @@ # &
             ],
             "LogEvidence" -> meanAndError[zSamples],
-            "ParameterValues" -> meanAndError[parameterSamples],
+            "ParameterExpectedValues" -> meanAndError[parameterSamples],
             "RelativeEntropy" -> meanAndError[
                 Subtract[
                     posteriorWeights . Replace[Values[result[["Samples", All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}],
                     zSamples
                 ]
             ],
-            "PosteriorDistribution" -> If[
-                OptionValue["PosteriorDistributionType"] === "Simple"
+            "EmpiricalPosteriorDistribution" -> If[
+                OptionValue["EmpiricalPosteriorDistributionType"] === "Simple"
                 ,
                 EmpiricalDistribution[ (* use the averaged weights *)
                     Rule[
@@ -612,12 +655,13 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
 
 Options[evidenceSampling] = {
     "PostProcessSamplingRuns" -> 100,
-    "PosteriorDistributionType" -> "Simple"
+    "EmpiricalPosteriorDistributionType" -> "Simple"
 };
 
 Options[nestedSampling] = Join[
     {
         "SamplePoolSize" -> 25,
+        "StartingPoints" -> Automatic,
         "MaxIterations" -> 1000,
         "MinIterations" -> 100,
         "MonteCarloMethod" -> Automatic,
