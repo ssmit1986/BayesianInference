@@ -251,7 +251,7 @@ logSumExp = Composition[
         ]
     ],
     Select[NumericQ] (* Get rid of -Infinity *)
-]
+];
 
 End[] (* End Private Context *)
 
