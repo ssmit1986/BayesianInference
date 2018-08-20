@@ -3,6 +3,10 @@
 BeginPackage["BayesianNeuralNetworks`"]
 (* Exported symbols added here with SymbolName::usage *)
 
+gaussianLossLayer;
+regressionNet;
+lossNet;
+alphaDivergenceLoss;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -42,11 +46,10 @@ Options[regressionNet] = {
     "NetworkDepth" -> 3,
     "LayerSize" -> 100,
     "ActivationFunction" -> Ramp,
-    "DropoutProbability" -> 0.25,
-    "Input" -> Automatic,
-    "Output" -> Automatic
-}
-regressionNet[opts : OptionsPattern[]] := With[{
+    "DropoutProbability" -> 0.25
+};
+
+regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
     pdrop = OptionValue["DropoutProbability"],
     size = OptionValue["LayerSize"],
     activation = OptionValue["ActivationFunction"]
@@ -75,8 +78,8 @@ regressionNet[opts : OptionsPattern[]] := With[{
             ],
             LinearLayer[]
         },
-        "Input" -> OptionValue["Input"],
-        "Output" -> OptionValue["Output"]
+        "Input" -> input,
+        "Output" -> output
     ]
 ];
 
@@ -86,7 +89,7 @@ regressionNet[
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
-        "reg1" -> regressionNet["Output" -> {1}, opts],
+        "reg1" -> regressionNet[{Automatic, {1}}, opts],
         "const" -> ConstantArrayLayer["Output" -> {1}],
         "cat" -> CatenateLayer[]
     |>,
@@ -100,11 +103,11 @@ regressionNet[
     "HeteroScedastic",
     trainingModel : Automatic : Automatic,
     opts : OptionsPattern[]
-] := regressionNet["Output" -> {2}, opts];
+] := regressionNet[{Automatic, {2}}, opts];
 
 regressionNet[
     errorModel_,
-    trainingModel : {"AlphaDivergence", k_Integer},
+    trainingModel : {"AlphaDivergence", _, k_Integer},
     opts : OptionsPattern[]
 ] := NetChain[
     <|
@@ -113,132 +116,51 @@ regressionNet[
     |>
 ];
 
-(*lossNet[
-    regressionNet_,
-    s_String,
-    opts : OptionsPattern[]
-] := lossNet[
-    regressionNet,
-    {s, gaussianLossLayer[]},
-    opts
+Options[lossNet] = Join[
+    Options[regressionNet],
+    {}
 ];
 
 lossNet[
-    regressionNet_,
-    {"HomoScedastic", lossLayer : Except[_String]},
+    errorModel_,
+    trainingModel : Automatic : Automatic,
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
-        "regression" -> NetGraph[
-            <|
-                "reg1" -> regressionNet,
-                "const" -> ConstantArrayLayer[]
-            |>,
-            {
-                NetPort["Input"] -> "reg1" -> NetPort["prediction"],
-                "const" -> NetPort["logTau"]
-            }
-        ],
-        "loss" -> lossLayer
+        "regression" -> regressionNet[errorModel, trainingModel, opts],
+        "part1" -> PartLayer[1],
+        "part2" -> PartLayer[2],
+        "loss" -> gaussianLossLayer[]
     |>,
     {
         NetPort["x"] -> "regression",
-        {NetPort["y"], NetPort[{"regression", "prediction"}], NetPort[{"regression", "logTau"}]} -> "loss"
-    },
-    "y" -> {1},
-    opts
+        "regression" -> "part1",
+        "regression" -> "part2",
+        {NetPort["y"], "part1", "part2"} -> "loss" -> NetPort["Loss"]
+    }
 ];
 
 lossNet[
-    regressionNet_,
-    {"HeteroScedastic", lossLayer : Except[_String]},
+    errorModel_,
+    trainingModel : {"AlphaDivergence", alpha_?NumericQ, k_Integer},
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
-        "regression" -> NetGraph[
-            <|
-                "reg1" -> NetReplacePart[regressionNet, "Output" -> {2}],
-                "part1" -> PartLayer[{{1}}],
-                "part2" -> PartLayer[{{2}}]
-            |>,
-            {
-                NetPort["Input"] -> "reg1",
-                "reg1" -> "part1" -> NetPort["prediction"],
-                "reg1" -> "part2" -> NetPort["logTau"]
-            }
-        ],
-        "loss" -> lossLayer
+        "regression" -> regressionNet[errorModel, trainingModel, opts],
+        "part1" -> PartLayer[{All, 1}],
+        "part2" -> PartLayer[{All, 2}],
+        "repY" -> ReplicateLayer[k],
+        "loss" -> gaussianLossLayer[],
+        "alphaDiv" -> alphaDivergenceLoss[alpha, k]
     |>,
     {
         NetPort["x"] -> "regression",
-        {NetPort["y"], NetPort[{"regression", "prediction"}], NetPort[{"regression", "logTau"}]} -> "loss"
-    },
-    "y" -> {1},
-    opts
+        "regression" -> "part1",
+        "regression" -> "part2",
+        NetPort["y"] -> "repY",
+        {"repY", "part1", "part2"} -> "loss" -> "alphaDiv" -> NetPort["Loss"]
+    }
 ];
-
-lossNet[
-    regressionNet_,
-    lossLayer : Except[_List | _String],
-    opts : OptionsPattern[]
-] := NetGraph[
-    <|
-        "regression" -> regressionNet,
-        "loss" -> lossLayer
-    |>,
-    {
-        NetPort["x"] -> "regression",
-        {NetPort["y"], "regression"} -> "loss"
-    },
-    "y" -> {1},
-    opts
-];
-
-lossNet[
-    regressionNet_,
-    loss_,
-    {alpha_, k_Integer},
-    opts : OptionsPattern[]
-] := Module[{
-    input,
-    tag = "DataDimensions"
-},
-    input = Lookup[{opts}, "x", Throw[$Failed, tag]];
-    If[ !MatchQ[input, {_Integer}],
-        Throw[$Failed, tag]
-    ];
-    input = First[input];
-    NetGraph[
-        <|
-            "repInput" -> ReplicateLayer[k],
-            "repOutput" -> ReplicateLayer[{k, 1}],
-            "combine" -> CatenateLayer[2],
-            "mapLossNet" -> NetMapOperator[
-                NetGraph[
-                    <|
-                        "inputPart" -> PartLayer[1 ;; input],
-                        "outputPart" -> PartLayer[input + 1],
-                        "lossnet" -> lossNet[regressionNet, loss, opts]
-                    |>,
-                    {
-                        NetPort["Input"] -> "inputPart",
-                        NetPort["Input"] -> "outputPart",
-                        "inputPart" -> NetPort[{"lossnet", "x"}],
-                        "outputPart" -> NetPort[{"lossnet", "y"}]
-                    }
-                ]
-            ],
-            "alphaDivergence" -> alphaDivergenceLoss[alpha, k]
-        |>,
-        {
-            NetPort["x"] -> "repInput",
-            NetPort["y"] -> "repOutput",
-            {"repInput", "repOutput"} -> "combine" -> "mapLossNet" -> "alphaDivergence"
-        },
-        "y" -> {1},
-        opts
-    ]
-];*)
 
 alphaDivergenceLoss[0, _]                       := AggregationLayer[Mean,   All];
 alphaDivergenceLoss[DirectedInfinity[1], _]     := AggregationLayer[Min,    All];
