@@ -175,15 +175,15 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
         "rep" -> ReplicateLayer[k],
         "sub" -> ThreadingLayer[Subtract],
         "expAlph" -> ElementwiseLayer[Exp],
-        "sum" -> SummationLayer[],
-        "logplusmax" ->  ThreadingLayer[Function[{sum, max}, Log[sum / k] + max]],
+        "average" -> AggregationLayer[Mean, 1],
+        "logplusmax" ->  ThreadingLayer[Function[{avg, max}, Log[avg] + max]],
         "invalpha" -> ElementwiseLayer[Function[-(# / alpha)]]
     |>,
     {
         NetPort["Input"] -> "timesAlpha",
         "timesAlpha" -> "max" -> "rep",
-        {"timesAlpha", "rep"} -> "sub" -> "expAlph" -> "sum" ,
-        {"sum", "max"} -> "logplusmax" -> "invalpha"
+        {"timesAlpha", "rep"} -> "sub" -> "expAlph" -> "average" ,
+        {"average", "max"} -> "logplusmax" -> "invalpha"
     },
     "Input" -> {k}
 ];
