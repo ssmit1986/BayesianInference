@@ -143,7 +143,7 @@ lossNet[
 
 lossNet[
     errorModel_,
-    trainingModel : {"AlphaDivergence", {alpha_?NumericQ, k_Integer}},
+    trainingModel : {"AlphaDivergence", {alpha_, k_Integer}},
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
@@ -164,7 +164,7 @@ lossNet[
     "x" -> OptionValue["Input"]
 ];
 
-alphaDivergenceLoss[0, _]                       := AggregationLayer[Mean,   All];
+alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, _] := AggregationLayer[Mean,   All];
 alphaDivergenceLoss[DirectedInfinity[1], _]     := AggregationLayer[Min,    All];
 alphaDivergenceLoss[DirectedInfinity[-1], _]    := AggregationLayer[Max,    All];
 
@@ -176,7 +176,7 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
         "sub" -> ThreadingLayer[Subtract],
         "expAlph" -> ElementwiseLayer[Exp],
         "sum" -> SummationLayer[],
-        "logplusmax" ->  ThreadingLayer[Function[{sum, max}, Log[sum] + max]],
+        "logplusmax" ->  ThreadingLayer[Function[{sum, max}, Log[sum / k] + max]],
         "invalpha" -> ElementwiseLayer[Function[-(# / alpha)]]
     |>,
     {
@@ -187,6 +187,7 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
     },
     "Input" -> {k}
 ];
+alphaDivergenceLoss[layer_, _] := layer;
 
 End[] (* End Private Context *)
 
