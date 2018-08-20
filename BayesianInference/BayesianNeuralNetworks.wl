@@ -107,7 +107,7 @@ regressionNet[
 
 regressionNet[
     errorModel_,
-    trainingModel : {"AlphaDivergence", _, k_Integer},
+    trainingModel : {"AlphaDivergence", {_, k_Integer} | k_Integer},
     opts : OptionsPattern[]
 ] := NetChain[
     <|
@@ -118,7 +118,7 @@ regressionNet[
 
 Options[lossNet] = Join[
     Options[regressionNet],
-    {}
+    {"Input" -> Automatic}
 ];
 
 lossNet[
@@ -127,7 +127,7 @@ lossNet[
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
-        "regression" -> regressionNet[errorModel, trainingModel, opts],
+        "regression" -> regressionNet[errorModel, trainingModel, FilterRules[{opts}, Options[regressionNet]]],
         "part1" -> PartLayer[1],
         "part2" -> PartLayer[2],
         "loss" -> gaussianLossLayer[]
@@ -137,16 +137,17 @@ lossNet[
         "regression" -> "part1",
         "regression" -> "part2",
         {NetPort["y"], "part1", "part2"} -> "loss" -> NetPort["Loss"]
-    }
+    },
+    "x" -> OptionValue["Input"]
 ];
 
 lossNet[
     errorModel_,
-    trainingModel : {"AlphaDivergence", alpha_?NumericQ, k_Integer},
+    trainingModel : {"AlphaDivergence", {alpha_?NumericQ, k_Integer}},
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
-        "regression" -> regressionNet[errorModel, trainingModel, opts],
+        "regression" -> regressionNet[errorModel, trainingModel, FilterRules[{opts}, Options[regressionNet]]],
         "part1" -> PartLayer[{All, 1}],
         "part2" -> PartLayer[{All, 2}],
         "repY" -> ReplicateLayer[k],
@@ -159,7 +160,8 @@ lossNet[
         "regression" -> "part2",
         NetPort["y"] -> "repY",
         {"repY", "part1", "part2"} -> "loss" -> "alphaDiv" -> NetPort["Loss"]
-    }
+    },
+    "x" -> OptionValue["Input"]
 ];
 
 alphaDivergenceLoss[0, _]                       := AggregationLayer[Mean,   All];
