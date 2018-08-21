@@ -223,9 +223,13 @@ sampleTrainedNet[
                 },
                     mean + stdv * {-1, 0, 1}
                 ]&,
-                Transpose @ Table[
-                    regnet[xvalues, NetEvaluationMode -> "Train", TargetDevice -> OptionValue[TargetDevice]],
-                    {i, nSamples}
+                Transpose @ Partition[
+                    regnet[
+                        Catenate[ConstantArray[xvalues, nSamples]],
+                        NetEvaluationMode -> "Train",
+                        TargetDevice -> OptionValue[TargetDevice]
+                    ],
+                    Length[xvalues]
                 ]
             ]
         ]
