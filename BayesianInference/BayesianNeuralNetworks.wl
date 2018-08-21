@@ -190,9 +190,18 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
 ];
 alphaDivergenceLoss[layer_, _] := layer;
 
+Options[sampleTrainedNet] = {
+    TargetDevice -> "CPU"
+};
+
 sampleTrainedNet[net_NetTrainResultsObject, rest___] := sampleTrainedNet[net["TrainedNet"], rest];
 
-sampleTrainedNet[net : (_NetChain | _NetGraph), xvalues_List, nSamples : (_Integer?Positive) : 100] := 
+sampleTrainedNet[
+    net : (_NetChain | _NetGraph),
+    xvalues_List,
+    nSamples : (_Integer?Positive) : 100,
+    opts : OptionsPattern[]
+] := 
     With[{
         regnet = If[
             MemberQ[
@@ -215,7 +224,7 @@ sampleTrainedNet[net : (_NetChain | _NetGraph), xvalues_List, nSamples : (_Integ
                     mean + stdv * {-1, 0, 1}
                 ]&,
                 Transpose @ Table[
-                    regnet[xvalues, NetEvaluationMode -> "Train"],
+                    regnet[xvalues, NetEvaluationMode -> "Train", TargetDevice -> OptionValue[TargetDevice]],
                     {i, nSamples}
                 ]
             ]
