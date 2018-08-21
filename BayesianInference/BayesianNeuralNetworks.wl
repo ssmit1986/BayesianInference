@@ -5,8 +5,9 @@ BeginPackage["BayesianNeuralNetworks`"]
 
 gaussianLossLayer;
 regressionNet;
-lossNet;
+regressionLossNet;
 alphaDivergenceLoss;
+sampleTrainedNet;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -116,12 +117,12 @@ regressionNet[
     |>
 ];
 
-Options[lossNet] = Join[
+Options[regressionLossNet] = Join[
     Options[regressionNet],
     {"Input" -> Automatic}
 ];
 
-lossNet[
+regressionLossNet[
     errorModel_,
     trainingModel : Automatic : Automatic,
     opts : OptionsPattern[]
@@ -141,7 +142,7 @@ lossNet[
     "x" -> OptionValue["Input"]
 ];
 
-lossNet[
+regressionLossNet[
     errorModel_,
     trainingModel : {"AlphaDivergence", {alpha_, k_Integer}},
     opts : OptionsPattern[]
@@ -188,6 +189,38 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
     "Input" -> {k}
 ];
 alphaDivergenceLoss[layer_, _] := layer;
+
+sampleTrainedNet[net_NetTrainResultsObject, rest___] := sampleTrainedNet[net["TrainedNet"], rest];
+
+sampleTrainedNet[net : (_NetChain | _NetGraph), xvalues_List, nSamples : (_Integer?Positive) : 100] := 
+    With[{
+        regnet = If[
+            MemberQ[
+                Keys @ NetInformation[net, "Layers"],
+                {"alphaDiv", ___}
+            ]
+            ,
+            NetExtract[net, {"regression", "map", "Net"}]
+            ,
+            NetExtract[net, "regression"]
+        ]
+    },
+        AssociationThread[
+            xvalues,
+            Map[
+                With[{
+                    mean = Mean[#[[All, 1]]],
+                    stdv = Sqrt[Variance[#[[All, 1]]] + Mean[Exp[-#[[All, 2]]]]]
+                },
+                    mean + stdv * {-1, 0, 1}
+                ]&,
+                Transpose @ Table[
+                    regnet[xvalues, NetEvaluationMode -> "Train"],
+                    {i, nSamples}
+                ]
+            ]
+        ]
+    ];
 
 End[] (* End Private Context *)
 
