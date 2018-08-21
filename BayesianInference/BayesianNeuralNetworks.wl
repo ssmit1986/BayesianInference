@@ -191,7 +191,8 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
 alphaDivergenceLoss[layer_, _] := layer;
 
 Options[sampleTrainedNet] = {
-    TargetDevice -> "CPU"
+    TargetDevice -> "CPU",
+    "StandardDeviations" -> 1
 };
 
 sampleTrainedNet[net_NetTrainResultsObject, rest___] := sampleTrainedNet[net["TrainedNet"], rest];
@@ -202,7 +203,7 @@ sampleTrainedNet[
     nSamples : (_Integer?Positive) : 100,
     opts : OptionsPattern[]
 ] := 
-    With[{
+    Module[{
         regnet = If[
             MemberQ[
                 Keys @ NetInformation[net, "Layers"],
@@ -212,26 +213,29 @@ sampleTrainedNet[
             NetExtract[net, {"regression", "map", "Net"}]
             ,
             NetExtract[net, "regression"]
-        ]
+        ],
+        nstdevs = OptionValue["StandardDeviations"],
+        samples,
+        mean,
+        stdv
     },
+        samples = Partition[
+            regnet[
+                Catenate[ConstantArray[xvalues, nSamples]],
+                NetEvaluationMode -> "Train",
+                TargetDevice -> OptionValue[TargetDevice]
+            ],
+            Length[xvalues]
+        ];
+        mean = Mean[samples[[All, All, 1]]];
+        stdv = nstdevs * Sqrt[Variance[samples[[All, All, 1]]] + Mean[Exp[-samples[[All, All, 2]]]]];
         AssociationThread[
             xvalues,
-            Map[
-                With[{
-                    mean = Mean[#[[All, 1]]],
-                    stdv = Sqrt[Variance[#[[All, 1]]] + Mean[Exp[-#[[All, 2]]]]]
-                },
-                    mean + stdv * {-1, 0, 1}
-                ]&,
-                Transpose @ Partition[
-                    regnet[
-                        Catenate[ConstantArray[xvalues, nSamples]],
-                        NetEvaluationMode -> "Train",
-                        TargetDevice -> OptionValue[TargetDevice]
-                    ],
-                    Length[xvalues]
-                ]
-            ]
+            Transpose[{
+                mean - stdv,
+                mean,
+                mean + stdv
+            }]
         ]
     ];
 
