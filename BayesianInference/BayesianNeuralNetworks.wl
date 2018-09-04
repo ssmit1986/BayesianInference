@@ -7,11 +7,14 @@ gaussianLossLayer;
 regressionNet;
 regressionLossNet;
 alphaDivergenceLoss;
+extractRegressionNet;
 sampleTrainedNet;
+netRegularizationLoss;
 
 Begin["`Private`"] (* Begin Private Context *)
 
-
+ClearAll["BayesianNeuralNetworks`*"];
+ClearAll["BayesianNeuralNetworks`Private`*"];
 
 (* Computes gaussian negative loglikelihood up to constants *)
 gaussianLossLayer[] := gaussianLossLayer["LogPrecision"];
@@ -195,25 +198,37 @@ Options[sampleTrainedNet] = {
     "StandardDeviations" -> 1
 };
 
-sampleTrainedNet[net_NetTrainResultsObject, rest___] := sampleTrainedNet[net["TrainedNet"], rest];
+extractRegressionNet[net_NetTrainResultsObject] := extractRegressionNet[net["TrainedNet"]];
+
+extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
+    layers = Keys @ NetInformation[net, "Layers"]
+},
+    Which[
+        MemberQ[layers, {"alphaDiv", ___}],
+            NetExtract[net, {"regression", "map", "Net"}],
+        MemberQ[layers, {"regression", ___}],
+            NetExtract[net, "regression"],
+        True,
+            net
+    ]
+];
+
+netWeights[net_] := Flatten @ Values @ NetInformation[
+    NetReplace[
+        extractRegressionNet[net],
+        _BatchNormalizationLayer -> Nothing
+    ],
+    "Arrays"
+];
 
 sampleTrainedNet[
-    net : (_NetChain | _NetGraph),
+    net : (_NetTrainResultsObject | _NetChain | _NetGraph),
     xvalues_List,
     nSamples : (_Integer?Positive) : 100,
     opts : OptionsPattern[]
 ] := 
     Module[{
-        regnet = If[
-            MemberQ[
-                Keys @ NetInformation[net, "Layers"],
-                {"alphaDiv", ___}
-            ]
-            ,
-            NetExtract[net, {"regression", "map", "Net"}]
-            ,
-            NetExtract[net, "regression"]
-        ],
+        regnet = extractRegressionNet[net],
         nstdevs = OptionValue["StandardDeviations"],
         samples,
         mean,
@@ -238,6 +253,28 @@ sampleTrainedNet[
             }]
         ]
     ];
+
+netRegularizationLoss[net : (_NetTrainResultsObject | _NetChain | _NetGraph), rest__] :=
+    netRegularizationLoss[netWeights[net], rest];
+
+netRegularizationLoss[weights_List, lambda_, p_?NumericQ] := If[
+    TrueQ[p == 0]
+    ,
+    lambda * Length[weights]
+    ,
+    lambda * Total[Abs[weights]^p]
+];
+
+netRegularizationLoss[
+    weights_List,
+    lambdaList_List,
+    pList_List
+] /; Length[lambdaList] === Length[pList] := Total[
+    MapThread[
+        netRegularizationLoss[weights, #1, #2]&,
+        {lambdaList, pList}
+    ]
+];
 
 End[] (* End Private Context *)
 
