@@ -1,0 +1,178 @@
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"ProbabilityDistribution", "[", 
+    RowBox[{
+     RowBox[{"Exp", "[", 
+      RowBox[{
+       RowBox[{"-", 
+        SuperscriptBox["x", "2"]}], "-", 
+       SuperscriptBox["y", "2"]}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"x", ",", 
+       RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"y", ",", 
+       RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"RandomVariate", "[", "\[IndentingNewLine]", 
+  RowBox[{
+  "prob", ",", "\[IndentingNewLine]", "10", ",", "\[IndentingNewLine]", 
+   RowBox[{"Method", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<MCMC\>\"", ",", 
+      RowBox[{"\"\<Thinning\>\"", "\[Rule]", "1"}], ",", 
+      RowBox[{"\"\<InitialPoint\>\"", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"0", ",", "0"}], "}"}]}], ",", 
+      RowBox[{"\"\<BurnInPeriod\>\"", "\[Rule]", "Automatic"}], ",", 
+      RowBox[{"\"\<InitialVariance\>\"", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"10", ",", "0"}], "}"}], ",", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "1"}], "}"}]}], "}"}]}]}], "}"}]}]}], 
+  "\[IndentingNewLine]", "]"}]}], "Input",
+ CellLabel->"In[53]:=",ExpressionUUID->"700900b5-fe54-4cf3-9b39-3b712f178436"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"-", "0.12744812305399097`"}], ",", 
+     RowBox[{"-", "0.7782475419103394`"}]}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"-", "0.060850339122023575`"}], ",", 
+     RowBox[{"-", "0.37000925418492486`"}]}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"-", "0.013835481447147094`"}], ",", 
+     RowBox[{"-", "0.0816733258362376`"}]}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.07849985137235203`", ",", "0.48440176044409994`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.12660867120166158`", ",", "0.7793851174448015`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.046685098197773764`", ",", "0.2897930994553432`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.046685098197773764`", ",", "0.2897930994553432`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.020003083475527907`", ",", "0.1247819227311269`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.036463275295599645`", ",", "0.22442235781260983`"}], "}"}], 
+   ",", 
+   RowBox[{"{", 
+    RowBox[{"0.09632549823495337`", ",", "0.5926522425874081`"}], "}"}]}], 
+  "}"}]], "Output",
+ CellLabel->"Out[54]=",ExpressionUUID->"d1255be4-3e8c-4db1-bd11-f27569c47297"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Options", "[", "Random`Private`MCMC", "]"}]], "Input",
+ CellLabel->"In[60]:=",ExpressionUUID->"f0cbfa4f-e466-40fc-b1d4-2899e171b381"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"\<\"Thinning\"\>", "\[Rule]", "Automatic"}], ",", 
+   RowBox[{"\<\"InitialPoint\"\>", "\[Rule]", "Automatic"}], ",", 
+   RowBox[{"\<\"InitialVariance\"\>", "\[Rule]", "Automatic"}], ",", 
+   RowBox[{"\<\"BurnInPeriod\"\>", "\[Rule]", "Automatic"}], ",", 
+   RowBox[{"\<\"MinEffectiveSampleSizeRatio\"\>", "\[Rule]", "Automatic"}]}], 
+  "}"}]], "Output",
+ CellLabel->"Out[60]=",ExpressionUUID->"bd560495-98d3-468e-9c21-54c654a0d91d"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"Attributes", "[", "Random`Private`MCMC", "]"}], "=", 
+  RowBox[{"{", "Protected", "}"}]}], "\[IndentingNewLine]", 
+ RowBox[{"Definition", "[", "Random`Private`MCMC", "]"}]}], "Input",
+ CellLabel->"In[61]:=",ExpressionUUID->"60d7a07c-8659-4e2d-a071-97485552867d"],
+
+Cell[BoxData[
+ RowBox[{"{", "Protected", "}"}]], "Output",
+ CellLabel->"Out[61]=",ExpressionUUID->"d8d9f462-39df-453e-ac4f-fe457da5d060"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Names", "[", "\"\<Random`Private`*\>\"", "]"}], "//", 
+  "TableForm"}]], "Input",
+ CellLabel->"In[56]:=",ExpressionUUID->"2035f4fd-9834-433e-b10b-a4e724977eb2"],
+
+Cell[BoxData[
+ TagBox[
+  TagBox[GridBox[{
+     {"\<\"Random`Private`AcceptanceRejection\"\>"},
+     {"\<\"Random`Private`BTPE\"\>"},
+     {"\<\"Random`Private`CompoundSum\"\>"},
+     {"\<\"Random`Private`ConditionalStandardBallUniformDistribution\"\>"},
+     {"\<\"Random`Private`DevroyeBinomial\"\>"},
+     {"\<\"Random`Private`DoublesToInteger\"\>"},
+     {"\<\"Random`Private`H2PE\"\>"},
+     {"\<\"Random`Private`IntegerToDoubles\"\>"},
+     {"\<\"Random`Private`IntegerUniformDistribution\"\>"},
+     {"\<\"Random`Private`InternalComplexNormalDistribution\"\>"},
+     {"\<\"Random`Private`InternalExponentialDistribution\"\>"},
+     {"\<\"Random`Private`InternalGammaDistribution\"\>"},
+     {"\<\"Random`Private`InternalNormalDistribution\"\>"},
+     {"\<\"Random`Private`InternalPoissonDistribution\"\>"},
+     {"\<\"Random`Private`InternalStandardBallUniformDistribution\"\>"},
+     {"\<\"Random`Private`InternalStandardSimplexUniformDistribution\"\>"},
+     {"\<\"Random`Private`InternalStandardSphereUniformDistribution\"\>"},
+     {"\<\"Random`Private`InverseTransform\"\>"},
+     {"\<\"Random`Private`LogBinomialPDF\"\>"},
+     {"\<\"Random`Private`LogPoissonPDF\"\>"},
+     {"\<\"Random`Private`MapThreadMax\"\>"},
+     {"\<\"Random`Private`MapThreadMin\"\>"},
+     {"\<\"Random`Private`MCMC\"\>"},
+     {"\<\"Random`Private`MPZipfDistribution\"\>"},
+     {"\<\"Random`Private`MultiUniformDistribution\"\>"},
+     {"\<\"Random`Private`OrderingAndCounts\"\>"},
+     {"\<\"Random`Private`PositionsOf\"\>"},
+     {"\<\"Random`Private`RandomVariateVector\"\>"},
+     {"\<\"Random`Private`RejectionStandardBallUniformDistribution\"\>"},
+     {"\<\"Random`Private`SelectWithinRange\"\>"},
+     {"\<\"Random`Private`StructureQuantityArrayRandomVector\"\>"},
+     {"\<\"Random`Private`ZigguratExponentialDistribution\"\>"},
+     {"\<\"Random`Private`ZigguratNormalDistribution\"\>"}
+    },
+    GridBoxAlignment->{
+     "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+      "RowsIndexed" -> {}},
+    GridBoxSpacings->{"Columns" -> {
+        Offset[0.27999999999999997`], {
+         Offset[0.5599999999999999]}, 
+        Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+        Offset[0.2], {
+         Offset[0.4]}, 
+        Offset[0.2]}, "RowsIndexed" -> {}}],
+   Column],
+  Function[BoxForm`e$, 
+   TableForm[BoxForm`e$]]]], "Output",
+ CellLabel->
+  "Out[56]//TableForm=",ExpressionUUID->"a99aafaf-cfd2-4aa7-980e-8a39c00d17d2"]
+}, Open  ]]
+},
+WindowSize->{1243, 700},
+WindowMargins->{{Automatic, 88}, {Automatic, 84}},
+PrivateNotebookOptions->{"FileOutlineCache"->False},
+TrackCellChangeTimes->False,
+Magnification:>1.2 Inherited,
+FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
+StyleDefinitions->"Default.nb"
+]
+
