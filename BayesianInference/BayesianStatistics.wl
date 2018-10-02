@@ -119,6 +119,68 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
+nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := With[{
+    logZero = -0.99 * $MaxMachineNumber (* Don't pick -$MaxMachineNumber to prevent going outside of machine numbers accidentally *)
+},
+    Compile[{
+        {point, _Real, 1}
+    },
+        Module[{
+            logLike = logLikelihood[point]
+        },
+            If[ logLike > logThreshold,
+                logPriorDensity[point],
+                logZero
+            ]
+        ],
+        RuntimeAttributes -> {Listable},
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True, 
+            "InlineCompiledFunctions" -> True
+        }
+    ]
+];
+
+MCMC[
+    logDensity_,
+    initialPoint_List,
+    meanEst_List,
+    covEst_List,
+    {numberOfSteps_Integer, extraSteps_Integer, maxSteps_Integer},
+    minMaxAcceptanceRate : {_, _}
+] := Module[{
+    chain = Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
+        "FullState",
+        {
+            initialPoint,
+            0,
+            meanEst,
+            covEst
+        },
+        logDensity,
+        {IdentityMatrix[Length[initialPoint]], 0},
+        Real
+    ]
+},
+    Statistics`MCMC`MarkovChainIterate[chain, {1, numberOfSteps}];
+    While[ True,
+        If[ Or[
+                TrueQ @ Between[chain["AcceptanceRate"], minMaxAcceptanceRate],
+                TrueQ[chain["StateData"][[2]] >= maxSteps]
+            ],
+            Break[],
+            Statistics`MCMC`MarkovChainIterate[chain, {1, extraSteps}]
+        ]
+    ];
+    Append[
+        AssociationThread[
+            {"Point", "MeanEstimate", "CovarianceEstimate"},
+            chain["StateData"][[{1, 3, 4}]]
+        ],
+        "AcceptanceRate" -> chain["AcceptanceRate"]
+    ]
+];
+
 constrainedMarkovChainMonteCarlo[
     pdfFunction_,
     livingPoints_List,
