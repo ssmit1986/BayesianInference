@@ -140,32 +140,36 @@ MCMC[
     covEst_List,
     {numberOfSteps_Integer, extraSteps_Integer, maxSteps_Integer},
     minMaxAcceptanceRate : {_, _}
-] := Module[{
-    (* Initialise the chain at step 10 so that the estimated covariance does not go all over the place *)
-    chain = Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
-        "FullState",
-        {initialPoint, 10, meanEst, covEst},
-        logDensity,
-        {covEst, 10},
-        Real
-    ]
+] := With[{
+    startingIteration = 10
 },
-    Statistics`MCMC`MarkovChainIterate[chain, {1, numberOfSteps}];
-    While[ True,
-        If[ Or[
-                TrueQ @ Between[chain["AcceptanceRate"], minMaxAcceptanceRate],
-                TrueQ[chain["StateData"][[2]] >= maxSteps]
-            ],
-            Break[],
-            Statistics`MCMC`MarkovChainIterate[chain, {1, extraSteps}]
+    Module[{
+        (* Initialise the chain at step 10 so that the estimated covariance does not go all over the place *)
+        chain = Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
+            "FullState",
+            {initialPoint, startingIteration, meanEst, covEst},
+            logDensity,
+            {covEst, startingIteration},
+            Real
         ]
-    ];
-    Append[
-        AssociationThread[
-            {"Point", "MeanEstimate", "CovarianceEstimate"},
-            chain["StateData"][[{1, 3, 4}]]
-        ],
-        "AcceptanceRate" -> chain["AcceptanceRate"]
+    },
+        Statistics`MCMC`MarkovChainIterate[chain, {1, numberOfSteps}];
+        While[ True,
+            If[ Or[
+                    TrueQ @ Between[chain["AcceptanceRate"], minMaxAcceptanceRate],
+                    TrueQ[chain["StateData"][[2]] >= maxSteps + startingIteration]
+                ],
+                Break[],
+                Statistics`MCMC`MarkovChainIterate[chain, {1, extraSteps}]
+            ]
+        ];
+        Append[
+            AssociationThread[
+                {"Point", "MeanEstimate", "CovarianceEstimate"},
+                chain["StateData"][[{1, 3, 4}]]
+            ],
+            "AcceptanceRate" -> chain["AcceptanceRate"]
+        ]
     ]
 ];
 
@@ -260,9 +264,9 @@ nestedSamplingInternal[
     mcSteps = Replace[
         OptionValue["MonteCarloSteps"],
         {
-            i_Integer :> {i, i, 5},
+            i_Integer :> {i, i, 5 * i},
             other : Except[{_Integer, _Integer, _Integer}] :> (
-                Message[nestedSampling::MCSteps, Short[other], {200, 200, 5}];
+                Message[nestedSampling::MCSteps, Short[other], {200, 200, 1000}];
                 {200, 200, 5}
             )
         } 
