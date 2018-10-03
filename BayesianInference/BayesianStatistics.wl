@@ -9,6 +9,8 @@ combineRuns;
 predictiveDistribution;
 calculationReport;
 parallelNestedSampling;
+defineInferenceProblem;
+bayesianInferenceObject;
 
 Begin["`Private`"];
 
@@ -118,6 +120,34 @@ Options[directPosteriorDistribution] = Join[
     Options[ProbabilityDistribution],
     {"IntegrationOptions" -> {}}
 ];
+
+defineInferenceProblem[assoc_?AssociationQ] := Catch[
+    Module[{
+        keys = Keys[assoc],
+        obj = <||>,
+        tempKeys
+    },
+        Which[
+            MemberQ[keys, "LogLikelihood"],
+                AppendTo[obj, assoc["LogLikelihood"]],
+            SubsetQ[keys, tempKeys = {"Data", "GeneratingDistribution", "Parameters"}],
+                AppendTo[obj, logLikelihoodFunction @@ Values[assoc[tempKeys]]]
+        ]
+    ],
+    "problemDef"
+];
+
+logLikelihoodFunction[
+    data : {__},
+    dist_,
+    parameters : {
+        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
+    } 
+] := Module[{
+    logPDF = dist
+},
+    bla
+]
 
 nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := Compile[{
     {point, _Real, 1}
