@@ -310,7 +310,7 @@ nestedSamplingInternal[
         Return["Bad likelihood function"]
     ];
     meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
-    covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
+    covEst = DiagonalMatrix @ Variance[Values @ variableSamplePoints[[All, "Point"]]];
     
     estimatedMissingEvidence = With[{
         lmax = OptionValue["LikelihoodMaximum"]
