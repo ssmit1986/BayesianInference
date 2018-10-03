@@ -26,6 +26,7 @@ $BayesianContexts = Flatten[
     }
 ];
 
+SetAttributes[quietCheck, {HoldAll}];
 quietCheck[expr_, failexpr_, msgs : {__MessageName}] :=
     Quiet[
         Check[
@@ -42,7 +43,6 @@ quietCheck[expr_, failexpr_] :=
             failexpr
         ]
     ];
-SetAttributes[quietCheck, {HoldAll}]
 
 passOptionsDown[functionName_Symbol, {opts : OptionsPattern[]}] := passOptionsDown[functionName, functionName, {opts}];
 
