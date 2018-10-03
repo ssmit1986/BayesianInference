@@ -141,16 +141,12 @@ MCMC[
     {numberOfSteps_Integer, extraSteps_Integer, maxSteps_Integer},
     minMaxAcceptanceRate : {_, _}
 ] := Module[{
+    (* Initialise the chain at step 10 so that the estimated covariance does not go all over the place *)
     chain = Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
         "FullState",
-        {
-            initialPoint,
-            0,
-            meanEst,
-            covEst
-        },
+        {initialPoint, 10, meanEst, covEst},
         logDensity,
-        {IdentityMatrix[Length[initialPoint]], 0},
+        {covEst, 10},
         Real
     ]
 },
@@ -256,7 +252,7 @@ nestedSampling::MCSteps = "Cannot use value `1` for option MonteCarloSteps. Defa
 nestedSamplingInternal[
     logLikelihoodFunction_,
     logPriorDensityFunction_,
-    startingPoints_?(MatrixQ[#, NumericQ]&),
+    startingPoints_List?(Length[#] > 1 && MatrixQ[#, NumericQ]&),
     opts : OptionsPattern[]
 ] := Module[{
     maxiterations = Max[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
@@ -283,6 +279,7 @@ nestedSamplingInternal[
     constrainedLogDensity,
     meanEst,
     covEst,
+    var,
     factor,
     estimatedMissingEvidence,
     evidence = 0,
@@ -313,11 +310,7 @@ nestedSamplingInternal[
         Return["Bad likelihood function"]
     ];
     meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
-    covEst = quietCheck[
-        Covariance[Values @ variableSamplePoints[[All, "Point"]]],
-        IdentityMatrix[parameterSpaceDimension],
-        {Covariance::shlen}
-    ];
+    covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
     
     estimatedMissingEvidence = With[{
         lmax = OptionValue["LikelihoodMaximum"]
@@ -384,7 +377,9 @@ nestedSamplingInternal[
             logLikelihoodFunction,
             likelihoodThreshold
         ];
+        var = Variance[bestPoints[[All, "Point"]]];
         factor = 1;
+        covEst = Divide[covEst + 3 * DiagonalMatrix[var], 4]; (* Retain a fraction of the previous covariance estimate *)
         While[ True,
             newPoint = MCMC[
                 constrainedLogDensity,
@@ -405,7 +400,7 @@ nestedSamplingInternal[
             Append[
                 variableSamplePoints,
                 iteration + nSamples -> Append[
-                    newPoint[[{"Point", "AcceptanceRate"}]],
+                    newPoint[[{"Point", "AcceptanceRate", "MeanEstimate", "CovarianceEstimate"}]],
                     "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]]
                 ]
             ],
