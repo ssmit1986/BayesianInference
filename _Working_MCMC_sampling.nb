@@ -1,6 +1,165 @@
 Notebook[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"SetDirectory", "[", 
+   RowBox[{"NotebookDirectory", "[", "]"}], "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"ClearAll", "[", 
+   RowBox[{
+   "\"\<BayesianStatistics`*\>\"", ",", 
+    "\"\<BayesianStatistics`Private`*\>\"", ",", 
+    "\"\<BayesianUtilities`*\>\"", ",", 
+    "\"\<BayesianUtilities`Private`*\>\""}], "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"<<", "BayesianInference`"}], "\[IndentingNewLine]", 
+ RowBox[{"Needs", "[", "\"\<CompiledFunctionTools`\>\"", "]"}]}], "Input",
+ CellLabel->"In[48]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dist", "=", 
+   RowBox[{"CauchyDistribution", "[", 
+    RowBox[{"0", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"RandomVariate", "[", 
+    RowBox[{"dist", ",", "10"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"logLike", "=", 
+    RowBox[{"With", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"fun", "=", 
+        RowBox[{"Activate", "@", 
+         RowBox[{"Function", "[", "\[IndentingNewLine]", 
+          RowBox[{"Evaluate", "[", "\[IndentingNewLine]", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"Assuming", "[", 
+              RowBox[{
+               RowBox[{"DistributionParameterAssumptions", "[", "#", "]"}], 
+               ",", "\[IndentingNewLine]", 
+               RowBox[{"Simplify", "@", 
+                RowBox[{"LogLikelihood", "[", 
+                 RowBox[{"#", ",", "testdata"}], "]"}]}]}], 
+              "\[IndentingNewLine]", "]"}], "&"}], "@", 
+            RowBox[{"CauchyDistribution", "[", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"Inactive", "[", "Part", "]"}], "[", 
+               RowBox[{"#", ",", "1"}], "]"}], ",", 
+              RowBox[{
+               RowBox[{"Inactive", "[", "Part", "]"}], "[", 
+               RowBox[{"#", ",", "2"}], "]"}]}], "]"}]}], 
+           "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", "]"}]}]}], 
+       "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"Compile", "[", 
+       RowBox[{
+        RowBox[{"{", "\[IndentingNewLine]", 
+         RowBox[{"{", 
+          RowBox[{"pt", ",", "_Real", ",", "1"}], "}"}], 
+         "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
+        RowBox[{"If", "[", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"pt", "[", 
+            RowBox[{"[", "2", "]"}], "]"}], ">", "0"}], ",", 
+          RowBox[{"fun", "[", "pt", "]"}], ",", "$MachineLogZero"}], "]"}], 
+        ",", "\[IndentingNewLine]", 
+        RowBox[{"CompilationOptions", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"\"\<InlineExternalDefinitions\>\"", "\[Rule]", "True"}], 
+           ",", 
+           RowBox[{"\"\<InlineCompiledFunctions\>\"", "\[Rule]", "True"}]}], 
+          "}"}]}]}], "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
+     "]"}]}], ";"}], "\[IndentingNewLine]", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"logLike", "=", 
+     RowBox[{
+      RowBox[{"-", 
+       RowBox[{"#", ".", "#"}]}], "&"}]}], ";"}], 
+   "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"logPrior", "=", " ", 
+   RowBox[{"Compile", "[", 
+    RowBox[{
+     RowBox[{"{", "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"pt", ",", "_Real", ",", "1"}], "}"}], "\[IndentingNewLine]", 
+      "}"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"pt", "[", 
+         RowBox[{"[", "2", "]"}], "]"}], ">", "0"}], ",", 
+       RowBox[{"-", 
+        RowBox[{"pt", "[", 
+         RowBox[{"[", "2", "]"}], "]"}]}], ",", "$MachineLogZero"}], "]"}], 
+     ",", "\[IndentingNewLine]", 
+     RowBox[{"CompilationOptions", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"\"\<InlineExternalDefinitions\>\"", "\[Rule]", "True"}], ",", 
+        RowBox[{"\"\<InlineCompiledFunctions\>\"", "\[Rule]", "True"}]}], 
+       "}"}]}]}], "\[IndentingNewLine]", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"nSamples", " ", "=", " ", "30"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"startingPts", " ", "=", " ", 
+   RowBox[{"Transpose", "[", 
+    RowBox[{"{", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"RandomReal", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"-", "20"}], ",", "20"}], "}"}], ",", "nSamples"}], "]"}], 
+      ",", "\[IndentingNewLine]", 
+      RowBox[{"RandomVariate", "[", 
+       RowBox[{
+        RowBox[{"ProbabilityDistribution", "[", 
+         RowBox[{
+          RowBox[{"1", "/", "y"}], ",", 
+          RowBox[{"{", 
+           RowBox[{"y", ",", "0.05", ",", "20"}], "}"}], ",", 
+          RowBox[{"Method", "\[Rule]", "\"\<Normalize\>\""}]}], "]"}], ",", 
+        "nSamples"}], "]"}]}], "\[IndentingNewLine]", "}"}], 
+    "\[IndentingNewLine]", "]"}]}], ";"}]}], "Input",
+ CellLabel->"In[97]:=",ExpressionUUID->"1f05f520-7430-41d5-ac4c-4b3934617592"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"result", "=", 
+   RowBox[{
+   "BayesianStatistics`Private`nestedSamplingInternal", "[", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+    "logLike", ",", "\[IndentingNewLine]", "logPrior", ",", 
+     "\[IndentingNewLine]", "startingPts"}], "\[IndentingNewLine]", "]"}]}], 
+  ";"}]], "Input",
+ CellLabel->
+  "In[109]:=",ExpressionUUID->"39ded403-5fbe-4a3d-baed-440a19cb2d29"],
+
+Cell[BoxData[
+ RowBox[{"result", "[", 
+  RowBox[{"[", 
+   RowBox[{"\"\<Samples\>\"", ",", "All", ",", "\"\<LogLikelihood\>\""}], 
+   "]"}], "]"}]], "Input",
+ CellLabel->
+  "In[110]:=",ExpressionUUID->"6c17b624-f66e-4c1e-ae1d-b9b6a92d4901"],
 
 Cell[CellGroupData[{
+
+Cell["Old", \
+"Subsubsection",ExpressionUUID->"2a683dc0-0998-4cf1-a94f-93e4e6de7bd4"],
+
+Cell[CellGroupData[{
+
 Cell[BoxData[{
  RowBox[{
   RowBox[{"prob", "=", 
@@ -165,6 +324,7 @@ Cell[BoxData[
    TableForm[BoxForm`e$]]]], "Output",
  CellLabel->
   "Out[56]//TableForm=",ExpressionUUID->"a99aafaf-cfd2-4aa7-980e-8a39c00d17d2"]
+}, Open  ]]
 }, Open  ]]
 },
 WindowSize->{1243, 700},

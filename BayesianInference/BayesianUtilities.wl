@@ -8,8 +8,11 @@ normalizeData;
 takePosteriorFraction;
 $BayesianContexts;
 logSumExp;
+$MachineLogZero;
 
 Begin["`Private`"] (* Begin Private Context *)
+
+$MachineLogZero = - 0.99 * $MaxMachineNumber;
 
 $BayesianContexts = Flatten[
     {

@@ -119,26 +119,18 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
-nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := With[{
-    logZero = -0.99 * $MaxMachineNumber (* Don't pick -$MaxMachineNumber to prevent going outside of machine numbers accidentally *)
+nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := Compile[{
+    {point, _Real, 1}
 },
-    Compile[{
-        {point, _Real, 1}
-    },
-        Module[{
-            logLike = logLikelihood[point]
-        },
-            If[ logLike > logThreshold,
-                logPriorDensity[point],
-                logZero
-            ]
-        ],
-        RuntimeAttributes -> {Listable},
-        CompilationOptions -> {
-            "InlineExternalDefinitions" -> True, 
-            "InlineCompiledFunctions" -> True
-        }
-    ]
+    If[ logLikelihood[point] > logThreshold,
+        logPriorDensity[point],
+        $MachineLogZero
+    ],
+    RuntimeAttributes -> {Listable},
+    CompilationOptions -> {
+        "InlineExternalDefinitions" -> True, 
+        "InlineCompiledFunctions" -> True
+    }
 ];
 
 MCMC[
@@ -419,6 +411,8 @@ nestedSamplingInternal[
             ],
             nSamples
         ];
+        evidence = Total[variableSamplePoints[[All, "CrudePosteriorWeight"]]];
+        entropy = calculateEntropy[variableSamplePoints, evidence];
         PreIncrement[iteration];
     ];
     
