@@ -249,11 +249,11 @@ calculateXValues = Compile[{
 },
     Join[
         Exp[-Divide[#, nSamplePool]]& /@ Range[nDeleted],
-        Reverse @ Rest @ Most @ Subdivide[Exp[-Divide[nDeleted, nSamplePool]], nSamplePool + 1]
-    ],
-    {
-        {Subdivide[_, _], _Real, 1}
-    }
+        Reverse @ Table[
+            (i / (nSamplePool + 1)) * Exp[-Divide[nDeleted, nSamplePool]],
+            {i, 1, nSamplePool}
+        ]
+    ]
 ];
 
 calculateEntropy[samples_Association, evidence_] := Subtract[
