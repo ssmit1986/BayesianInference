@@ -136,7 +136,7 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
             MemberQ[keys, "LogLikelihood"],
                 AppendTo[obj, assoc["LogLikelihood"]],
             SubsetQ[keys, tempKeys = {"Data", "GeneratingDistribution", "Parameters"}],
-                AppendTo[obj, logLikelihoodFunction @@ Values[assoc[tempKeys]]]
+                AppendTo[obj, "LogLikelihood" -> logLikelihoodFunction @@ Values[assoc[tempKeys]]]
         ]
     ],
     "problemDef"
