@@ -121,12 +121,17 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
-defineInferenceProblem[assoc_?AssociationQ] := Catch[
+defineInferenceProblem[input_?AssociationQ] := Catch[
     Module[{
-        keys = Keys[assoc],
+        assoc = input,
+        keys,
         obj = <||>,
         tempKeys
     },
+        keys = Keys[assoc];
+        If[ MemberQ[keys, "Data"] && VectorQ[assoc["Data"]],
+            assoc["Data"] = List /@ assoc["Data"]
+        ];
         Which[
             MemberQ[keys, "LogLikelihood"],
                 AppendTo[obj, assoc["LogLikelihood"]],
@@ -137,16 +142,89 @@ defineInferenceProblem[assoc_?AssociationQ] := Catch[
     "problemDef"
 ];
 
+logLikelihoodFunction[data_List?VectorQ, rest__] := logLikelihoodFunction[List /@ data, rest];
+
 logLikelihoodFunction[
-    data : {__},
+    data_,
     dist_,
     parameters : {
         {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
     } 
-] := Module[{
-    logPDF = dist
+] := logLikelihoodFunction[data, dist, parameters[[All, 1]], parameters[[All, {2, 3}]]]
+
+logLikelihoodFunction[
+    data_List?(MatrixQ[#, NumericQ]&),
+    dist_,
+    params : {__Symbol},
+    constraintList : {
+        {_?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
+    } 
+] /; Length[params] === Length[constraintList] := Module[{
+    dim = Length[params],
+    dataDim = Dimensions[data][[2]],
+    logLike,
+    constraints
 },
-    bla
+    logLike = Activate @ Function[
+        {paramVector, dataPoint},
+        Evaluate @ LogLikelihood[
+            dist /. Thread[
+                params -> Table[
+                    Inactive[Part][paramVector, i],
+                    {i, 1, dim}
+                ]
+            ],
+            If[ dataDim === 1,
+                {Inactive[Part][dataPoint, 1]},
+                List @ Table[
+                    Inactive[Part][dataPoint, i],
+                    {i, 1, dataDim}
+                ]
+            ]
+        ]
+    ];
+    logLike = Compile[{
+        {input, _Real, 1},
+        {pt, _Real, 1}
+    },
+        logLike[input, pt],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        },
+        RuntimeAttributes -> {Listable},
+        Parallelization -> True
+    ];
+    constraints = Activate @ Function @ Evaluate[
+        And @@ MapIndexed[
+            Function[{cons, index},
+                Switch[ cons,
+                    {_DirectedInfinity, _DirectedInfinity},
+                        True,
+                    {_DirectedInfinity, _},
+                        Inactive[Part][#, First[index]] < cons[[2]],
+                    {_, _DirectedInfinity},
+                        cons[[1]] < Inactive[Part][#, First[index]],
+                    _,
+                        cons[[1]] < Inactive[Part][#, First[index]] < cons[[2]]
+                ]
+            ],
+            constraintList
+        ]
+    ];
+    Compile[{
+        {input, _Real, 1}
+    },
+        If[ constraints[input],
+            Total @ logLike[input, data],
+            $MachineLogZero
+        ],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> False
+        },
+        RuntimeAttributes -> {Listable}
+    ]
 ]
 
 nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := Compile[{
