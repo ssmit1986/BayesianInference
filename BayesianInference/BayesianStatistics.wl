@@ -142,25 +142,14 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
     "problemDef"
 ];
 
-logLikelihoodFunction[data_List?VectorQ, rest__] := logLikelihoodFunction[List /@ data, rest];
-
-logLikelihoodFunction[
-    data_,
-    dist_,
-    parameters : {
-        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
-    } 
-] := logLikelihoodFunction[data, dist, parameters[[All, 1]], parameters[[All, {2, 3}]]]
-
 logLikelihoodFunction[
     data_List?(MatrixQ[#, NumericQ]&),
     dist_,
-    params : {__Symbol},
-    constraintList : {
-        {_?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
-    } 
-] /; Length[params] === Length[constraintList] := Module[{
-    dim = Length[params],
+    parameters : {
+        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
+    }
+] := Module[{
+    dim = Length[parameters],
     dataDim = Dimensions[data][[2]],
     logLike,
     constraints
@@ -169,7 +158,7 @@ logLikelihoodFunction[
         {paramVector, dataPoint},
         Evaluate @ LogLikelihood[
             dist /. Thread[
-                params -> Table[
+                parameters[[All, 1]] -> Table[
                     Inactive[Part][paramVector, i],
                     {i, 1, dim}
                 ]
@@ -196,20 +185,34 @@ logLikelihoodFunction[
         Parallelization -> True
     ];
     constraints = Activate @ Function @ Evaluate[
-        And @@ MapIndexed[
-            Function[{cons, index},
-                Switch[ cons,
-                    {_DirectedInfinity, _DirectedInfinity},
-                        True,
-                    {_DirectedInfinity, _},
-                        Inactive[Part][#, First[index]] < cons[[2]],
-                    {_, _DirectedInfinity},
-                        cons[[1]] < Inactive[Part][#, First[index]],
-                    _,
-                        cons[[1]] < Inactive[Part][#, First[index]] < cons[[2]]
+        Simplify @ And[
+            ReplaceAll[
+                And @@ Cases[
+                    BooleanConvert[DistributionParameterAssumptions[dist], "CNF"],
+                    _Less | _Greater | _GreaterEqual | _LessEqual
+                ],
+                Thread[
+                    parameters[[All, 1]] -> Table[
+                        Inactive[Part][#, i],
+                        {i, 1, dim}
+                    ]
                 ]
             ],
-            constraintList
+            And @@ MapIndexed[
+                Function[{cons, index},
+                    Switch[ cons,
+                        {_DirectedInfinity, _DirectedInfinity},
+                            True,
+                        {_DirectedInfinity, _},
+                            Inactive[Part][#, First[index]] < cons[[2]],
+                        {_, _DirectedInfinity},
+                            cons[[1]] < Inactive[Part][#, First[index]],
+                        _,
+                            cons[[1]] < Inactive[Part][#, First[index]] < cons[[2]]
+                    ]
+                ],
+                parameters[[All, {2, 3}]]
+            ]
         ]
     ];
     Compile[{
