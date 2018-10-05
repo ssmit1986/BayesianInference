@@ -154,20 +154,47 @@ logLikelihoodFunction[
     logLike,
     constraints
 },
+    constraints = FullSimplify @ And[
+        And @@ Cases[
+            BooleanConvert[DistributionParameterAssumptions[dist], "CNF"],
+            _Less | _Greater | _GreaterEqual | _LessEqual,
+            {0, 1}
+        ],
+        And @@ (Less @@@ parameters[[All, {2, 1, 3}]])
+    ];
     logLike = Activate @ Function[
         {paramVector, dataPoint},
-        Evaluate @ LogLikelihood[
-            dist /. Thread[
+        Evaluate[
+            With[{
+                vars = Table[
+                    Inactive[Part][dataPoint, i],
+                    {i, 1, dataDim}
+                ]
+            },
+                Simplify[
+                    LogLikelihood[
+                        dist,
+                        If[ dataDim === 1, vars, List @ vars]
+                    ],
+                    And[
+                        constraints,
+                        And @@ (Less @@@ Transpose @ Insert[
+                            Transpose[
+                                Cases[
+                                    DistributionDomain[dist],
+                                    dom_Interval :> First[dom],
+                                    {0, 1}
+                                ]
+                            ],
+                            vars,
+                            2
+                        ])
+                    ] 
+                ]
+            ] /. Thread[
                 parameters[[All, 1]] -> Table[
                     Inactive[Part][paramVector, i],
                     {i, 1, dim}
-                ]
-            ],
-            If[ dataDim === 1,
-                {Inactive[Part][dataPoint, 1]},
-                List @ Table[
-                    Inactive[Part][dataPoint, i],
-                    {i, 1, dataDim}
                 ]
             ]
         ]
@@ -185,33 +212,10 @@ logLikelihoodFunction[
         Parallelization -> True
     ];
     constraints = Activate @ Function @ Evaluate[
-        Simplify @ And[
-            ReplaceAll[
-                And @@ Cases[
-                    BooleanConvert[DistributionParameterAssumptions[dist], "CNF"],
-                    _Less | _Greater | _GreaterEqual | _LessEqual
-                ],
-                Thread[
-                    parameters[[All, 1]] -> Table[
-                        Inactive[Part][#, i],
-                        {i, 1, dim}
-                    ]
-                ]
-            ],
-            And @@ MapIndexed[
-                Function[{cons, index},
-                    Switch[ cons,
-                        {_DirectedInfinity, _DirectedInfinity},
-                            True,
-                        {_DirectedInfinity, _},
-                            Inactive[Part][#, First[index]] < cons[[2]],
-                        {_, _DirectedInfinity},
-                            cons[[1]] < Inactive[Part][#, First[index]],
-                        _,
-                            cons[[1]] < Inactive[Part][#, First[index]] < cons[[2]]
-                    ]
-                ],
-                parameters[[All, {2, 3}]]
+        constraints /. Thread[
+            parameters[[All, 1]] -> Table[
+                Inactive[Part][#, i],
+                {i, 1, dim}
             ]
         ]
     ];
