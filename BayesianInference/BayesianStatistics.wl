@@ -142,6 +142,8 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
     "problemDef"
 ];
 
+defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
+
 logLikelihoodFunction[
     data_List?(MatrixQ[#, NumericQ]&),
     dist_,
@@ -152,14 +154,11 @@ logLikelihoodFunction[
     dim = Length[parameters],
     dataDim = Dimensions[data][[2]],
     logLike,
-    constraints
+    constraints,
+    domain = DistributionDomain[dist]
 },
     constraints = FullSimplify @ And[
-        And @@ Cases[
-            BooleanConvert[DistributionParameterAssumptions[dist], "CNF"],
-            _Less | _Greater | _GreaterEqual | _LessEqual,
-            {0, 1}
-        ],
+        DistributionParameterAssumptions[dist],
         And @@ (Less @@@ parameters[[All, {2, 1, 3}]])
     ];
     logLike = Activate @ Function[
@@ -171,17 +170,23 @@ logLikelihoodFunction[
                     {i, 1, dataDim}
                 ]
             },
-                Simplify[
-                    LogLikelihood[
-                        dist,
-                        If[ dataDim === 1, vars, List @ vars]
+                FullSimplify[
+                    Replace[
+                        LogLikelihood[
+                            dist,
+                            If[ Head[domain] === List , List @ vars, vars]
+                        ],
+                        _LogLikelihood :> (
+                            Message[defineInferenceProblem::logLike, dist];
+                            Throw[$Failed, "problemDef"]
+                        )
                     ],
                     And[
                         constraints,
                         And @@ (Less @@@ Transpose @ Insert[
                             Transpose[
                                 Cases[
-                                    DistributionDomain[dist],
+                                    domain,
                                     dom_Interval :> First[dom],
                                     {0, 1}
                                 ]
@@ -212,7 +217,11 @@ logLikelihoodFunction[
         Parallelization -> True
     ];
     constraints = Activate @ Function @ Evaluate[
-        constraints /. Thread[
+        And @@ Cases[
+            BooleanConvert[constraints, "CNF"],
+            _Less | _Greater | _GreaterEqual | _LessEqual,
+            {0, 1}
+        ] /. Thread[
             parameters[[All, 1]] -> Table[
                 Inactive[Part][#, i],
                 {i, 1, dim}
