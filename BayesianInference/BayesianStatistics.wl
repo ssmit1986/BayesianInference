@@ -121,11 +121,14 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
+defineInferenceProblem::insuffInfo = "Not enough information was provide to define the problem. Failed at: `1`";
+defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
+defineInferenceProblem::prior = "Unable to automatically construct the log prior PDF function for distribution `1`. Please construct one manually";
+
 defineInferenceProblem[input_?AssociationQ] := Catch[
     Module[{
         assoc = input,
         keys,
-        obj = <||>,
         tempKeys
     },
         keys = Keys[assoc];
@@ -133,16 +136,111 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
             assoc["Data"] = List /@ assoc["Data"]
         ];
         Which[
-            MemberQ[keys, "LogLikelihood"],
-                AppendTo[obj, assoc["LogLikelihood"]],
+            MemberQ[keys, "LogLikelihoodFunction"],
+                Null,
             SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "Parameters"}],
-                AppendTo[obj, "LogLikelihood" -> logLikelihoodFunction @@ Values[assoc[tempKeys]]]
-        ]
+                AppendTo[assoc, "LogLikelihoodFunction" -> logLikelihoodFunction @@ Values[assoc[tempKeys]]],
+            True,
+                (
+                    Message[defineInferenceProblem::insuffInfo, "LogLikelihood function"];
+                    Throw[$Failed, "problemDef"]
+                )
+        ];
+        Which[
+            MemberQ[keys, "LogPriorPDFFunction"],
+                Null,
+            SubsetQ[keys, tempKeys = {"PriorDistribution", "Parameters"}],
+                AppendTo[
+                    assoc,
+                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[tempKeys]]
+                ],
+            SubsetQ[keys, tempKeys = {"PriorPDF", "Parameters"}],
+                AppendTo[
+                    assoc,
+                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[tempKeys]]
+                ],
+            True,
+                (
+                    Message[defineInferenceProblem::insuffInfo, "Log prior PDF"];
+                    Throw[$Failed, "problemDef"]
+                )
+        ];
+        assoc
     ],
     "problemDef"
 ];
 
-defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
+logPDFFunction[
+    dist_?DistributionParameterQ,
+    parameters : {
+        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
+    }
+] := logPDFFunction[
+    Replace[
+        If[ Head[DistributionDomain[dist]] === List,
+            PDF[dist, parameters[[All, 1]]],
+            PDF[dist, parameters[[1, 1]]]
+        ],
+        _PDF :> (
+            Message[defineInferenceProblem::prior, dist];
+            Throw[$Failed, "problemDef"]
+        )
+    ],
+    parameters
+];
+
+logPDFFunction[
+    pdf_,
+    parameters : {
+        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
+    }
+] := Module[{
+    constraints = And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
+    logPDF,
+    dim = Length[parameters]
+},
+    logPDF = Activate @ Function[ paramVector,
+        Evaluate[
+            ReplaceAll[
+                FullSimplify[
+                    Log[pdf],
+                    constraints
+                ],
+                Thread[
+                    parameters[[All, 1]] -> Table[
+                        Inactive[Part][paramVector, i],
+                        {i, 1, dim}
+                    ]
+                ]
+            ]
+        ]
+    ];
+    constraints = Activate @ Function[
+        Evaluate[
+            constraints /. Thread[
+                parameters[[All, 1]] -> Table[
+                    Inactive[Part][#, i],
+                    {i, 1, dim}
+                ]
+            ]
+        ]
+    ];
+    
+    Compile[{
+        {param, _Real, 1}
+    },
+        If[ constraints[param],
+            logPDF[param],
+            $MachineLogZero
+        ],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        },
+        RuntimeAttributes -> {Listable},
+        Parallelization -> True
+    ]
+];
 
 logLikelihoodFunction[
     dist_?DistributionParameterQ,
