@@ -135,7 +135,7 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
         Which[
             MemberQ[keys, "LogLikelihood"],
                 AppendTo[obj, assoc["LogLikelihood"]],
-            SubsetQ[keys, tempKeys = {"Data", "GeneratingDistribution", "Parameters"}],
+            SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "Parameters"}],
                 AppendTo[obj, "LogLikelihood" -> logLikelihoodFunction @@ Values[assoc[tempKeys]]]
         ]
     ],
@@ -145,8 +145,8 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
 defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
 
 logLikelihoodFunction[
+    dist_?DistributionParameterQ,
     data_List?(MatrixQ[#, NumericQ]&),
-    dist_,
     parameters : {
         {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
     }
@@ -164,42 +164,45 @@ logLikelihoodFunction[
     logLike = Activate @ Function[
         {paramVector, dataPoint},
         Evaluate[
-            With[{
-                vars = Table[
-                    Inactive[Part][dataPoint, i],
-                    {i, 1, dataDim}
-                ]
-            },
-                FullSimplify[
-                    Replace[
-                        LogLikelihood[
-                            dist,
-                            If[ Head[domain] === List , List @ vars, vars]
-                        ],
-                        _LogLikelihood :> (
-                            Message[defineInferenceProblem::logLike, dist];
-                            Throw[$Failed, "problemDef"]
-                        )
-                    ],
-                    And[
-                        constraints,
-                        And @@ (Less @@@ Transpose @ Insert[
-                            Transpose[
-                                Cases[
-                                    domain,
-                                    dom_Interval :> First[dom],
-                                    {0, 1}
-                                ]
+            ReplaceAll[
+                With[{
+                    vars = Table[
+                        Inactive[Part][dataPoint, i],
+                        {i, 1, dataDim}
+                    ]
+                },
+                    FullSimplify[
+                        Replace[
+                            LogLikelihood[
+                                dist,
+                                If[ Head[domain] === List , List @ vars, vars] (* Determine if dist is a scalar of vector distribution *)
                             ],
-                            vars,
-                            2
-                        ])
-                    ] 
-                ]
-            ] /. Thread[
-                parameters[[All, 1]] -> Table[
-                    Inactive[Part][paramVector, i],
-                    {i, 1, dim}
+                            _LogLikelihood :> ( (* If LogLikelihood doesn't evaluate, no compiled function can be constructed *)
+                                Message[defineInferenceProblem::logLike, dist];
+                                Throw[$Failed, "problemDef"]
+                            )
+                        ],
+                        And[
+                            constraints,
+                            And @@ (Less @@@ Transpose @ Insert[
+                                Transpose[
+                                    Cases[
+                                        domain,
+                                        dom_Interval :> First[dom],
+                                        {0, 1}
+                                    ]
+                                ],
+                                vars,
+                                2
+                            ])
+                        ] 
+                    ]
+                ],
+                Thread[
+                    parameters[[All, 1]] -> Table[
+                        Inactive[Part][paramVector, i],
+                        {i, 1, dim}
+                    ]
                 ]
             ]
         ]
@@ -216,6 +219,8 @@ logLikelihoodFunction[
         RuntimeAttributes -> {Listable},
         Parallelization -> True
     ];
+    
+    (* convert constraint equations into a boolean function that tells you if the constraints are satisfied for a given parameter vector *)
     constraints = Activate @ Function @ Evaluate[
         And @@ Cases[
             BooleanConvert[constraints, "CNF"],
@@ -241,7 +246,11 @@ logLikelihoodFunction[
         },
         RuntimeAttributes -> {Listable}
     ]
-]
+];
+logLikelihoodFunction[dist_, ___] := (
+    Message[defineInferenceProblem::logLike, dist];
+    Throw[$Failed, "problemDef"]
+);
 
 nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := Compile[{
     {point, _Real, 1}
