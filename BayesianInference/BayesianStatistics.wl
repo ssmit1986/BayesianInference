@@ -10,6 +10,7 @@ predictiveDistribution;
 calculationReport;
 parallelNestedSampling;
 defineInferenceProblem;
+inferenceObject;
 bayesianInferenceObject;
 
 Begin["`Private`"];
@@ -18,8 +19,38 @@ Begin["`Private`"];
 MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
 
 Unprotect[MixtureDistribution];
-Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution["Mixture of " <> ToString @ Length[list1] <> " distributions"];
+Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
+    StringForm[
+        "Mixture of `1` distributions",
+        Length[list1]
+    ]
+];
 Protect[MixtureDistribution];
+
+Format[inferenceObject[assoc_?AssociationQ]] := With[{
+    notMissing = DeleteMissing @ assoc
+},
+    If[ TrueQ[Length[notMissing] > 0],
+        Tooltip[
+            #,
+            Column[Keys[notMissing], Alignment -> Left]
+        ]&,
+        Identity
+    ] @ inferenceObject[
+        StringForm[
+            "<< `1` defined properties >>",
+            Length[notMissing]
+        ]
+    ]
+];
+
+inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
+
+inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
+inferenceObject[first_, rest__] := inferenceObject[first];
+inferenceObject[assoc_?AssociationQ]["Properties"] := Sort @ Append[Keys[assoc], "Properties"];
+inferenceObject[assoc_?AssociationQ][prop : (_String | {__String})] := assoc[[prop]];
+inferenceObject[Except[_?AssociationQ | $Failed | _StringForm]] := inferenceObject[$Failed];
 
 (*
     If the prior is a list, convert all strings "LocationParameter" and "ScaleParameter" to distributions automatically
@@ -121,11 +152,15 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
+paramSpecPattern = {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]};
+
 defineInferenceProblem::insuffInfo = "Not enough information was provide to define the problem. Failed at: `1`";
 defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
 defineInferenceProblem::prior = "Unable to automatically construct the log prior PDF function for distribution `1`. Please construct one manually";
 
-defineInferenceProblem[input_?AssociationQ] := Catch[
+defineInferenceProblem[rules : __Rule] := defineInferenceProblem[Association[{rules}]];
+
+defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
     Module[{
         assoc = input,
         keys,
@@ -135,11 +170,20 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
         If[ MemberQ[keys, "Data"] && VectorQ[assoc["Data"]],
             assoc["Data"] = List /@ assoc["Data"]
         ];
+        Which[ 
+            MatchQ[assoc["Parameters"], {paramSpecPattern..}],
+                Null,
+            MatchQ[assoc["Parameters"], paramSpecPattern],
+                assoc["Parameters"] = {assoc["Parameters"]},
+            True,
+                Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
+                Throw[$Failed, "problemDef"]
+        ];
         Which[
             MemberQ[keys, "LogLikelihoodFunction"],
                 Null,
             SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "Parameters"}],
-                AppendTo[assoc, "LogLikelihoodFunction" -> logLikelihoodFunction @@ Values[assoc[tempKeys]]],
+                AppendTo[assoc, "LogLikelihoodFunction" -> logLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
             True,
                 (
                     Message[defineInferenceProblem::insuffInfo, "LogLikelihood function"];
@@ -152,12 +196,12 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
             SubsetQ[keys, tempKeys = {"PriorDistribution", "Parameters"}],
                 AppendTo[
                     assoc,
-                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[tempKeys]]
+                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[[tempKeys]]]
                 ],
             SubsetQ[keys, tempKeys = {"PriorPDF", "Parameters"}],
                 AppendTo[
                     assoc,
-                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[tempKeys]]
+                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[[tempKeys]]]
                 ],
             True,
                 (
@@ -169,31 +213,50 @@ defineInferenceProblem[input_?AssociationQ] := Catch[
     ],
     "problemDef"
 ];
+defineInferenceProblem[___] := inferenceObject[$Failed];
+
+distributionDomainTest::paramSpec = "Warning! The support of distribution `1` could not be verified to contain the region specified by parameters `2`";
+distributionDomainTest[dist_?DistributionParameterQ, parameters : {paramSpecPattern..}] := With[{
+    reg1 = Replace[DistributionDomain[dist], int_Interval :> {int}],
+    reg2 = Map[
+        Interval,
+        parameters[[All, {2, 3}]]
+    ]
+},
+    TrueQ[
+        And @@ IntervalMemberQ[reg1, reg2]
+    ] /; And[
+        AllTrue[{reg1, reg2}, MatchQ[{__Interval}]],
+        Length[reg1] === Length[reg2]
+    ]
+];
+distributionDomainTest[___] := False;
 
 logPDFFunction[
     dist_?DistributionParameterQ,
-    parameters : {
-        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
-    }
-] := logPDFFunction[
-    Replace[
-        If[ Head[DistributionDomain[dist]] === List,
-            PDF[dist, parameters[[All, 1]]],
-            PDF[dist, parameters[[1, 1]]]
+    parameters : {paramSpecPattern..}
+] := (
+    If[ !TrueQ[distributionDomainTest[dist, parameters]],
+        Message[distributionDomainTest::paramSpec, dist, parameters]
+    ];
+    logPDFFunction[
+        Replace[
+            If[ Head[DistributionDomain[dist]] === List,
+                PDF[dist, parameters[[All, 1]]],
+                PDF[dist, parameters[[1, 1]]]
+            ],
+            _PDF :> (
+                Message[defineInferenceProblem::prior, dist];
+                Throw[$Failed, "problemDef"]
+            )
         ],
-        _PDF :> (
-            Message[defineInferenceProblem::prior, dist];
-            Throw[$Failed, "problemDef"]
-        )
-    ],
-    parameters
-];
+        parameters
+    ]
+);
 
 logPDFFunction[
     pdf_,
-    parameters : {
-        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
-    }
+    parameters : {paramSpecPattern..}
 ] := Module[{
     constraints = And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
     logPDF,
@@ -245,9 +308,7 @@ logPDFFunction[
 logLikelihoodFunction[
     dist_?DistributionParameterQ,
     data_List?(MatrixQ[#, NumericQ]&),
-    parameters : {
-        {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..
-    }
+    parameters : {paramSpecPattern..}
 ] := Module[{
     dim = Length[parameters],
     dataDim = Dimensions[data][[2]],
