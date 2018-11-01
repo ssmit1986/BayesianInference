@@ -6,16 +6,112 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"ClearAll", "[", 
-   RowBox[{
-   "\"\<BayesianStatistics`*\>\"", ",", 
-    "\"\<BayesianStatistics`Private`*\>\"", ",", 
-    "\"\<BayesianUtilities`*\>\"", ",", 
-    "\"\<BayesianUtilities`Private`*\>\""}], "]"}], 
-  ";"}], "\[IndentingNewLine]", 
+   RowBox[{"\"\<Bayesian*`*\>\"", ",", "\"\<Bayesian*`Private`*\>\""}], "]"}],
+   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}], "\[IndentingNewLine]", 
  RowBox[{"Needs", "[", "\"\<CompiledFunctionTools`\>\"", "]"}]}], "Input",
  CellLabel->
-  "In[212]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
+  "In[107]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"obj", "=", 
+  RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"\"\<Data\>\"", "\[Rule]", " ", 
+     RowBox[{"N", "@", 
+      RowBox[{"Range", "[", "10", "]"}]}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
+     RowBox[{"NormalDistribution", "[", 
+      RowBox[{"mu", ",", " ", "sigma"}], "]"}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"mu", ",", 
+         RowBox[{"-", "2"}], ",", "2"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"sigma", ",", "0.1", ",", "10"}], "}"}]}], "}"}]}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<LogPriorPDFFunction\>\"", "\[Rule]", " ", 
+     RowBox[{"Function", "[", 
+      RowBox[{"-", 
+       RowBox[{"#", ".", "#"}]}], "]"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input",
+ CellLabel->
+  "In[104]:=",ExpressionUUID->"07f07f07-4c6b-4c56-8ee2-23a8a8a13c06"],
+
+Cell[BoxData[
+ TagBox[
+  TooltipBox[
+   RowBox[{"inferenceObject", "[", 
+    FrameBox[
+     InterpretationBox["\<\"<< \\!\\(\\*RowBox[{\\\"5\\\"}]\\) defined \
+properties >>\"\>",
+      StringForm["<< `1` defined properties >>", 5],
+      Editable->False],
+     StripOnInput->False], "]"}],
+   TagBox[
+    GridBox[{{"\"Data\""}, {"\"GeneratingDistribution\""}, {
+      "\"Parameters\""}, {"\"LogPriorPDFFunction\""}, {
+      "\"LogLikelihoodFunction\""}}, 
+     GridBoxAlignment -> {"Columns" -> {{Left}}}, DefaultBaseStyle -> 
+     "Column", 
+     GridBoxItemSize -> {
+      "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}], "Column"]],
+  Annotation[#, 
+   Column[{
+    "Data", "GeneratingDistribution", "Parameters", "LogPriorPDFFunction", 
+     "LogLikelihoodFunction"}, Alignment -> Left], "Tooltip"]& ]], "Output",
+ CellLabel->"Out[104]=",ExpressionUUID->"675497d6-055e-45eb-97fe-8d365166036b"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"generateStartingPoints", "[", 
+  RowBox[{"obj", ",", "10", ",", 
+   RowBox[{"\"\<BurnInPeriod\>\"", "\[Rule]", "10000"}]}], "]"}]], "Input",
+ CellLabel->
+  "In[112]:=",ExpressionUUID->"916f07c0-7254-4610-b03a-aa0cb017b345"],
+
+Cell[BoxData[
+ InterpretationBox["\<\"Generated \\!\\(\\*RowBox[{\\\"10\\\"}]\\) inital \
+samples using MCMC. Acceptance rate: \
+\\!\\(\\*RowBox[{\\\"0.3724`\\\"}]\\)\"\>",
+  StringForm[
+  "Generated `1` inital samples using MCMC. Acceptance rate: `2`", 10, 0.3724],
+  Editable->False]], "Print",
+ CellLabel->
+  "During evaluation of \
+In[112]:=",ExpressionUUID->"610eb7ee-474b-4118-9807-e2f6db9bf125"],
+
+Cell[BoxData[
+ TagBox[
+  TooltipBox[
+   RowBox[{"inferenceObject", "[", 
+    FrameBox[
+     InterpretationBox["\<\"<< \\!\\(\\*RowBox[{\\\"6\\\"}]\\) defined \
+properties >>\"\>",
+      StringForm["<< `1` defined properties >>", 6],
+      Editable->False],
+     StripOnInput->False], "]"}],
+   TagBox[
+    GridBox[{{"\"Data\""}, {"\"GeneratingDistribution\""}, {
+      "\"Parameters\""}, {"\"LogPriorPDFFunction\""}, {
+      "\"LogLikelihoodFunction\""}, {"\"StartingPoints\""}}, 
+     GridBoxAlignment -> {"Columns" -> {{Left}}}, DefaultBaseStyle -> 
+     "Column", 
+     GridBoxItemSize -> {
+      "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}], "Column"]],
+  Annotation[#, 
+   Column[{
+    "Data", "GeneratingDistribution", "Parameters", "LogPriorPDFFunction", 
+     "LogLikelihoodFunction", "StartingPoints"}, Alignment -> Left], 
+   "Tooltip"]& ]], "Output",
+ CellLabel->"Out[112]=",ExpressionUUID->"6b84f256-5056-47ce-b1a0-69a7b60ee2d9"]
+}, Open  ]],
 
 Cell[BoxData[{
  RowBox[{
@@ -594,8 +690,8 @@ X4XVr/M=
         26., -3.3089738096854407`*^-25}, {
         26.000000037252676`, -5.421422689788626*^-20}}], 
        LineBox[{{27.999999962747097`, -5.421422689788626*^-20}, {
-        28., -1.2925678944083753`*^-27}, {29., -5.421422689788626*^-21}, {
-        30., -2.0681086310534004`*^-26}, {
+        28., -1.2925678944083753`*^-27}, {29., -5.421422689788626*^-21}, {30.,
+         -2.0681086310534004`*^-26}, {
         30.000000002328306`, -5.421422689788626*^-20}}], 
        LineBox[{{31.9999999977299, -5.421422689788626*^-20}, {
         32., -1.3553556724471565`*^-21}, {33., -3.231419736020938*^-28}, {
