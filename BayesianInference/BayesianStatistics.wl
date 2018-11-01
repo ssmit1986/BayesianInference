@@ -37,12 +37,16 @@ Format[inferenceObject[assoc_?AssociationQ]] := With[{
         ]&,
         Identity
     ] @ inferenceObject[
-        StringForm[
-            "<< `1` defined properties >>",
-            Length[notMissing]
+        Framed[
+            StringForm[
+                "<< `1` defined properties >>",
+                Length[notMissing]
+            ]
         ]
     ]
 ];
+
+paramSpecPattern = {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]};
 
 inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
 
@@ -50,7 +54,7 @@ inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
 inferenceObject[first_, rest__] := inferenceObject[first];
 inferenceObject[assoc_?AssociationQ]["Properties"] := Sort @ Append[Keys[assoc], "Properties"];
 inferenceObject[assoc_?AssociationQ][prop : (_String | {__String})] := assoc[[prop]];
-inferenceObject[Except[_?AssociationQ | $Failed | _StringForm]] := inferenceObject[$Failed];
+inferenceObject[Except[_?AssociationQ | $Failed | _Framed]] := inferenceObject[$Failed];
 
 (*
     If the prior is a list, convert all strings "LocationParameter" and "ScaleParameter" to distributions automatically
@@ -58,7 +62,7 @@ inferenceObject[Except[_?AssociationQ | $Failed | _StringForm]] := inferenceObje
 *)
 ignorancePrior[
     priorSpecification : {(_?DistributionParameterQ | "LocationParameter" | "ScaleParameter")..},
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..}
+    variables : {paramSpecPattern..}
 ] /; Length[priorSpecification] === Length[variables] := Module[{
     positionsLoc = Position[priorSpecification, "LocationParameter"],
     positionsScale = Position[priorSpecification, "ScaleParameter"]
@@ -68,7 +72,7 @@ ignorancePrior[
             Join[
                 Thread[
                     positionsLoc -> (
-                        UniformDistribution[{#[[2 ;;]]}]& /@ Extract[variables, positionsLoc]
+                        UniformDistribution[{#[[{2, 3}]]}]& /@ Extract[variables, positionsLoc]
                     )
                 ],
                 Thread[
@@ -152,8 +156,6 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
-paramSpecPattern = {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]};
-
 defineInferenceProblem::insuffInfo = "Not enough information was provide to define the problem. Failed at: `1`";
 defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
 defineInferenceProblem::prior = "Unable to automatically construct the log prior PDF function for distribution `1`. Please construct one manually";
@@ -178,6 +180,20 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
             True,
                 Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
                 Throw[$Failed, "problemDef"]
+        ];
+        If[ ListQ[assoc["PriorDistribution"]],
+            With[{
+                priorDist = ignorancePrior[
+                    assoc["PriorDistribution"],
+                    assoc["Parameters"]
+                ]
+            },
+                If[ TrueQ @ DistributionParameterQ[priorDist],
+                    assoc["PriorDistribution"] = priorDist,
+                    Message[defineInferenceProblem::insuffInfo, "Prior distribution construction"];
+                    Throw[$Failed, "problemDef"]
+                ]
+            ]
         ];
         Which[
             MemberQ[keys, "LogLikelihoodFunction"],
