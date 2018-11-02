@@ -160,6 +160,7 @@ Options[directPosteriorDistribution] = Join[
 defineInferenceProblem::insuffInfo = "Not enough information was provide to define the problem. Failed at: `1`";
 defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
 defineInferenceProblem::prior = "Unable to automatically construct the log prior PDF function for distribution `1`. Please construct one manually";
+defineInferenceProblem::failed = "Failure. `1` does not yield numerical results in the required domain";
 
 defineInferenceProblem[] := {
     "Data",
@@ -178,7 +179,8 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
     Module[{
         assoc = input,
         keys,
-        tempKeys
+        tempKeys,
+        randomTestPoints
     },
         keys = Keys[assoc];
         If[ MemberQ[keys, "Data"] && VectorQ[assoc["Data"]],
@@ -236,6 +238,26 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                     Message[defineInferenceProblem::insuffInfo, "Log prior PDF"];
                     Throw[$Failed, "problemDef"]
                 )
+        ];
+        
+        (* Simple test to check if the functions work as required *)
+        randomTestPoints = RandomVariate[
+            UniformDistribution[assoc["Parameters"][[All, {2, 3}]]],
+            100
+        ];
+        If[ !TrueQ @ VectorQ[assoc["LogPriorPDFFunction"] /@ randomTestPoints, NumericQ]
+            ,
+            (
+                Message[defineInferenceProblem::failed, "LogPriorPDFFunction"];
+                Throw[$Failed, "problemDef"]
+            )
+            ,
+            If[ !TrueQ @ VectorQ[assoc["LogLikelihoodFunction"] /@ randomTestPoints, NumericQ],
+                (
+                    Message[defineInferenceProblem::failed, "LogLikelihoodFunction"];
+                    Throw[$Failed, "problemDef"]
+                )
+            ]
         ];
         assoc
     ],
