@@ -1,6 +1,6 @@
 (* Wolfram Language Package *)
 
-BeginPackage["BayesianUtilities`"]
+BeginPackage["BayesianUtilities`", {"CompiledFunctionTools`"}]
 (* Exported symbols added here with SymbolName::usage *)
 passOptionsDown::usage = "passOptionsDown[mainFunction, subFunction, {opts}] passes options down correctly from the main function into a sub function, even when the default options for both functions are different";
 quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the functionalities of Quiet and Check";
@@ -9,6 +9,7 @@ takePosteriorFraction;
 $BayesianContexts;
 logSumExp;
 $MachineLogZero;
+checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has calls to MainEvaluate. If it does, it will issue a message and return False. It will return True for CompiledFunctions that pass the test and $Failed for any expression other than a CompiledFunction";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -255,6 +256,15 @@ logSumExp = Composition[
     ],
     Select[NumericQ] (* Get rid of -Infinity *)
 ];
+
+checkCompiledFunction::mainEval = "CompiledFunction `1` has calls to MainEvaluate and may not perform optimally";
+checkCompiledFunction[cf_CompiledFunction, name : _ : Automatic] /; StringContainsQ[CompilePrint[cf], "MainEvaluate"] := (
+    Message[checkCompiledFunction::mainEval, Replace[name, Automatic :> Short[cf]]];
+    False
+);
+checkCompiledFunction[_CompiledFunction, ___] := True;
+checkCompiledFunction[___] := $Failed;
+
 
 End[] (* End Private Context *)
 

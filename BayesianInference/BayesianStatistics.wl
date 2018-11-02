@@ -259,6 +259,11 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 )
             ]
         ];
+        
+        (* Issue a message if a sub-optimal compiled function is found *)
+        KeyValueMap[checkCompiledFunction[#2, #1]&,
+            assoc[[{"LogPriorPDFFunction", "LogLikelihoodFunction"}]]
+        ];
         assoc
     ],
     "problemDef"
@@ -349,9 +354,7 @@ logPDFFunction[
         CompilationOptions -> {
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
-        },
-        RuntimeAttributes -> {Listable},
-        Parallelization -> True
+        }
     ]
 ];
 
@@ -424,9 +427,7 @@ logLikelihoodFunction[
         CompilationOptions -> {
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
-        },
-        RuntimeAttributes -> {Listable},
-        Parallelization -> True
+        }
     ];
     
     (* convert constraint equations into a boolean function that tells you if the constraints are satisfied for a given parameter vector *)
@@ -446,14 +447,13 @@ logLikelihoodFunction[
         {input, _Real, 1}
     },
         If[ constraints[input],
-            Total @ logLike[input, data],
+            Total[logLike[input, #]& /@ data],
             $MachineLogZero
         ],
         CompilationOptions -> {
             "InlineExternalDefinitions" -> True,
-            "InlineCompiledFunctions" -> False
-        },
-        RuntimeAttributes -> {Listable}
+            "InlineCompiledFunctions" -> True
+        }
     ]
 ];
 logLikelihoodFunction[dist_, ___] := (
@@ -702,7 +702,6 @@ nestedSamplingInternal[
             ]
         ]
     ];
-    
     (* Main loop starts here *)
     While[
         And[
