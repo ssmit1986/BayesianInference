@@ -161,7 +161,18 @@ defineInferenceProblem::insuffInfo = "Not enough information was provide to defi
 defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
 defineInferenceProblem::prior = "Unable to automatically construct the log prior PDF function for distribution `1`. Please construct one manually";
 
+defineInferenceProblem[] := {
+    "Data",
+    "Parameters",
+    "LogLikelihoodFunction",
+    "LogPriorPDFFunction",
+    "GeneratingDistribution",
+    "PriorDistribution",
+    "PriorDistribution",
+    "PriorPDF"
+};
 defineInferenceProblem[rules : __Rule] := defineInferenceProblem[Association[{rules}]];
+defineInferenceProblem[inferenceObject[assoc_?AssociationQ]] := defineInferenceProblem[assoc];
 
 defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
     Module[{
@@ -762,7 +773,7 @@ generateStartingPoints[
     {
         lst_List?(VectorQ[#, NumericQ]&) :> List /@ lst,
         Except[_List?(MatrixQ[#, NumericQ]&)] :> generateStartingPoints[
-            KeyDrop[assoc, "PriorDistribution"],
+            KeyDrop[assoc, "PriorDistribution"], (* Try generating points from the LogPriorPDFFunction, if available *)
             n
         ]
     }
@@ -802,19 +813,18 @@ generateStartingPoints[
         chain["AcceptanceRate"]
     ];
     samples
-]
+];
+generateStartingPoints[__] := $Failed
 
 nestedSampling[
     inferenceObject[assoc_?AssociationQ],
     opts : OptionsPattern[]
 ] /; !MatrixQ[assoc["StartingPoints"], NumericQ] := With[{
-    startingPoints = With[{
-        optStartPts = OptionValue["StartingPoints"]
-    },
-        If[ MatrixQ[optStartPts, NumericQ],
-            optStartPts,
-            generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
-        ]
+    startingPoints = Replace[
+        OptionValue["StartingPoints"],
+        {
+            Except[_?(MatrixQ[#, NumericQ]&)] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
+        }
     ]
 },
     nestedSampling[
