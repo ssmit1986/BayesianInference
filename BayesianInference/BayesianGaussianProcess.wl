@@ -20,6 +20,8 @@ sym[] = covarianceMatrix[
 sym[args__] := Function[Evaluate[sym[]]][args]
 *)
 
+paramSpecPattern = BayesianStatistics`Private`paramSpecPattern;
+
 nullKernelPattern = HoldPattern[Function[Repeated[_, {0, 1}], 0 | 0., ___]];
 
 covarianceMatrix[points_List, kernel : nullKernelPattern, nugget_] :=
@@ -39,23 +41,20 @@ covarianceMatrix[points_List, kernel : Except[nullKernelPattern], nugget_] :=
         ]
     ];
 
-compiledCovarianceMatrix[points_List, kernel_, nugget_, vars : {__Symbol}, opts : OptionsPattern[]] :=
-    With[{
-        matrix = Normal @ covarianceMatrix[points, kernel, nugget]
-    },
-        Compile[
-            Evaluate[
-                Transpose[{
-                    vars,
-                    ConstantArray[_Real, Length[vars]]
-                }]
-            ],
-            matrix,
-            RuntimeAttributes -> {Listable},
-            opts
-        ]
-    ];
-Options[compiledCovarianceMatrix] = Options[Compile];
+compiledCovarianceMatrix[points_List, kernel_, nugget_, vars : {__Symbol}] := With[{
+    matrix = Normal @ covarianceMatrix[points, kernel, nugget]
+},
+    Compile[
+        Evaluate[
+            Transpose[{
+                vars,
+                ConstantArray[_Real, Length[vars]]
+            }]
+        ],
+        matrix,
+        RuntimeAttributes -> {Listable}
+    ]
+];
 
 compiledKandKappa[
     points1_List,
@@ -90,8 +89,7 @@ compiledKandKappa[
 compiledKandKappa[
     points1_List,
     kernel : Except[nullKernelPattern],
-    nugget_,
-    opts : OptionsPattern[]
+    nugget_
 ] := With[{
     rank1 = Length[Dimensions[points1]],
     rank2 = Length[Dimensions[points1]] - 1 
@@ -105,15 +103,13 @@ compiledKandKappa[
                 {i, points1},
                 {j, points2}
             ],
-            RuntimeAttributes -> {Listable},
-            opts
+            RuntimeAttributes -> {Listable}
         ],
         cf2 = Compile[{
             {points2, _Real, rank2}
         },
             kernel[points2, points2] + nugget[points2],
-            RuntimeAttributes -> {Listable},
-            opts
+            RuntimeAttributes -> {Listable}
         ]
     },
         Function[
@@ -124,7 +120,6 @@ compiledKandKappa[
         ]
     ]
 ];
-Options[compiledKandKappa] = Options[Compile];
 
 matrixInverseAndDet[matrix_List?(MatrixQ[#, NumericQ]&)] :=
     Module[{
@@ -173,16 +168,23 @@ gaussianProcessLogLikelihood[
     ]
 ];
 
-gaussianProcessLogLikelihood[
-    meanAdjustedOutputVector_List,
-    inverseCov_Association
-] := - 0.5 * Plus[
-    Length[meanAdjustedOutputVector] * Log[2. * Pi],
-    Log[inverseCov["Det"]],
-    meanAdjustedOutputVector . inverseCov["Inverse"][meanAdjustedOutputVector]
+With[{
+    logTwoPi = N[Log[2 * Pi]]
+},
+    gaussianProcessLogLikelihood[
+        meanAdjustedOutputVector_List,
+        inverseCov_Association
+    ] := Clip[
+        - 0.5 * Plus[
+            Length[meanAdjustedOutputVector] * logTwoPi,
+            Log[inverseCov["Det"]],
+            meanAdjustedOutputVector . inverseCov["Inverse"][meanAdjustedOutputVector]
+        ],
+        {$MachineLogZero, Abs[$MachineLogZero]}
+    ]
 ];
 
-gaussianProcessNestedSampling[data_, kernel_, nugget_, meanFunction_, variables : {_Symbol, _?NumericQ, _?NumericQ}, opts : OptionsPattern[]] :=
+gaussianProcessNestedSampling[data_, kernel_, nugget_, meanFunction_, variables : {paramSpecPattern..}, opts : OptionsPattern[]] :=
     gaussianProcessNestedSampling[data, kernel, meanFunction, {variables}, opts];
 
 gaussianProcessNestedSampling[data : {__Rule}, rest___] :=
@@ -211,7 +213,7 @@ gaussianProcessNestedSampling[
     nuggetFunction_,
     meanFunction_,
     variablePrior_,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
+    variables : {paramSpecPattern..},
     opts : OptionsPattern[]
 ] := With[{
     vars = variables[[All, 1]],
@@ -227,7 +229,8 @@ gaussianProcessNestedSampling[
         kAndKappa,
         invCovFun,
         logLikelihood,
-        output
+        output,
+        infObject
     },
         If[ Length[inputData] =!= Length[outputData],
             Return["Input and output data are not of same length"]
@@ -275,24 +278,28 @@ gaussianProcessNestedSampling[
                 _,
                     Function[
                         gaussianProcessLogLikelihood[
-                            outputData - (mean[##]) /@ inputData,
-                            matrixInverseAndDet[covarianceFunction[##]]
+                            outputData - (mean @@ #) /@ inputData,
+                            matrixInverseAndDet[covarianceFunction @@ #]
                         ]
                     ]
             ];
             invCovFun = Function[matrixInverseAndDet[covarianceFunction[##]]];
+            
+            infObject = defineInferenceProblem[
+                "LogLikelihoodFunction" -> logLikelihood,
+                "PriorDistribution" -> variablePrior,
+                "Parameters" -> variables
+            ];
+            If[FailureQ[infObject], Return[infObject]];
+            
             If[ TrueQ[IntegerQ[parallelRuns] && parallelRuns > 0],
-                output = parallelNestedSampling[
-                    logLikelihood,
-                    variablePrior,
-                    variables,
+                output = Normal @ parallelNestedSampling[
+                    infObject,
                     Sequence @@ passOptionsDown[gaussianProcessNestedSampling, parallelNestedSampling, {opts}]
                 ]
                 ,
-                output = nestedSampling[
-                    logLikelihood,
-                    variablePrior,
-                    variables,
+                output = Normal @ nestedSampling[
+                    infObject,
                     Sequence @@ passOptionsDown[gaussianProcessNestedSampling, nestedSampling, {opts}]
                 ]
             ];
@@ -309,7 +316,7 @@ gaussianProcessNestedSampling[
                 ]
             ];
             
-            output = Join[
+            output = inferenceObject @ Join[
                 MapAt[
                     Function[{row},
                         Module[{
@@ -371,8 +378,7 @@ Options[gaussianProcessNestedSampling] = Join[
     {
         "Likelihood" -> Automatic
     },
-    Options[parallelNestedSampling],
-    Options[Compile]
+    Options[parallelNestedSampling]
 ];
 SetOptions[gaussianProcessNestedSampling, "ParallelRuns" -> None];
 
