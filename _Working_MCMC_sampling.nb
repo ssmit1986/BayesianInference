@@ -10,7 +10,7 @@ Cell[BoxData[{
    ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}], "\[IndentingNewLine]", 
  RowBox[{"Needs", "[", "\"\<CompiledFunctionTools`\>\"", "]"}]}], "Input",
- CellLabel->"In[12]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
+ CellLabel->"In[50]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
 
 Cell[CellGroupData[{
 
@@ -52,14 +52,13 @@ Cell[BoxData[
       RowBox[{"-", 
        RowBox[{"#", ".", "#"}]}], "]"}]}]}], "\[IndentingNewLine]", 
    "]"}]}]], "Input",
- CellLabel->"In[11]:=",ExpressionUUID->"07f07f07-4c6b-4c56-8ee2-23a8a8a13c06"],
+ CellLabel->"In[54]:=",ExpressionUUID->"07f07f07-4c6b-4c56-8ee2-23a8a8a13c06"],
 
 Cell[BoxData[
  RowBox[{"generateStartingPoints", "[", 
   RowBox[{"obj", ",", "10", ",", 
    RowBox[{"\"\<BurnInPeriod\>\"", "\[Rule]", "10000"}]}], "]"}]], "Input",
- CellLabel->
-  "In[112]:=",ExpressionUUID->"916f07c0-7254-4610-b03a-aa0cb017b345"],
+ CellLabel->"In[55]:=",ExpressionUUID->"916f07c0-7254-4610-b03a-aa0cb017b345"],
 
 Cell[BoxData[{
  RowBox[{

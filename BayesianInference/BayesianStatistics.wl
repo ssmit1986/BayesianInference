@@ -242,7 +242,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
         
         (* Simple test to check if the functions work as required *)
         randomTestPoints = RandomVariate[
-            UniformDistribution[assoc["Parameters"][[All, {2, 3}]]],
+            BayesianUtilities`Private`randomDomainPointDistribution[assoc["Parameters"][[All, {2, 3}]]],
             100
         ];
         If[ !TrueQ @ VectorQ[assoc["LogPriorPDFFunction"] /@ randomTestPoints, NumericQ]
@@ -806,20 +806,12 @@ generateStartingPoints[
     opts : OptionsPattern[]
 ] := Module[{
     chain = With[{
-        paramLimits = Sort /@ Replace[
-            params[[All, {2, 3}]],
-            {
-                {Except[_?NumericQ], Except[_?NumericQ]} -> {-10, 10},
-                {Except[_?NumericQ], max_?NumericQ} -> {max - 10, max},
-                {min_?NumericQ, Except[_?NumericQ]} -> {min, min + 10}
-            },
-            {1}
-        ]
+        crudeSamples = RandomVariate[BayesianUtilities`Private`randomDomainPointDistribution[params[[All, {2, 3}]]], 100]
     },
         Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
-            RandomVariate @ UniformDistribution[paramLimits],
+            First @ crudeSamples,
             logPDF,
-            {DiagonalMatrix[0.25 * Abs[Subtract @@ #]& /@ paramLimits], 20},
+            {DiagonalMatrix[Variance[crudeSamples]], 20},
             Real,
             Compiled -> True
         ]

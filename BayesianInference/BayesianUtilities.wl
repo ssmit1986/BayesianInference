@@ -265,6 +265,13 @@ checkCompiledFunction[cf_CompiledFunction, name : _ : Automatic] /; StringContai
 checkCompiledFunction[_CompiledFunction, ___] := True;
 checkCompiledFunction[___] := $Failed;
 
+randomDomainPointDistribution[
+    list : {{_?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..},
+    width : (_?NumericQ) : 100
+] := TruncatedDistribution[
+    list,
+    ProductDistribution[{CauchyDistribution[0, width], Length[list]}]
+];
 
 End[] (* End Private Context *)
 
