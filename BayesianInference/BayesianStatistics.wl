@@ -354,7 +354,8 @@ logPDFFunction[
         CompilationOptions -> {
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
-        }
+        },
+        RuntimeAttributes -> {Listable}
     ]
 ];
 
@@ -453,7 +454,8 @@ logLikelihoodFunction[
         CompilationOptions -> {
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
-        }
+        },
+        RuntimeAttributes -> {Listable}
     ]
 ];
 logLikelihoodFunction[dist_, ___] := (
@@ -471,7 +473,7 @@ nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := Compile[{
     RuntimeAttributes -> {Listable},
     CompilationOptions -> {
         "InlineExternalDefinitions" -> True, 
-        "InlineCompiledFunctions" -> True
+        "InlineCompiledFunctions" -> False
     }
 ];
 
