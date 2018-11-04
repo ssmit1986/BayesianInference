@@ -34,7 +34,7 @@ Format[inferenceObject[assoc_?AssociationQ]] := With[{
     If[ TrueQ[Length[notMissing] > 0],
         Tooltip[
             #,
-            Column[Keys[notMissing], Alignment -> Left]
+            Grid[KeyValueMap[{#1, Short[#2]}&, notMissing], Alignment -> Left]
         ]&,
         Identity
     ] @ inferenceObject[
@@ -761,8 +761,6 @@ nestedSamplingInternal[
     output = evidenceSampling[
         <|
             "Samples" -> variableSamplePoints,
-            "LogPriorFunction" -> logPriorDensityFunction,
-            "LogLikelihoodFunction" -> logLikelihoodFunction,
             "SamplePoolSize" -> nSamples,
             "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples
         |>,
@@ -852,11 +850,18 @@ nestedSampling[
     MatrixQ[assoc["StartingPoints"], NumericQ],
     MatchQ[assoc["Parameters"], {paramSpecPattern..}],
     Dimensions[assoc["StartingPoints"]][[2]] === Length[assoc["Parameters"]]
-] := nestedSamplingInternal[
-    assoc["LogLikelihoodFunction"],
-    assoc["LogPriorPDFFunction"],
-    assoc["StartingPoints"],
-    Sequence @@ FilterRules[{opts}, Options[nestedSamplingInternal]]
+] := Module[{
+    result = nestedSamplingInternal[
+        assoc["LogLikelihoodFunction"],
+        assoc["LogPriorPDFFunction"],
+        assoc["StartingPoints"],
+        Sequence @@ FilterRules[{opts}, Options[nestedSamplingInternal]]
+    ]
+},
+    If[ TrueQ @ AssociationQ[result],
+        inferenceObject[Join[assoc, result]],
+        result
+    ]
 ];
 
 meanAndErrorAssociation = Function[
@@ -908,24 +913,7 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                 Min[DeleteMissing @ result[["Samples", All, "X"]]],
                 Exp @ Max[result[["Samples", All, "LogLikelihood"]]]
             ],
-            "CrudeRelativeEntropy" -> crudeEntropy,
-            "PosteriorPDF" -> With[{
-                prior = result["PriorFunction"],
-                loglike = result["LogLikelihoodFunction"],
-                ev = crudeEvidence
-            },
-                Function[
-                    Null,
-                    Divide[
-                        Times[
-                            prior[##],
-                            Exp[loglike[##]]
-                        ],
-                        ev
-                    ],
-                    {Listable}
-                ]
-            ]
+            "CrudeRelativeEntropy" -> crudeEntropy
         |>
     ];
     If[ !TrueQ[IntegerQ[nRuns] && nRuns > 0],
@@ -1023,29 +1011,48 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     ]
 ];
 
-combineRuns[results__?AssociationQ, opts : OptionsPattern[]] /; UnsameQ[results] := With[{
+combineRuns[results : inferenceObject[_?AssociationQ].., opts : OptionsPattern[]] /; UnsameQ[results] := With[{
     mergedResults = SortBy[{#LogLikelihood, #Point}&] @ DeleteDuplicatesBy[
-        Join @@ Values /@ {results}[[All, "Samples"]],
+        Join @@ Values /@ {results}[[All, 1, "Samples"]],
         #Point&
     ]
 },
     evidenceSampling[
         <|
-            {results}[[1]],
+            {results}[[All, 1]],
             "Samples" -> AssociationThread[
                 Range[Length @ mergedResults],
                 mergedResults
             ],
-            "LogLikelihoodMaximum" -> Max[{results}[[All, "LogLikelihoodMaximum"]]],
-            "SamplePoolSize" -> Total[{results}[[All, "SamplePoolSize"]]],
-            "GeneratedNestedSamples" -> Length[mergedResults] - Total[{results}[[All, "SamplePoolSize"]]]
+            "LogLikelihoodMaximum" -> Max[{results}[[All, 1, "LogLikelihoodMaximum"]]],
+            "SamplePoolSize" -> Total[{results}[[All, 1, "SamplePoolSize"]]],
+            "GeneratedNestedSamples" -> Length[mergedResults] - Total[{results}[[All, 1, "SamplePoolSize"]]]
         |>,
         opts
     ]
 ];
 Options[combineRuns] = Options[evidenceSampling];
 
-parallelNestedSampling[logLikelihood_, prior_, variables_, opts : OptionsPattern[]] := Module[{
+parallelNestedSampling[
+    inferenceObject[assoc_?AssociationQ],
+    opts : OptionsPattern[]
+] /; !MatrixQ[assoc["StartingPoints"], NumericQ] := With[{
+    startingPoints = Replace[
+        OptionValue["StartingPoints"],
+        {
+            Except[_?(MatrixQ[#, NumericQ]&)] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
+        }
+    ]
+},
+    parallelNestedSampling[
+        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]]
+    ] /; MatrixQ[startingPoints, NumericQ]
+];
+
+parallelNestedSampling[
+    inferenceObject[assoc_?AssociationQ],
+    opts : OptionsPattern[]
+] /; MatrixQ[assoc["StartingPoints"], NumericQ] := Module[{
     resultTable,
     parallelRuns = OptionValue["ParallelRuns"],
     nestedSamplingOptions = Join[
@@ -1059,18 +1066,18 @@ parallelNestedSampling[logLikelihood_, prior_, variables_, opts : OptionsPattern
 
     resultTable = ParallelTable[
         nestedSampling[
-            logLikelihood,
-            prior,
-            variables,
+            inferenceObject[assoc],
             Sequence @@ nestedSamplingOptions
         ],
         {parallelRuns},
         Evaluate[Sequence @@ passOptionsDown[parallelNestedSampling, ParallelTable, {opts}]]
     ];
-    combineRuns[
-        ##,
-        Sequence @@ passOptionsDown[parallelNestedSampling, combineRuns, {opts}]
-    ]& @@ resultTable
+    inferenceObject[
+        combineRuns[
+            ##,
+            Sequence @@ passOptionsDown[parallelNestedSampling, combineRuns, {opts}]
+        ]& @@ resultTable
+    ]
 ];
 
 Options[parallelNestedSampling] = Join[

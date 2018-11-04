@@ -10,13 +10,14 @@ Cell[BoxData[{
    ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}], "\[IndentingNewLine]", 
  RowBox[{"Needs", "[", "\"\<CompiledFunctionTools`\>\"", "]"}]}], "Input",
- CellLabel->"In[50]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
+ CellLabel->
+  "In[157]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
 
 Cell[CellGroupData[{
 
 Cell[BoxData[
  RowBox[{"defineInferenceProblem", "[", "]"}]], "Input",
- CellLabel->"In[16]:=",ExpressionUUID->"0aba50b7-8be7-4282-9322-07cadc831c12"],
+ CellLabel->"In[74]:=",ExpressionUUID->"0aba50b7-8be7-4282-9322-07cadc831c12"],
 
 Cell[BoxData[
  RowBox[{"{", 
@@ -25,40 +26,8 @@ Cell[BoxData[
    ",", "\<\"GeneratingDistribution\"\>", ",", "\<\"PriorDistribution\"\>", 
    ",", "\<\"PriorDistribution\"\>", ",", "\<\"PriorPDF\"\>"}], 
   "}"}]], "Output",
- CellLabel->"Out[16]=",ExpressionUUID->"3b18373e-7ea3-417b-814e-305dc107a1d2"]
+ CellLabel->"Out[74]=",ExpressionUUID->"46275fa3-433a-4fb0-b59d-aea2a3f1a2be"]
 }, Open  ]],
-
-Cell[BoxData[
- RowBox[{"obj", "=", 
-  RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
-   RowBox[{
-    RowBox[{"\"\<Data\>\"", "\[Rule]", " ", 
-     RowBox[{"N", "@", 
-      RowBox[{"Range", "[", "10", "]"}]}]}], ",", "\[IndentingNewLine]", 
-    RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
-     RowBox[{"NormalDistribution", "[", 
-      RowBox[{"mu", ",", " ", "sigma"}], "]"}]}], ",", "\[IndentingNewLine]", 
-    RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
-     RowBox[{"{", 
-      RowBox[{
-       RowBox[{"{", 
-        RowBox[{"mu", ",", 
-         RowBox[{"-", "2"}], ",", "2"}], "}"}], ",", 
-       RowBox[{"{", 
-        RowBox[{"sigma", ",", "0.1", ",", "10"}], "}"}]}], "}"}]}], ",", 
-    "\[IndentingNewLine]", 
-    RowBox[{"\"\<LogPriorPDFFunction\>\"", "\[Rule]", " ", 
-     RowBox[{"Function", "[", 
-      RowBox[{"-", 
-       RowBox[{"#", ".", "#"}]}], "]"}]}]}], "\[IndentingNewLine]", 
-   "]"}]}]], "Input",
- CellLabel->"In[56]:=",ExpressionUUID->"07f07f07-4c6b-4c56-8ee2-23a8a8a13c06"],
-
-Cell[BoxData[
- RowBox[{"generateStartingPoints", "[", 
-  RowBox[{"obj", ",", "10", ",", 
-   RowBox[{"\"\<BurnInPeriod\>\"", "\[Rule]", "10000"}]}], "]"}]], "Input",
- CellLabel->"In[55]:=",ExpressionUUID->"916f07c0-7254-4610-b03a-aa0cb017b345"],
 
 Cell[BoxData[{
  RowBox[{
@@ -95,21 +64,33 @@ Cell[BoxData[{
      RowBox[{"{", 
       RowBox[{
       "\"\<LocationParameter\>\"", ",", " ", "\"\<ScaleParameter\>\""}], 
-      "}"}]}]}], "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->"In[57]:=",ExpressionUUID->"1f05f520-7430-41d5-ac4c-4b3934617592"],
+      "}"}]}]}], "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"obj", "=", 
+  RowBox[{"generateStartingPoints", "[", 
+   RowBox[{"obj", ",", "25"}], "]"}]}]}], "Input",
+ CellLabel->
+  "In[152]:=",ExpressionUUID->"1f05f520-7430-41d5-ac4c-4b3934617592"],
 
 Cell[BoxData[
- RowBox[{
-  RowBox[{"result", "=", 
-   RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
-    RowBox[{"obj", ",", "\[IndentingNewLine]", 
-     RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "1000"}], ",", 
-     "\[IndentingNewLine]", 
-     RowBox[{"\"\<MinMaxAcceptanceRate\>\"", " ", "\[Rule]", 
-      RowBox[{"{", 
-       RowBox[{"0.1", ",", "0.9"}], "}"}]}]}], "\[IndentingNewLine]", "]"}]}],
-   ";"}]], "Input",
- CellLabel->"In[60]:=",ExpressionUUID->"39ded403-5fbe-4a3d-baed-440a19cb2d29"],
+ RowBox[{"result", "=", 
+  RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
+   RowBox[{"obj", ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "1000"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<MinMaxAcceptanceRate\>\"", " ", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{"0.1", ",", "0.9"}], "}"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input",
+ CellLabel->
+  "In[161]:=",ExpressionUUID->"39ded403-5fbe-4a3d-baed-440a19cb2d29"],
+
+Cell[BoxData[
+ RowBox[{"parallelNestedSampling", "[", "obj", "]"}]], "Input",
+ CellLabel->"In[98]:=",ExpressionUUID->"6e6756bd-bd43-4b2f-ad09-2eecfe54da7a"],
+
+Cell[BoxData[
+ RowBox[{"result", "[", "\"\<ParameterExpectedValues\>\"", "]"}]], "Input",
+ CellLabel->"In[69]:=",ExpressionUUID->"ec61b517-23cc-404c-a0b6-7daab5c6e909"],
 
 Cell[BoxData[
  RowBox[{
@@ -635,8 +616,7 @@ Cell[BoxData[
      "RowsIndexed" -> {}}],
   Definition[Random`Private`MCMC],
   Editable->False]], "Output",
- CellLabel->
-  "Out[114]=",ExpressionUUID->"4a2608c0-6561-4316-8f40-bc1b4e163265"]
+ CellLabel->"Out[114]=",ExpressionUUID->"4a2608c0-6561-4316-8f40-bc1b4e163265"]
 }, Open  ]],
 
 Cell[BoxData[
@@ -750,9 +730,9 @@ Cell[BoxData["Statistics`RandomVariateDump`$InitialBurnIn"], "Input",
 Cell[BoxData["100"], "Output",
  CellLabel->"Out[117]=",ExpressionUUID->"dd62045c-6fba-4358-b489-4dbd7de60230"]
 }, Open  ]]
-}, Open  ]]
+}, Closed]]
 },
-WindowSize->{1243, 700},
+WindowSize->{1244, 700},
 WindowMargins->{{Automatic, 176}, {Automatic, 86}},
 PrivateNotebookOptions->{"FileOutlineCache"->False},
 TrackCellChangeTimes->False,
