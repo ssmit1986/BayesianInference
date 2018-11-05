@@ -463,18 +463,28 @@ logLikelihoodFunction[dist_, ___] := (
     Throw[$Failed, "problemDef"]
 );
 
-nsDensity[logPriorDensity_, logLikelihood_, logThreshold_] := Compile[{
+nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logThreshold_?NumericQ] := Compile[{
     {point, _Real, 1}
 },
     If[ logLikelihood[point] > logThreshold,
         logPriorDensity[point],
         $MachineLogZero
     ],
-    RuntimeAttributes -> {Listable},
     CompilationOptions -> {
         "InlineExternalDefinitions" -> True, 
         "InlineCompiledFunctions" -> False
     }
+];
+
+nsDensity[logPriorDensity_, logLikelihood_, logThreshold_?NumericQ] := With[{
+    logzero = $MachineLogZero 
+},
+    Function[
+        If[ TrueQ[logLikelihood[#] > logThreshold],
+            logPriorDensity[#],
+            logzero
+        ]
+    ]
 ];
 
 MCMC[
@@ -495,7 +505,7 @@ MCMC[
             logDensity,
             {covEst, startingIteration},
             Real,
-            Compiled -> True
+            Compiled -> Head[logDensity] === CompiledFunction
         ]
     },
         Statistics`MCMC`MarkovChainIterate[chain, {1, numberOfSteps}];
