@@ -136,12 +136,16 @@ compiledKandKappa[
     ]
 ];
 
+logTotal = Function[ (* Take Abs because the covariance matrix has positive determinant *)
+    Total @ Log @ Abs[#]
+];
+
 matrixInverseAndDet[matrix_List?(MatrixQ[#, NumericQ]&)] := With[{
     ls = LinearSolve[matrix]
 },
     <|
         "Inverse" -> ls,
-        "Det" -> Abs[Tr[ls[[2, 3, 1]], Times]]
+        "LogDet" -> logTotal[Diagonal @ ls[[2, 3, 1]]]
     |>
 ];
 
@@ -150,13 +154,13 @@ matrixInverseAndDet[matrix_SparseArray?(MatrixQ[#, NumericQ]&)] := With[{
 },
     <|
         "Inverse" -> ls,
-        "Det" -> Abs[Tr[ls["getL"], Times] * Tr[ls["getU"], Times]]
+        "LogDet" -> logTotal[Join[Diagonal @ ls["getL"], Diagonal @ ls["getU"]]]
     |>
 ];
 
 matrixInverseAndDet[matrixDiagonal_List?(VectorQ[#, NumericQ]&)] := <|
     "Inverse" -> Function[Divide[#, matrixDiagonal]],
-    "Det" -> Abs[Times @@ matrixDiagonal]
+    "LogDet" -> logTotal[matrixDiagonal]
 |>;
 
 gaussianProcessLogLikelihood[data : {__Rule}, rest___] :=
@@ -188,7 +192,7 @@ With[{
         Clip[
             - 0.5 * Plus[
                 Length[#1] * logTwoPi,
-                Log[#2["Det"]],
+                #2["LogDet"],
                 #1 . #2["Inverse"][#1]
             ],
             limits
