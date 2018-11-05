@@ -24,6 +24,18 @@ paramSpecPattern = BayesianStatistics`Private`paramSpecPattern;
 
 nullKernelPattern = HoldPattern[Function[Repeated[_, {0, 1}], 0 | 0., ___]];
 
+varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_] := (
+    varsToParamVector[expr, vars] = ReplaceAll[
+        expr,
+        Thread[
+            vars -> Table[
+                Indexed[paramVectorSymbol, i],
+                {i, Length[vars]}
+            ]
+        ]
+    ]
+);
+
 covarianceMatrix[points_List, kernel : nullKernelPattern, nugget_] :=
     nugget /@ points;
 
@@ -42,16 +54,19 @@ covarianceMatrix[points_List, kernel : Except[nullKernelPattern], nugget_] :=
     ];
 
 compiledCovarianceMatrix[points_List, kernel_, nugget_, vars : {__Symbol}] := With[{
-    matrix = Normal @ covarianceMatrix[points, kernel, nugget]
+    matrix = Function[
+        paramSymbol,
+        Evaluate @ Normal @ covarianceMatrix[
+            points,
+            varsToParamVector[kernel, vars, paramSymbol],
+            varsToParamVector[nugget, vars, paramSymbol]
+        ]
+    ]
 },
-    Compile[
-        Evaluate[
-            Transpose[{
-                vars,
-                ConstantArray[_Real, Length[vars]]
-            }]
-        ],
-        matrix,
+    Compile[{
+        {pt, _Real, 1}
+    },
+        matrix[pt],
         RuntimeAttributes -> {Listable}
     ]
 ];
@@ -121,35 +136,28 @@ compiledKandKappa[
     ]
 ];
 
-matrixInverseAndDet[matrix_List?(MatrixQ[#, NumericQ]&)] :=
-    Module[{
-        ls = LinearSolve[matrix],
-        absdet
-    },
-        absdet = Abs[Tr[ls[[2, 3, 1]], Times]];
-        <|
-            "Inverse" -> ls,
-            "Det" -> absdet
-        |>
-    ];
-
-matrixInverseAndDet[matrix_SparseArray?(MatrixQ[#, NumericQ]&)] :=
-    Module[{
-        ls = LinearSolve[matrix],
-        absdet
-    },
-        absdet = Abs[Tr[ls["getL"], Times] * Tr[ls["getU"], Times]];
-        <|
-            "Inverse" -> ls,
-            "Det" -> absdet
-        |>
-    ];
-
-matrixInverseAndDet[matrixDiagonal_List?(VectorQ[#, NumericQ]&)] :=
+matrixInverseAndDet[matrix_List?(MatrixQ[#, NumericQ]&)] := With[{
+    ls = LinearSolve[matrix]
+},
     <|
-        "Inverse" -> Function[Divide[#, matrixDiagonal]],
-        "Det" -> Abs[Times @@ matrixDiagonal]
+        "Inverse" -> ls,
+        "Det" -> Abs[Tr[ls[[2, 3, 1]], Times]]
     |>
+];
+
+matrixInverseAndDet[matrix_SparseArray?(MatrixQ[#, NumericQ]&)] := With[{
+    ls = LinearSolve[matrix]
+},
+    <|
+        "Inverse" -> ls,
+        "Det" -> Abs[Tr[ls["getL"], Times] * Tr[ls["getU"], Times]]
+    |>
+];
+
+matrixInverseAndDet[matrixDiagonal_List?(VectorQ[#, NumericQ]&)] := <|
+    "Inverse" -> Function[Divide[#, matrixDiagonal]],
+    "Det" -> Abs[Times @@ matrixDiagonal]
+|>;
 
 gaussianProcessLogLikelihood[data : {__Rule}, rest___] :=
     gaussianProcessLogLikelihood[data[[All, 1]] -> data[[All, 2]], rest];
@@ -159,7 +167,7 @@ gaussianProcessLogLikelihood[
     kernel_, (* Kernel has to give numerical results after evaluation *)
     nugget_,
     meanFunction : _ : Function[0]
-] := gaussianProcessLogLikelihood[
+] := gaussianProcessLogLikelihood[][
     dataOut - meanFunction /@ dataIn,
     matrixInverseAndDet @ covarianceMatrix[
         dataIn,
@@ -169,22 +177,26 @@ gaussianProcessLogLikelihood[
 ];
 
 With[{
-    logTwoPi = N[Log[2 * Pi]]
+    logTwoPi = N[Log[2 * Pi]],
+    limits = {- Abs[$MachineLogZero], Abs[$MachineLogZero]}
 },
-    gaussianProcessLogLikelihood[
-        meanAdjustedOutputVector_List,
-        inverseCov_Association
-    ] := Clip[
-        - 0.5 * Plus[
-            Length[meanAdjustedOutputVector] * logTwoPi,
-            Log[inverseCov["Det"]],
-            meanAdjustedOutputVector . inverseCov["Inverse"][meanAdjustedOutputVector]
-        ],
-        {$MachineLogZero, Abs[$MachineLogZero]}
+    gaussianProcessLogLikelihood[] := Function[
+        (*
+            #1 : mean adjusted output vector,
+            #2 : output from matrixInverseAndDet 
+        *)
+        Clip[
+            - 0.5 * Plus[
+                Length[#1] * logTwoPi,
+                Log[#2["Det"]],
+                #1 . #2["Inverse"][#1]
+            ],
+            limits
+        ]
     ]
 ];
 
-gaussianProcessNestedSampling[data_, kernel_, nugget_, meanFunction_, variables : {paramSpecPattern..}, opts : OptionsPattern[]] :=
+gaussianProcessNestedSampling[data_, kernel_, nugget_, meanFunction_, variables : paramSpecPattern, opts : OptionsPattern[]] :=
     gaussianProcessNestedSampling[data, kernel, meanFunction, {variables}, opts];
 
 gaussianProcessNestedSampling[data : {__Rule}, rest___] :=
@@ -238,8 +250,8 @@ gaussianProcessNestedSampling[
         
         {kernel, nugget, mean} = Function[
             Function[
-                Evaluate[vars],
-                #
+                paramVector,
+                Evaluate @ varsToParamVector[#, vars, paramVector]
             ]
         ] /@ {kernelFunction, nuggetFunction, meanFunction};
         
@@ -266,9 +278,9 @@ gaussianProcessNestedSampling[
                         Function[
                             LogLikelihood[
                                 MultinormalDistribution[
-                                    f[covarianceFunction[##]]
+                                    f[covarianceFunction[#]]
                                 ],
-                                {outputData - (mean[##]) /@ inputData}
+                                {outputData - mean[#] /@ inputData}
                             ]
                         ]
                     ]
@@ -276,14 +288,16 @@ gaussianProcessNestedSampling[
                 _Function,
                     OptionValue["Likelihood"],
                 _,
-                    Function[
-                        gaussianProcessLogLikelihood[
-                            outputData - (mean @@ #) /@ inputData,
-                            matrixInverseAndDet[covarianceFunction @@ #]
+                    With[{fun = gaussianProcessLogLikelihood[]},
+                        Function[
+                            fun[
+                                outputData - (mean[#]) /@ inputData,
+                                matrixInverseAndDet[covarianceFunction[#]]
+                            ]
                         ]
                     ]
             ];
-            invCovFun = Function[matrixInverseAndDet[covarianceFunction[##]]];
+            invCovFun = Function[matrixInverseAndDet[covarianceFunction[#]]];
             
             infObject = defineInferenceProblem[
                 "LogLikelihoodFunction" -> logLikelihood,
@@ -320,8 +334,8 @@ gaussianProcessNestedSampling[
                 MapAt[
                     Function[{row},
                         Module[{
-                            Cmat = covarianceFunction @@ row["Point"],
-                            mf = mean @@ row["Point"],
+                            Cmat = covarianceFunction @ row["Point"],
+                            mf = mean @ row["Point"],
                             inv
                         },
                             inv = matrixInverseAndDet[Cmat]["Inverse"];
@@ -339,7 +353,7 @@ gaussianProcessNestedSampling[
                                                         mf /@ inputData
                                                     ]
                                                 ],
-                                                "KandKappaFunction" -> kAndKappa @@ row["Point"],
+                                                "KandKappaFunction" -> kAndKappa @ row["Point"],
                                                 "MeanFunction" -> mf
                                             |>
                                         ]
