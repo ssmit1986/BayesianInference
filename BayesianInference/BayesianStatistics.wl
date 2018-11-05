@@ -612,6 +612,7 @@ nestedSamplingInternal[
     logLikelihoodFunction_,
     logPriorDensityFunction_,
     startingPoints_,
+    params : {paramSpecPattern..},
     opts : OptionsPattern[]
 ] := Module[{
     maxiterations = Max[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
@@ -776,6 +777,7 @@ nestedSamplingInternal[
             "SamplePoolSize" -> nSamples,
             "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples
         |>,
+        params[[All, 1]],
         Sequence @@ passOptionsDown[nestedSampling, evidenceSampling, {opts}]
     ];
     Share[output];
@@ -867,6 +869,7 @@ nestedSampling[
         assoc["LogLikelihoodFunction"],
         assoc["LogPriorPDFFunction"],
         assoc["StartingPoints"],
+        assoc["Parameters"],
         Sequence @@ FilterRules[{opts}, Options[nestedSamplingInternal]]
     ]
 },
@@ -897,7 +900,7 @@ meanAndError[data_List /; Length[Dimensions[data]] === 2] := Map[
 ];
 
 
-evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
+evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPattern[]] := Module[{
     result = MapAt[
         calculateWeightsCrude[#, assoc["SamplePoolSize"]]&,
         assoc,
@@ -992,7 +995,14 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                 Join @@ # &
             ],
             "LogEvidence" -> meanAndError[zSamples],
-            "ParameterExpectedValues" -> meanAndError[parameterSamples],
+            "ParameterExpectedValues" -> With[{
+                paramMeanErr = meanAndError[parameterSamples]
+            },
+                If[ Length[paramNames] === Length[paramMeanErr],
+                    AssociationThread[paramNames, paramMeanErr],
+                    paramMeanErr
+                ]
+            ],
             "RelativeEntropy" -> meanAndError[
                 Subtract[
                     posteriorWeights . Replace[Values[result[["Samples", All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}],
@@ -1040,6 +1050,7 @@ combineRuns[results : inferenceObject[_?AssociationQ].., opts : OptionsPattern[]
             "SamplePoolSize" -> Total[{results}[[All, 1, "SamplePoolSize"]]],
             "GeneratedNestedSamples" -> Length[mergedResults] - Total[{results}[[All, 1, "SamplePoolSize"]]]
         |>,
+        {results}[[1, 1, "Parameters", All, 1]],
         opts
     ]
 ];
