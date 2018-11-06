@@ -10,6 +10,7 @@ $BayesianContexts;
 logSumExp;
 $MachineLogZero;
 checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has calls to MainEvaluate. If it does, it will issue a message and return False. It will return True for CompiledFunctions that pass the test and $Failed for any expression other than a CompiledFunction";
+distributionDimension;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -275,6 +276,17 @@ randomDomainPointDistribution[
 ] := TruncatedDistribution[
     list,
     ProductDistribution[{CauchyDistribution[0, width], Length[list]}]
+];
+
+distributionDimension[dist_?DistributionParameterQ] := With[{dom = DistributionDomain[dist]},
+    Switch[ dom,
+        {__},
+            {Length[dom]},
+        _Interval,
+            1,
+        _,
+            $Failed
+    ]
 ];
 
 End[] (* End Private Context *)

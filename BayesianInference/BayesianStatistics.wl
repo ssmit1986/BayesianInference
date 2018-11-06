@@ -28,13 +28,28 @@ Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
 ];
 Protect[MixtureDistribution];
 
+summaryForm[list_List] := ToString @ StringForm["List (``)", StringRiffle[ToString /@ Dimensions[list], " \[Times] "]];
+summaryForm[assoc_?AssociationQ] := ToString @ StringForm["Association (`` keys)", Length[assoc]];
+summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[dist]},
+    ToString @ Switch[dim,
+        1,
+            "Distribution (1D, Real)",
+        {_Integer},
+            StringForm["Distribution (``D, Vector)", First[dim]],
+        _,
+            $Failed
+    ]
+];
+summaryForm[other_] := ToString[Head[other]];
+
+
 Format[inferenceObject[assoc_?AssociationQ]] := With[{
     notMissing = DeleteMissing @ assoc
 },
     If[ TrueQ[Length[notMissing] > 0],
         Tooltip[
             #,
-            Grid[KeyValueMap[{#1, Short[#2]}&, notMissing], Alignment -> Left]
+            Grid[KeyValueMap[{#1, summaryForm[#2]}&, notMissing], Alignment -> Left]
         ]&,
         Identity
     ] @ inferenceObject[
