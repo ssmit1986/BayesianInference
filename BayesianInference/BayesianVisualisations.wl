@@ -11,13 +11,13 @@ gaussianProcessPredictionPlot;
 
 Begin["`Private`"] (* Begin Private Context *) 
 
-covarianceMatrixPlot[result_?(AssociationQ[#] && KeyExistsQ[#, "EmpiricalPosteriorDistribution"]&), opts : OptionsPattern[]] :=
+covarianceMatrixPlot[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "EmpiricalPosteriorDistribution"]&)], opts : OptionsPattern[]] :=
     MatrixPlot[
         Covariance[result["EmpiricalPosteriorDistribution"]],
         Sequence @@ FilterRules[{opts}, Options[MatrixPlot]],
         PlotLegends -> Automatic,
         FrameTicks -> ConstantArray[
-            Transpose[{Range[Length[result["Parameters"]]], result["Parameters"]}],
+            Transpose[{Range[Length[result["ParameterSymbols"]]], result["ParameterSymbols"]}],
             {2, 2}
         ]
     ];
@@ -27,10 +27,10 @@ Options[covarianceMatrixPlot] = Join[
     Options[MatrixPlot]
 ];
 
-posteriorMarginalPDFPlot1D[result_?AssociationQ, parameter_Symbol, opts : OptionsPattern[]] /; MemberQ[result["Parameters"], parameter] :=
-    posteriorMarginalPDFPlot1D[result, First @ FirstPosition[result["Parameters"], parameter, Missing["Error"], {1}], opts];
+posteriorMarginalPDFPlot1D[result_, parameter_Symbol, range : _ : Automatic, opts : OptionsPattern[]] /; MemberQ[result["ParameterSymbols"], parameter] :=
+    posteriorMarginalPDFPlot1D[result, First @ FirstPosition[result["ParameterSymbols"], parameter, Missing["Error"], {1}], range, opts];
 
-posteriorMarginalPDFPlot1D[result_?AssociationQ, plotIndex_Integer, range : (Automatic | {_, _}) : Automatic, opts : OptionsPattern[]] /;
+posteriorMarginalPDFPlot1D[inferenceObject[result_?AssociationQ], plotIndex_Integer, range : (Automatic | {_, _}) : Automatic, opts : OptionsPattern[]] /;
     (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && plotIndex <= Length[result["ParameterRanges"]]) :=
     Module[{
         x, pdf,
@@ -55,7 +55,7 @@ posteriorMarginalPDFPlot1D[result_?AssociationQ, plotIndex_Integer, range : (Aut
             Evaluate[Sequence @@ FilterRules[{opts}, Options[Plot]]],
             PlotRange -> All,
             Filling -> Axis,
-            Evaluate[AxesLabel -> {result["Parameters"][[plotIndex]], "PDF"}]
+            Evaluate[AxesLabel -> {result["ParameterSymbols"][[plotIndex]], "PDF"}]
         ]
     ];
 
@@ -66,25 +66,28 @@ Options[posteriorMarginalPDFPlot1D] = Join[
     Options[Plot]
 ];
 
-posteriorMarginalPDFDensityPlot2D[result_?AssociationQ, parameters : {_Symbol, _Symbol}, range_, opts : OptionsPattern[]] /;
-    (ListQ[result["Parameters"]] && SubsetQ[result["Parameters"], parameters]):=
-    posteriorMarginalPDFDensityPlot2D[
-        result,
-        Flatten[
-            Position[
-                result["Parameters"],
-                Alternatives @@ parameters,
-                {1},
-                Length[parameters]
-            ]
-        ],
-        range,
-        opts
-    ];
+posteriorMarginalPDFDensityPlot2D[result_, parameters : {_Symbol, _Symbol}, range : _ : Automatic, opts : OptionsPattern[]] /; (
+    ListQ[result["ParameterSymbols"]] && SubsetQ[result["ParameterSymbols"], parameters]
+) := posteriorMarginalPDFDensityPlot2D[
+    result,
+    Flatten[
+        Position[
+            result["ParameterSymbols"],
+            Alternatives @@ parameters,
+            {1},
+            Length[parameters]
+        ]
+    ],
+    range,
+    opts
+];
 
-posteriorMarginalPDFDensityPlot2D[result_?AssociationQ, plotIndices : {_Integer, _Integer},
+posteriorMarginalPDFDensityPlot2D[inferenceObject[result_?AssociationQ], plotIndices : {_Integer, _Integer},
     range : (Automatic | {{_, _}, {_, _}}) : Automatic, opts : OptionsPattern[]
-] /; (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && Max[plotIndices] <= Length[result["ParameterRanges"]]):=
+] /; And[
+    AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&],
+    Max[plotIndices] <= Length[result["ParameterRanges"]]
+] := Quiet[
     Module[{
         x, y, pdf,
         plotRange = Replace[range, Automatic :> result["ParameterRanges"][[plotIndices]]]
@@ -113,9 +116,11 @@ posteriorMarginalPDFDensityPlot2D[result_?AssociationQ, plotIndices : {_Integer,
             Evaluate[Sequence @@ FilterRules[{opts}, Options[DensityPlot]]],
             PlotLegends -> Automatic,
             Evaluate[PlotRange -> Join[plotRange, {All}]],
-            Evaluate[FrameLabel -> result["Parameters"][[plotIndices]]]
+            Evaluate[FrameLabel -> result["ParameterSymbols"][[plotIndices]]]
         ]
-    ];
+    ],
+    {General::munfl}
+];
 
 Options[posteriorMarginalPDFDensityPlot2D] = Join[
     {
@@ -124,10 +129,10 @@ Options[posteriorMarginalPDFDensityPlot2D] = Join[
     Options[DensityPlot]
 ];
 
-posteriorMarginalCDFPlot1D[result_?AssociationQ, parameter_Symbol, opts : OptionsPattern[]] /; MemberQ[result["Parameters"], parameter] :=
-    posteriorMarginalCDFPlot1D[result, First @ FirstPosition[result["Parameters"], parameter, Missing["Error"], {1}], opts];
+posteriorMarginalCDFPlot1D[result_, parameter_Symbol, opts : OptionsPattern[]] /; MemberQ[result["ParameterSymbols"], parameter] :=
+    posteriorMarginalCDFPlot1D[result, First @ FirstPosition[result["ParameterSymbols"], parameter, Missing["Error"], {1}], opts];
 
-posteriorMarginalCDFPlot1D[result_?AssociationQ, plotIndex_Integer, range : (Automatic | {_, _}) : Automatic, opts : OptionsPattern[]] /;
+posteriorMarginalCDFPlot1D[inferenceObject[result_?AssociationQ], plotIndex_Integer, range : (Automatic | {_, _}) : Automatic, opts : OptionsPattern[]] /;
     (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && plotIndex <= Length[result["ParameterRanges"]]) :=
     Module[{
         x, cdf,
@@ -157,7 +162,7 @@ posteriorMarginalCDFPlot1D[result_?AssociationQ, plotIndex_Integer, range : (Aut
                 Sequence @@ FilterRules[{opts}, Options[ListStepPlot]],
                 PlotRange -> {0, 1},
                 Filling -> Axis,
-                AxesLabel -> {result["Parameters"][[plotIndex]], "CDF"}
+                AxesLabel -> {result["ParameterSymbols"][[plotIndex]], "CDF"}
             ],
             Plot[
                 cdf,
@@ -165,7 +170,7 @@ posteriorMarginalCDFPlot1D[result_?AssociationQ, plotIndex_Integer, range : (Aut
                 Evaluate[Sequence @@ FilterRules[{opts}, Options[Plot]]],
                 PlotRange -> {0, 1},
                 Filling -> Axis,
-                Evaluate[AxesLabel -> {result["Parameters"][[plotIndex]], "CDF"}]
+                Evaluate[AxesLabel -> {result["ParameterSymbols"][[plotIndex]], "CDF"}]
             ]
         ]
     ];
@@ -175,13 +180,13 @@ Options[posteriorMarginalCDFPlot1D] = Join[
     Options[Plot]
 ];
 
-posteriorMarginalCDFDensityPlot2D[result_?AssociationQ, parameters : {_Symbol, _Symbol},range_, opts : OptionsPattern[]] /;
-    (ListQ[result["Parameters"]] && SubsetQ[result["Parameters"], parameters]):=
+posteriorMarginalCDFDensityPlot2D[result_, parameters : {_Symbol, _Symbol},range_, opts : OptionsPattern[]] /;
+    (ListQ[result["ParameterSymbols"]] && SubsetQ[result["ParameterSymbols"], parameters]):=
     posteriorMarginalCDFDensityPlot2D[
         result,
         Flatten[
             Position[
-                result["Parameters"],
+                result["ParameterSymbols"],
                 Alternatives @@ parameters,
                 {1},
                 Length[parameters]
@@ -192,7 +197,7 @@ posteriorMarginalCDFDensityPlot2D[result_?AssociationQ, parameters : {_Symbol, _
     ];
 
 
-posteriorMarginalCDFDensityPlot2D[result_?AssociationQ, plotIndices : {_Integer, _Integer},
+posteriorMarginalCDFDensityPlot2D[inferenceObject[result_?AssociationQ], plotIndices : {_Integer, _Integer},
     range : (Automatic | {{_, _}, {_, _}}) : Automatic, opts : OptionsPattern[]
 ] /; (AllTrue[{"ParameterRanges", "EmpiricalPosteriorDistribution"}, KeyExistsQ[result, #]&] && Max[plotIndices] <= Length[result["ParameterRanges"]]):=
     Module[{
@@ -213,7 +218,7 @@ posteriorMarginalCDFDensityPlot2D[result_?AssociationQ, plotIndices : {_Integer,
             Evaluate[Sequence @@ FilterRules[{opts}, Options[DensityPlot]]],
             PlotLegends -> Automatic,
             Evaluate[PlotRange -> Join[plotRange, {0, 1}]],
-            Evaluate[FrameLabel -> result["Parameters"][[plotIndices]]]
+            Evaluate[FrameLabel -> result["ParameterSymbols"][[plotIndices]]]
         ]
     ];
 
@@ -223,13 +228,13 @@ Options[posteriorMarginalCDFDensityPlot2D] = Join[
 ];
 
 
-posteriorBubbleChart[result_?AssociationQ, parameters : {Repeated[_Symbol, {2, 3}]}, frac_, opts : OptionsPattern[]] /;
-    (ListQ[result["Parameters"]] && SubsetQ[result["Parameters"], parameters]):=
+posteriorBubbleChart[result_, parameters : {Repeated[_Symbol, {2, 3}]}, frac_, opts : OptionsPattern[]] /;
+    (ListQ[result["ParameterSymbols"]] && SubsetQ[result["ParameterSymbols"], parameters]):=
     posteriorBubbleChart[
         result,
         Flatten[
             Position[
-                result["Parameters"],
+                result["ParameterSymbols"],
                 Alternatives @@ parameters,
                 {1},
                 Length[parameters]
@@ -239,7 +244,7 @@ posteriorBubbleChart[result_?AssociationQ, parameters : {Repeated[_Symbol, {2, 3
         opts
     ];
 
-posteriorBubbleChart[result_?AssociationQ, plotIndices : {Repeated[_Integer, {2, 3}]}, frac : _?NumericQ : 1, opts : OptionsPattern[]] /; 
+posteriorBubbleChart[inferenceObject[result_?AssociationQ], plotIndices : {Repeated[_Integer, {2, 3}]}, frac : _?NumericQ : 1, opts : OptionsPattern[]] /; 
     (KeyExistsQ[result, "Samples"] && Max[plotIndices] <= Length[result["Samples", 1, "Point"]] && Between[frac, {0, 1}]) :=
     Module[{
         data = Query[
@@ -260,7 +265,7 @@ posteriorBubbleChart[result_?AssociationQ, plotIndices : {Repeated[_Integer, {2,
         plotFunction[
             data,
             Sequence @@ FilterRules[{opts}, Options[plotFunction]],
-            label -> result["Parameters"][[plotIndices]],
+            label -> result["ParameterSymbols"][[plotIndices]],
             ColorFunction -> Function[Opacity[0.7]]
         ]
     ];
@@ -277,7 +282,7 @@ Options[posteriorBubbleChart] = Join[
 ];
 
 gaussianProcessPredictionPlot[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"]&),
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"]&)],
     predictedDistributions : <|(_?NumericQ -> _) ..|>,
     opts : OptionsPattern[]
 ] :=
@@ -304,38 +309,41 @@ gaussianProcessPredictionPlot[
         ]
     ];
 
-gaussianProcessPredictionPlot[predictedDistributions : <|(_?NumericQ -> _) ..|>, opts : OptionsPattern[]] := With[{
-    DistributionPercentiles = Replace[
-        OptionValue["DistributionPercentiles"],
-        {
-            "Moments" -> Function[
-                Dot[
-                    {
-                        {1, -1,   1},
-                        {1,  0,   0},
-                        {1,  1,   1}
-                    },
-                    {Mean[#], StandardDeviation[#], Surd[CentralMoment[#, 3], 3]}
+gaussianProcessPredictionPlot[predictedDistributions : <|(_?NumericQ -> _) ..|>, opts : OptionsPattern[]] := Quiet[
+    With[{
+        DistributionPercentiles = Replace[
+            OptionValue["DistributionPercentiles"],
+            {
+                "Moments" -> Function[
+                    Dot[
+                        {
+                            {1, -1,   1},
+                            {1,  0,   0},
+                            {1,  1,   1}
+                        },
+                        {Mean[#], StandardDeviation[#], Surd[CentralMoment[#, 3], 3]}
+                    ]
                 ]
-            ]
-            ,
-            levels : {__?NumericQ} /; (Min[levels] > 0 && Max[levels] < 1) :>
-                Function[InverseCDF[#, levels]]
-        }
-    ]
-},
-    Module[{
-        plotPoints = Map[
-            DistributionPercentiles,
-            KeySort[predictedDistributions]
+                ,
+                levels : {__?NumericQ} /; (Min[levels] > 0 && Max[levels] < 1) :>
+                    Function[InverseCDF[#, levels]]
+            }
         ]
     },
-        ListPlot[
-            plotPoints[[All, #]]& /@ Range[Length[First @ plotPoints]],
-            Sequence @@ FilterRules[{opts}, Options[ListPlot]],
-            Joined -> True
+        Module[{
+            plotPoints = Map[
+                DistributionPercentiles,
+                KeySort[predictedDistributions]
+            ]
+        },
+            ListPlot[
+                plotPoints[[All, #]]& /@ Range[Length[First @ plotPoints]],
+                Sequence @@ FilterRules[{opts}, Options[ListPlot]],
+                Joined -> True
+            ]
         ]
-    ]
+    ],
+    {General::munfl}
 ];
 Options[gaussianProcessPredictionPlot] = Join[
     {
@@ -343,8 +351,6 @@ Options[gaussianProcessPredictionPlot] = Join[
     },
     Options[ListPlot]
 ];
-
-
 
 End[] (* End Private Context *)
 

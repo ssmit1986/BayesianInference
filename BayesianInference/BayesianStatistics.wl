@@ -4,73 +4,17 @@ BeginPackage["BayesianStatistics`", {"BayesianUtilities`"}];
 
 directPosteriorDistribution;
 nestedSampling;
-posteriorDistribution;
 combineRuns;
 predictiveDistribution;
 calculationReport;
 parallelNestedSampling;
 defineInferenceProblem;
-inferenceObject;
 bayesianInferenceObject;
 generateStartingPoints;
 
 Begin["`Private`"];
 
-(* Dummy code to make WL load everything related to MixtureDistribution *)
-MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
-
-Unprotect[MixtureDistribution];
-Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
-    StringForm[
-        "Mixture of `1` distributions",
-        Length[list1]
-    ]
-];
-Protect[MixtureDistribution];
-
-summaryForm[list_List] := ToString @ StringForm["List (``)", StringRiffle[ToString /@ Dimensions[list], " \[Times] "]];
-summaryForm[assoc_?AssociationQ] := ToString @ StringForm["Association (`` keys)", Length[assoc]];
-summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[dist]},
-    ToString @ Switch[dim,
-        1,
-            "Distribution (1D, Real)",
-        {_Integer},
-            StringForm["Distribution (``D, Vector)", First[dim]],
-        _,
-            $Failed
-    ]
-];
-summaryForm[other_] := ToString[Head[other]];
-
-
-Format[inferenceObject[assoc_?AssociationQ]] := With[{
-    notMissing = DeleteMissing @ assoc
-},
-    If[ TrueQ[Length[notMissing] > 0],
-        Tooltip[
-            #,
-            Grid[KeyValueMap[{#1, summaryForm[#2]}&, notMissing], Alignment -> Left]
-        ]&,
-        Identity
-    ] @ inferenceObject[
-        Framed[
-            StringForm[
-                "<< `1` defined properties >>",
-                Length[notMissing]
-            ]
-        ]
-    ]
-];
-
 paramSpecPattern = {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]};
-
-inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
-inferenceObject /: FailureQ[inferenceObject[$Failed]] := True;
-
-inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
-inferenceObject[first_, rest__] := inferenceObject[first];
-inferenceObject[assoc_?AssociationQ]["Properties"] := Sort @ Append[Keys[assoc], "Properties"];
-inferenceObject[assoc_?AssociationQ][prop : (_String | {__String})] := assoc[[prop]];
 
 (*
     If the prior is a list, convert all strings "LocationParameter" and "ScaleParameter" to distributions automatically
@@ -103,7 +47,6 @@ ignorancePrior[
             ]
         ]
     ];
-
 
 directPosteriorDistribution[data_NumericQ, generatingDistribution_, prior_, variables_, opts : OptionsPattern[]] :=
     directPosteriorDistribution[{data}, generatingDistribution, prior, variables, opts];
@@ -210,6 +153,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
                 Throw[$Failed, "problemDef"]
         ];
+        AppendTo[assoc, "ParameterSymbols" -> assoc["Parameters"][[All, 1]]];
         If[ ListQ[assoc["PriorDistribution"]],
             With[{
                 priorDist = ignorancePrior[
@@ -790,7 +734,9 @@ nestedSamplingInternal[
         <|
             "Samples" -> variableSamplePoints,
             "SamplePoolSize" -> nSamples,
-            "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples
+            "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples,
+            "TotalSamples" -> Length[variableSamplePoints],
+            "ParameterRanges" -> CoordinateBounds[Values @ variableSamplePoints[[All, "Point"]]]
         |>,
         params[[All, 1]],
         Sequence @@ passOptionsDown[nestedSampling, evidenceSampling, {opts}]
@@ -1063,7 +1009,8 @@ combineRuns[results : inferenceObject[_?AssociationQ].., opts : OptionsPattern[]
             ],
             "LogLikelihoodMaximum" -> Max[{results}[[All, 1, "LogLikelihoodMaximum"]]],
             "SamplePoolSize" -> Total[{results}[[All, 1, "SamplePoolSize"]]],
-            "GeneratedNestedSamples" -> Length[mergedResults] - Total[{results}[[All, 1, "SamplePoolSize"]]]
+            "GeneratedNestedSamples" -> Length[mergedResults] - Total[{results}[[All, 1, "SamplePoolSize"]]],
+            "TotalSamples" -> Length[mergedResults]
         |>,
         {results}[[1, 1, "Parameters", All, 1]],
         opts
@@ -1154,24 +1101,25 @@ predictiveDistribution[
 ];
 
 calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]] := TabView[{
-
     DynamicModule[{
         min = Max[result[["Samples", All, "LogLikelihood"]]] - 100
     },
         Column[{
-           Dynamic[
-               ListLogLinearPlot[
-                    Transpose[
-                        {
-                            Values @ result[["Samples", All, "SampledX", "Mean"]],
-                            Values @ result[["Samples", All, "LogLikelihood"]]
-                        }
+            With[{
+                dat = Transpose @ {
+                    Values @ result[["Samples", All, "SampledX", "Mean"]],
+                    Values @ result[["Samples", All, "LogLikelihood"]]
+                }
+            },
+                Dynamic[
+                    ListLogLinearPlot[
+                        dat,
+                        PlotRange -> {{0, 1}, {min, All}},
+                        PlotLabel -> "Enclosed prior mass vs log likelihood",
+                        ImageSize -> Large
                     ],
-                    PlotRange -> {min, All},
-                    PlotLabel -> "Enclosed prior mass vs log likelihood",
-                    ImageSize -> Large
-                ],
-                TrackedSymbols :> {min}
+                    TrackedSymbols :> {min}
+                ]
             ],
             Manipulator[
                 Dynamic[min],
@@ -1189,7 +1137,7 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
                 ]
             }
         ],
-        PlotRange -> All,
+        PlotRange -> {{All, 1}, {All, 1}},
         PlotLabel -> "Enclosed posterior mass vs enclosed prior mass",
         ImageSize -> Large
     ],
@@ -1209,7 +1157,7 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
     ],
 
     ListPlot[
-        Divide[#[[1]], #[[1]] + #[[2]]]& /@ DeleteMissing @ result[["Samples", All, "AcceptanceRejectionCounts"]],
+        DeleteMissing @ result[["Samples", All, "AcceptanceRate"]],
         PlotLabel -> "Acceptance Ratio",
         PlotRange -> {0, 1},
         ImageSize -> Large,

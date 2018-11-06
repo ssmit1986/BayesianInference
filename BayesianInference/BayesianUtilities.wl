@@ -11,6 +11,8 @@ logSumExp;
 $MachineLogZero;
 checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has calls to MainEvaluate. If it does, it will issue a message and return False. It will return True for CompiledFunctions that pass the test and $Failed for any expression other than a CompiledFunction";
 distributionDimension;
+inferenceObject;
+posteriorDistribution;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -30,6 +32,62 @@ $BayesianContexts = Flatten[
         "Global`"
     }
 ];
+
+(* Dummy code to make WL load everything related to MixtureDistribution *)
+MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
+
+Unprotect[MixtureDistribution];
+Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
+    StringForm[
+        "Mixture of `1` distributions",
+        Length[list1]
+    ]
+];
+Protect[MixtureDistribution];
+
+summaryForm[list_List] := ToString @ StringForm["List (``)", StringRiffle[ToString /@ Dimensions[list], " \[Times] "]];
+summaryForm[assoc_?AssociationQ] := ToString @ StringForm["Association (`` keys)", Length[assoc]];
+summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[dist]},
+    ToString @ Switch[dim,
+        1,
+            "Distribution (1D, Real)",
+        {_Integer},
+            StringForm["Distribution (``D, Vector)", First[dim]],
+        _,
+            $Failed
+    ]
+];
+summaryForm[atom : (_?NumericQ | _String)] := ToString[Short[atom]];
+summaryForm[other_] := ToString[StringForm["``[...]", Head[other]]];
+
+
+Format[inferenceObject[assoc_?AssociationQ]] := With[{
+    notMissing = DeleteMissing @ assoc
+},
+    inferenceObject[
+        If[ TrueQ[Length[notMissing] > 0],
+            Tooltip[
+                #,
+                Grid[KeyValueMap[{#1, summaryForm[#2]}&, notMissing], Alignment -> Left]
+            ]&,
+            Identity
+        ] @ Framed[
+            StringForm[
+                "<< `1` defined properties >>",
+                Length[notMissing]
+            ]
+        ]
+    ]
+];
+
+inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
+inferenceObject /: FailureQ[inferenceObject[$Failed]] := True;
+
+inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
+inferenceObject[first_, rest__] := inferenceObject[first];
+inferenceObject[assoc_?AssociationQ]["Properties"] := Sort @ Append[Keys[assoc], "Properties"];
+inferenceObject[assoc_?AssociationQ][prop : (_String | {__String})] := assoc[[prop]];
+
 
 SetAttributes[quietCheck, {HoldAll}];
 quietCheck[expr_, failexpr_, msgs : {__MessageName}] :=
@@ -172,14 +230,16 @@ takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), fr
     count = 0
 },
     MapAt[
-        TakeWhile[
-            Function[samples, SortBy[samples, -#CrudePosteriorWeight &]],
-            Function[
-                With[{
-                    boole = count <= frac
-                },
-                    count += #CrudePosteriorWeight;
-                    boole
+        Function[ samples,
+            TakeWhile[
+                SortBy[samples, -#CrudePosteriorWeight &],
+                Function[
+                    With[{
+                        boole = count <= frac
+                    },
+                        count += #CrudePosteriorWeight;
+                        boole
+                    ]
                 ]
             ]
         ],

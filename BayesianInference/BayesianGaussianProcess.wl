@@ -406,7 +406,7 @@ predictFromGaussianProcess[
     posteriorFraction : (_?(NumericQ[#] && Between[#, {0, 1}]&)) : 1,
     opts : OptionsPattern[]
 ] := predictFromGaussianProcess[
-    result,
+    inferenceObject[result],
     If[ Length[Dimensions[result[["GaussianProcessData", "OriginalData", "Input"]]]] === 1,
         Subdivide[
             Sequence @@ MinMax @ result[["GaussianProcessData", "OriginalData", "Input"]],
