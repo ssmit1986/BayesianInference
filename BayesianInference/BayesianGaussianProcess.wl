@@ -401,9 +401,9 @@ Options[gaussianProcessNestedSampling] = Join[
 SetOptions[gaussianProcessNestedSampling, "ParallelRuns" -> None];
 
 predictFromGaussianProcess[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"]&),
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"]&)],
     predictionPoints_Integer /; predictionPoints > 1,
-    posteriorFraction : _?(NumericQ[#] && Between[#, {0, 1}]&): 1,
+    posteriorFraction : (_?(NumericQ[#] && Between[#, {0, 1}]&)) : 1,
     opts : OptionsPattern[]
 ] := predictFromGaussianProcess[
     result,
@@ -424,9 +424,9 @@ predictFromGaussianProcess[
 ]
 
 predictFromGaussianProcess[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"]&),
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"]&)],
     predictionPoints_List,
-    posteriorFraction : _?(NumericQ[#] && Between[#, {0, 1}]&) : 1,
+    posteriorFraction : (_?(NumericQ[#] && Between[#, {0, 1}]&)) : 1,
     opts : OptionsPattern[]
 ] /; Between[posteriorFraction, {0, 1}]:= Module[{
     truncatedResult = takePosteriorFraction[result, posteriorFraction],

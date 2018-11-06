@@ -1111,8 +1111,8 @@ Options[parallelNestedSampling] = Join[
 SetOptions[parallelNestedSampling, DistributedContexts :> $BayesianContexts];
 
 predictiveDistribution[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&),
-    posteriorFraction : _?NumericQ : 1
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)],
+    posteriorFraction : (_?NumericQ) : 1
 ] /; !MissingQ[result["GeneratingDistribution"]] :=
     predictiveDistribution[
         result,
@@ -1121,14 +1121,14 @@ predictiveDistribution[
     ];
 
 predictiveDistribution[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&),
-    posteriorFraction : _?NumericQ : 1
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)],
+    posteriorFraction : (_?NumericQ) : 1
 ] /; MissingQ[result["GeneratingDistribution"]] := "No distribution specified";
 
 predictiveDistribution[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&),
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)],
     dist : Except[_?NumericQ],
-    posteriorFraction : _?NumericQ : 1
+    posteriorFraction : (_?NumericQ) : 1
 ] /; Between[posteriorFraction, {0, 1}] := Module[{
     truncatedResult = takePosteriorFraction[result, posteriorFraction]
 },
@@ -1138,7 +1138,7 @@ predictiveDistribution[
     ]
 ];
 
-calculationReport[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)] := TabView[{
+calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]] := TabView[{
 
     DynamicModule[{
         min = Max[result[["Samples", All, "LogLikelihood"]]] - 100

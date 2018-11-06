@@ -159,28 +159,32 @@ Options[normalizeData] = {
     "StandardizationFunctions" -> {Mean, StandardDeviation}
 };
 
-takePosteriorFraction[result_, 1] := MapAt[
+takePosteriorFraction[inferenceObject[assoc_?AssociationQ], rest___] := inferenceObject @ takePosteriorFraction[assoc, rest];
+
+takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), 1] := MapAt[
     SortBy[-#CrudePosteriorWeight &],
     result,
     {"Samples"}
 ];
 
 takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), frac_?NumericQ] /; 0 <= frac < 1 := Module[{
-    newSamples = result,
     count = 0
 },
-    newSamples["Samples"] = TakeWhile[
-        SortBy[newSamples["Samples"], -#CrudePosteriorWeight &],
-        Function[
-            With[{
-                boole = count <= frac
-            },
-                count += #CrudePosteriorWeight;
-                boole
+    MapAt[
+        TakeWhile[
+            Function[samples, SortBy[samples, -#CrudePosteriorWeight &]],
+            Function[
+                With[{
+                    boole = count <= frac
+                },
+                    count += #CrudePosteriorWeight;
+                    boole
+                ]
             ]
-        ]
-    ];
-    newSamples
+        ],
+        result,
+        {"Samples"}
+    ]
 ];
 
 regressionLogLikelihoodFunction[
