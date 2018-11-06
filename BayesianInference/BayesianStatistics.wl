@@ -531,13 +531,13 @@ calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
     keys = Keys[sorted];
     xValues = calculateXValues[nSamplePool, nDeleted];
     weights = trapezoidWeigths[xValues];
-    Merge[
-        {
-            sorted,
-            <|"X" -> #|> & /@ AssociationThread[keys, xValues],
-            <|"CrudePosteriorWeight" -> #|> & /@ AssociationThread[keys, weights * Exp[Values @ sorted[[All, "LogLikelihood"]]]]
-        },
-        Join @@ # &
+    Join[
+        sorted,
+        GeneralUtilities`AssociationTranspose @ <|
+            "X" -> AssociationThread[keys, xValues],
+            "CrudePosteriorWeight" -> AssociationThread[keys, weights * Exp[Values @ sorted[[All, "LogLikelihood"]]]]
+        |>,
+        2
     ]
 ];
 
