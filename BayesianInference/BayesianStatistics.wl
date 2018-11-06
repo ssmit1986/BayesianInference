@@ -934,26 +934,23 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
     Join[
         output,
         <|
-            "Samples" -> SortBy[-#CrudePosteriorWeight &] @ Merge[
-                {
-                    MapAt[
-                        Divide[#, crudeEvidence]&,
-                        result["Samples"],
-                        {All, "CrudePosteriorWeight"}
-                    ],
-                    <|"SampledX" -> #|> & /@ AssociationThread[
-                        keys,
-                        meanAndError[Transpose[sampledX]]
-                    ],
-                    <|"LogPosteriorWeight" -> #|> & /@ AssociationThread[
+            "Samples" -> SortBy[-#CrudePosteriorWeight &] @ Join[
+                MapAt[
+                    Divide[#, crudeEvidence]&,
+                    result["Samples"],
+                    {All, "CrudePosteriorWeight"}
+                ],
+                GeneralUtilities`AssociationTranspose @ <|
+                    "SampledX" -> AssociationThread[keys, meanAndError[Transpose[sampledX]]],
+                    "LogPosteriorWeight" -> AssociationThread[
                         keys,
                         meanAndError @ Subtract[
                             Transpose[Log[posteriorWeights]],
                             logSumExp[Mean[Log @ posteriorWeights]] (* Adjust LogWeights by constant factor so that Total[Exp[meanLogweights]] == 1. *)
                         ]
                     ]
-                },
-                Join @@ # &
+                |>,
+                2
             ],
             "LogEvidence" -> meanAndError[zSamples],
             "ParameterExpectedValues" -> With[{
