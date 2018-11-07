@@ -1097,70 +1097,84 @@ predictiveDistribution[
     ]
 ];
 
-calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]] := TabView[{
-    DynamicModule[{
-        min = Max[result[["Samples", All, "LogLikelihood"]]] - 100
-    },
-        Column[{
+calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]] := With[{
+    style = Function[
+        {
+            Frame -> True,
+            ImageSize -> Large,
+            FrameLabel -> {{#2, None}, {#1, None}}
+        }
+    ]
+},
+    TabView[{
+        DynamicModule[{
+            min = Max[result[["Samples", All, "LogLikelihood"]]] - 100
+        },
+            Column[{
+                With[{
+                    dat = Transpose @ {
+                        Values @ result[["Samples", All, "SampledX", "Mean"]],
+                        Values @ result[["Samples", All, "LogLikelihood"]]
+                    }
+                },
+                    Dynamic[
+                        ListLogLinearPlot[
+                            dat,
+                            PlotRange -> {{0, 1}, {min, All}},
+                            PlotLabel -> "Skilling's plot",
+                            Sequence @@ style["X; enclosed prior mass", "LogLikelihood"]
+                        ],
+                        TrackedSymbols :> {min}
+                    ]
+                ],
+                Manipulator[
+                    Dynamic[min],
+                    Max[result[["Samples", All, "LogLikelihood"]]] + {-100, -1}
+                ]
+            }, Alignment -> Left]
+        ],
+        
+        ListLogLogPlot[
             With[{
-                dat = Transpose @ {
-                    Values @ result[["Samples", All, "SampledX", "Mean"]],
-                    Values @ result[["Samples", All, "LogLikelihood"]]
-                }
+                sorted = SortBy[result["Samples"], #LogLikelihood&]
             },
-                Dynamic[
-                    ListLogLinearPlot[
-                        dat,
-                        PlotRange -> {{0, 1}, {min, All}},
-                        PlotLabel -> "Enclosed prior mass vs log likelihood",
-                        ImageSize -> Large
-                    ],
-                    TrackedSymbols :> {min}
+                Transpose[
+                    {
+                        Values @ sorted[[All, "SampledX", "Mean"]],
+                        Reverse @ Accumulate @ Reverse[
+                            Values @ sorted[[All, "CrudePosteriorWeight"]]
+                        ]
+                    }
                 ]
             ],
-            Manipulator[
-                Dynamic[min],
-                Max[result[["Samples", All, "LogLikelihood"]]] + {-100, -1}
-            ]
-        }, Alignment -> Left]
-    ],
-
-    ListLogLogPlot[
-        Transpose[
-            {
-                Values @ result[["Samples", All, "SampledX", "Mean"]],
-                Reverse @ Accumulate @ Reverse[
-                    Values @ result[["Samples", All, "CrudePosteriorWeight"]]
-                ]
-            }
+            PlotRange -> {{All, 1}, {All, 1}},
+            PlotLabel -> "Localisation of posterior distribution",
+            Sequence @@ style["Enclosed prior mass", "Enclosed posterior mass"]
         ],
-        PlotRange -> {{All, 1}, {All, 1}},
-        PlotLabel -> "Enclosed posterior mass vs enclosed prior mass",
-        ImageSize -> Large
-    ],
-
-    ListPlot[
-        Log /@ Accumulate @ Values @ result[["Samples", All, "CrudePosteriorWeight"]],
-        PlotLabel -> "Log evidence",
-        PlotRange -> All,
-        ImageSize -> Large
-    ],
-
-    ListPlot[
-        result[["Samples", All, "LogLikelihood"]],
-        PlotLabel -> "Log likelihood",
-        PlotRange -> All,
-        ImageSize -> Large
-    ],
-
-    ListPlot[
-        DeleteMissing @ result[["Samples", All, "AcceptanceRate"]],
-        PlotLabel -> "Acceptance Ratio",
-        PlotRange -> {0, 1},
-        ImageSize -> Large,
-        Epilog -> InfiniteLine[{{0, 0.5}, {1, 0.5}}]
-    ]
-}];
+        
+        ListPlot[
+            Log /@ Accumulate @ Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+            PlotLabel -> "Evidence progression",
+            PlotRange -> All,
+            Sequence @@ style["Iteration", "Evidence found"]
+        ],
+        
+        ListPlot[
+            result[["Samples", All, "LogLikelihood"]],
+            PlotLabel -> "LogLikelihood progression",
+            PlotRange -> All,
+            Sequence @@ style["Iteration", "LogLikelihood"]
+        ],
+        
+        ListPlot[
+            DeleteMissing @ result[["Samples", All, "AcceptanceRate"]],
+            PlotLabel -> "Acceptance Ratio",
+            PlotRange -> {0, 1},
+            ImageSize -> Large,
+            Epilog -> InfiniteLine[{{0, 0.5}, {1, 0.5}}]
+        ]
+    }]
+];
 
 End[(*Private*)]
 
