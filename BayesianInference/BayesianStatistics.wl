@@ -1087,13 +1087,9 @@ predictiveDistribution[
 predictiveDistribution[
     inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]
 ] := With[{
-    dist = Function[
-        paramVector,
-        Evaluate @ varsToParamVector[
-            Evaluate @ result["GeneratingDistribution"],
-            result["ParameterSymbols"],
-            paramVector
-        ]
+    dist = expressionToFunction[
+        result["GeneratingDistribution"],
+        result["ParameterSymbols"]
     ]
 },
     MixtureDistribution[

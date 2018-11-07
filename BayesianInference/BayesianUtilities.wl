@@ -14,6 +14,7 @@ distributionDimension;
 inferenceObject;
 posteriorDistribution;
 varsToParamVector;
+expressionToFunction
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -360,18 +361,28 @@ distributionDimension[dist_?DistributionParameterQ] := With[{dom = DistributionD
     ]
 ];
 
-SetAttributes[varsToParamVector, HoldFirst];
+varsToParamVector::duplicateSym = "Warning: symbol `1` already present in expression";
 varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_Symbol] := (
-    varsToParamVector[expr, vars] = ReplaceAll[
-        Unevaluated[expr],
-        Thread[
-            vars -> Table[
-                Indexed[paramVectorSymbol, i],
-                {i, Length[vars]}
+    varsToParamVector[expr, vars, paramVectorSymbol] = (
+        If[ !FreeQ[expr, paramVectorSymbol],
+            Message[varsToParamVector::duplicateSym, paramVectorSymbol]
+        ];
+        ReplaceAll[
+            expr,
+            Thread[
+                vars -> Table[
+                    Indexed[paramVectorSymbol, i],
+                    {i, Length[vars]}
+                ]
             ]
         ]
-    ]
+    )
 );
+
+expressionToFunction[expr_, vars : {__Symbol}] := Function[
+    vectorSymbol,
+    Evaluate @ varsToParamVector[expr, vars, vectorSymbol]
+]
 
 End[] (* End Private Context *)
 
