@@ -1137,11 +1137,14 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
         
         ListLogLogPlot[
             With[{
-                sorted = SortBy[result["Samples"], #LogLikelihood&]
+                sorted = SortBy[
+                    result[["Samples", All, {"X", "CrudePosteriorWeight", "LogLikelihood"}]],
+                    #LogLikelihood&
+                ]
             },
                 Transpose[
                     {
-                        Values @ sorted[[All, "SampledX", "Mean"]],
+                        Values @ sorted[[All, "X"]],
                         Reverse @ Accumulate @ Reverse[
                             Values @ sorted[[All, "CrudePosteriorWeight"]]
                         ]
