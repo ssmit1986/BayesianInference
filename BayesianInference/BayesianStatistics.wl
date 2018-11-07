@@ -1105,38 +1105,43 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
             ImageSize -> Large,
             FrameLabel -> {{#2, None}, {#1, None}}
         }
-    ]
+    ],
+    manipulateStyle = {ControlPlacement -> Bottom, Paneled -> False}
 },
-    TabView[{
-        DynamicModule[{
-            min = Max[result[["Samples", All, "LogLikelihood"]]] - 100
+    TabView @ AssociationThread[{
+            "Skilling's plot",
+            "Posterior concentration",
+            "Evidence",
+            "LogLikelihood",
+            "Acceptance rate"
+        } -> {
+        With[{
+            dat = Transpose @ {
+                Values @ result[["Samples", All, "SampledX", "Mean"]],
+                Values @ result[["Samples", All, "LogLikelihood"]]
+            }
         },
-            Column[{
-                With[{
-                    dat = Transpose @ {
-                        Values @ result[["Samples", All, "SampledX", "Mean"]],
-                        Values @ result[["Samples", All, "LogLikelihood"]]
-                    }
-                },
-                    Dynamic[
-                        ListLogLinearPlot[
-                            dat,
-                            PlotRange -> {{0, 1}, {min, All}},
-                            PlotLabel -> "Skilling's plot",
-                            Sequence @@ style["X; enclosed prior mass", "LogLikelihood"]
-                        ],
-                        TrackedSymbols :> {min}
-                    ]
+            Manipulate[
+                Show[
+                    ListLogLinearPlot[
+                        dat,
+                        PlotRange -> MinMax[dat[[All, 2]]],
+                        PlotRangePadding -> {{0, 0}, {0, Scaled[0.01]}},
+                        PlotLabel -> "Skilling's plot",
+                        Sequence @@ style["X; enclosed prior mass", "LogLikelihood"]
+                    ],
+                    PlotRange -> {{All, Log[1]}, {Dynamic[min], All}}
                 ],
-                Manipulator[
-                    Dynamic[min],
-                    Max[result[["Samples", All, "LogLikelihood"]]] + {-100, -1}
-                ]
-            }, Alignment -> Left]
+                {
+                    {min, Max[result[["Samples", All, "LogLikelihood"]]] - 100, "Y-axis range"},
+                    Sequence @@ (Max[result[["Samples", All, "LogLikelihood"]]] + {-100, -1})
+                },
+                Evaluate[Sequence @@ manipulateStyle]
+            ]
         ],
         
-        ListLogLogPlot[
-            With[{
+        With[{
+            points = With[{
                 sorted = SortBy[
                     result[["Samples", All, {"X", "CrudePosteriorWeight", "LogLikelihood"}]],
                     #LogLikelihood&
@@ -1150,10 +1155,45 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
                         ]
                     }
                 ]
-            ],
-            PlotRange -> {{All, 1}, {All, 1}},
-            PlotLabel -> "Localisation of posterior distribution",
-            Sequence @@ style["Enclosed prior mass", "Enclosed posterior mass"]
+            ]
+        },
+            DynamicModule[{
+                splitPts, range,
+                fit
+            },
+                Manipulate[
+                    splitPts = TakeDrop[points, Sort[Length[points] + 1 - range]];
+                    If[ Length[splitPts[[1]]] > 1,
+                        fit = Exp[
+                            Fit[Log @ splitPts[[1]], {1, \[FormalX]}, \[FormalX]] /. \[FormalX] -> Log[\[FormalX]]
+                        ],
+                        fit = 0
+                    ];
+                    Show[
+                        ListLogLogPlot[
+                            DeleteCases[{}] @ splitPts,
+                            PlotRange -> {{All, 1}, {All, 1}},
+                            PlotLabel -> "Localisation of posterior distribution",
+                            Sequence @@ style["Enclosed prior mass", "Enclosed posterior mass"]
+                        ],
+                        LogLogPlot[
+                            fit, {\[FormalX], Min[points[[All, 1]]], 1},
+                            PlotRange -> {{All, 1}, {All, 1}}
+                        ],
+                        Graphics[
+                            Inset[
+                                Style[fit, 20],
+                                Scaled[{0.8, 0.2}]
+                            ]
+                        ]
+                    ],
+                    {
+                        {range, {1, Ceiling[Length[points] / 3]}, "Range"},
+                        1, Length[points], 1, ControlType -> IntervalSlider
+                    },
+                    Evaluate[Sequence @@ manipulateStyle]
+                ]
+            ]
         ],
         
         ListPlot[
@@ -1172,7 +1212,7 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
         
         ListPlot[
             DeleteMissing @ result[["Samples", All, "AcceptanceRate"]],
-            PlotLabel -> "Acceptance Ratio",
+            PlotLabel -> "Acceptance rate",
             PlotRange -> {0, 1},
             ImageSize -> Large,
             Epilog -> InfiniteLine[{{0, 0.5}, {1, 0.5}}]
