@@ -1069,31 +1069,36 @@ Options[parallelNestedSampling] = Join[
 ];
 SetOptions[parallelNestedSampling, DistributedContexts :> $BayesianContexts];
 
+predictiveDistribution::MissGenDist = "No generating distribution specified";
+predictiveDistribution::unsampled = "Posterior has not been sampled yet";
 predictiveDistribution[
-    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)],
-    posteriorFraction : (_?NumericQ) : 1
-] /; !MissingQ[result["GeneratingDistribution"]] :=
-    predictiveDistribution[
-        result,
-        result["GeneratingDistribution"],
-        posteriorFraction
-    ];
+    inferenceObject[result_?(AssociationQ[#] && MissingQ[#["Samples"]]&)]
+] := (
+    Message[predictiveDistribution::unsampled];
+    $Failed
+);
+predictiveDistribution[
+    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]] && MissingQ[#["GeneratingDistribution"]]&)]
+] := (
+    Message[predictiveDistribution::MissGenDist];
+    $Failed
+);
 
 predictiveDistribution[
-    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)],
-    posteriorFraction : (_?NumericQ) : 1
-] /; MissingQ[result["GeneratingDistribution"]] := "No distribution specified";
-
-predictiveDistribution[
-    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)],
-    dist : Except[_?NumericQ],
-    posteriorFraction : (_?NumericQ) : 1
-] /; Between[posteriorFraction, {0, 1}] := Module[{
-    truncatedResult = takePosteriorFraction[result, posteriorFraction]
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]
+] := With[{
+    dist = Function[
+        paramVector,
+        Evaluate @ varsToParamVector[
+            Evaluate @ result["GeneratingDistribution"],
+            result["ParameterSymbols"],
+            paramVector
+        ]
+    ]
 },
     MixtureDistribution[
-        Values @ truncatedResult[["Samples", All, "CrudePosteriorWeight"]],
-        dist @@ #& /@ Values @ truncatedResult[["Samples", All, "Point"]]
+        Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+        dist /@ Values[result[["Samples", All, "Point"]]]
     ]
 ];
 

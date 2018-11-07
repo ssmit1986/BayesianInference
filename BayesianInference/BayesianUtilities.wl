@@ -13,6 +13,7 @@ checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has c
 distributionDimension;
 inferenceObject;
 posteriorDistribution;
+varsToParamVector;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -38,9 +39,17 @@ MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
 
 Unprotect[MixtureDistribution];
 Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
-    StringForm[
-        "Mixture of `1` distributions",
-        Length[list1]
+    Framed[
+        Tooltip[
+            StringForm[
+                "<< Mixture of `1` distributions >>",
+                Length[list1]
+            ],
+            Grid[
+                KeyValueMap[List] @ CountsBy[list2, Head],
+                Alignment -> Left
+            ]
+        ]
     ]
 ];
 Protect[MixtureDistribution];
@@ -81,6 +90,8 @@ Format[inferenceObject[assoc_?AssociationQ]] := With[{
 ];
 
 inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
+inferenceObject /: Append[inferenceObject[assoc_?AssociationQ], elem_] :=  inferenceObject @ Append[assoc, elem];
+inferenceObject /: Prepend[inferenceObject[assoc_?AssociationQ], elem_] := inferenceObject @ Prepend[assoc, elem]
 inferenceObject /: FailureQ[inferenceObject[$Failed]] := True;
 
 inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
@@ -348,6 +359,19 @@ distributionDimension[dist_?DistributionParameterQ] := With[{dom = DistributionD
             $Failed
     ]
 ];
+
+SetAttributes[varsToParamVector, HoldFirst];
+varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_Symbol] := (
+    varsToParamVector[expr, vars] = ReplaceAll[
+        Unevaluated[expr],
+        Thread[
+            vars -> Table[
+                Indexed[paramVectorSymbol, i],
+                {i, Length[vars]}
+            ]
+        ]
+    ]
+);
 
 End[] (* End Private Context *)
 

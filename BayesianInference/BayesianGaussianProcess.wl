@@ -24,18 +24,6 @@ paramSpecPattern = BayesianStatistics`Private`paramSpecPattern;
 
 nullKernelPattern = HoldPattern[Function[Repeated[_, {0, 1}], 0 | 0., ___]];
 
-varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_] := (
-    varsToParamVector[expr, vars] = ReplaceAll[
-        expr,
-        Thread[
-            vars -> Table[
-                Indexed[paramVectorSymbol, i],
-                {i, Length[vars]}
-            ]
-        ]
-    ]
-);
-
 covarianceMatrix[points_List, kernel : nullKernelPattern, nugget_] :=
     nugget /@ points;
 
