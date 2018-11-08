@@ -127,7 +127,6 @@ defineInferenceProblem[] := {
     "LogPriorPDFFunction",
     "GeneratingDistribution",
     "PriorDistribution",
-    "PriorDistribution",
     "PriorPDF"
 };
 defineInferenceProblem[rules : __Rule] := defineInferenceProblem[Association[{rules}]];
@@ -272,35 +271,31 @@ logPDFFunction[
     pdf_,
     parameters : {paramSpecPattern..}
 ] := Module[{
-    constraints = And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
-    logPDF,
-    dim = Length[parameters]
+    constraints = FullSimplify[
+        And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
+        Element[
+            Alternatives @@ parameters[[All, 1]],
+            Reals
+        ]
+    ],
+    logPDF
 },
-    logPDF = Activate @ Function[ paramVector,
-        Evaluate[
-            ReplaceAll[
-                simplifyLogPDF[
-                    Log[pdf],
-                    constraints
-                ],
-                Thread[
-                    parameters[[All, 1]] -> Table[
-                        Inactive[Part][paramVector, i],
-                        {i, 1, dim}
-                    ]
+    logPDF = expressionToFunction[
+        simplifyLogPDF[
+            N @ Log[pdf],
+            And[
+                constraints,
+                Element[
+                    Alternatives @@ parameters[[All, 1]],
+                    Reals
                 ]
             ]
-        ]
+        ],
+        parameters[[All, 1]]
     ];
-    constraints = Activate @ Function[
-        Evaluate[
-            constraints /. Thread[
-                parameters[[All, 1]] -> Table[
-                    Inactive[Part][#, i],
-                    {i, 1, dim}
-                ]
-            ]
-        ]
+    constraints = expressionToFunction[
+        constraints,
+        parameters[[All, 1]]
     ];
     
     Compile[{
@@ -331,15 +326,19 @@ logLikelihoodFunction[
 },
     constraints = FullSimplify @ And[
         DistributionParameterAssumptions[dist],
-        And @@ (Less @@@ parameters[[All, {2, 1, 3}]])
+        And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
+        Element[
+            Alternatives @@ parameters[[All, 1]],
+            Reals
+        ]
     ];
-    logLike = Activate @ Function[
+    logLike = Function[
         {paramVector, dataPoint},
         Evaluate[
-            ReplaceAll[
+            N @ ReplaceAll[
                 With[{
                     vars = Table[
-                        Inactive[Part][dataPoint, i],
+                        Indexed[dataPoint, i],
                         {i, 1, dataDim}
                     ]
                 },
@@ -372,7 +371,7 @@ logLikelihoodFunction[
                 ],
                 Thread[
                     parameters[[All, 1]] -> Table[
-                        Inactive[Part][paramVector, i],
+                        Indexed[paramVector, i],
                         {i, 1, dim}
                     ]
                 ]
