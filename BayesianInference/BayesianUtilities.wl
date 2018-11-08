@@ -14,7 +14,8 @@ distributionDimension;
 inferenceObject;
 posteriorDistribution;
 varsToParamVector;
-expressionToFunction
+expressionToFunction;
+simplifyLogPDF;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -382,7 +383,18 @@ varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_Symbol] := (
 expressionToFunction[expr_, vars : {__Symbol}] := Function[
     vectorSymbol,
     Evaluate @ varsToParamVector[expr, vars, vectorSymbol]
-]
+];
+
+simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting expressions like Log[1. / x] to -Log[x]*)
+    FullSimplify[
+        logPDF,
+        assum,
+        ComplexityFunction -> Function[ (* Force Log to expand as much as possible *)
+            LeafCount[#] + 100 * Count[#, Log[Except[_Symbol]], {0, Infinity}]
+        ]
+    ],
+    Assumptions -> assum
+];
 
 End[] (* End Private Context *)
 

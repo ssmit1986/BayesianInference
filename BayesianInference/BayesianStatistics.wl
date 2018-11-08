@@ -279,7 +279,7 @@ logPDFFunction[
     logPDF = Activate @ Function[ paramVector,
         Evaluate[
             ReplaceAll[
-                FullSimplify[
+                simplifyLogPDF[
                     Log[pdf],
                     constraints
                 ],
@@ -343,7 +343,7 @@ logLikelihoodFunction[
                         {i, 1, dataDim}
                     ]
                 },
-                    FullSimplify[
+                    simplifyLogPDF[
                         Replace[
                             LogLikelihood[
                                 dist,
