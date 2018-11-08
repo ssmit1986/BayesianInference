@@ -25,7 +25,8 @@ ignorancePrior[
     variables : {paramSpecPattern..}
 ] /; Length[priorSpecification] === Length[variables] := Module[{
     positionsLoc = Position[priorSpecification, "LocationParameter"],
-    positionsScale = Position[priorSpecification, "ScaleParameter"]
+    positionsScale = Position[priorSpecification, "ScaleParameter"],
+    positionsDist = Position[priorSpecification, _?DistributionParameterQ]
 },
         ProductDistribution @@ ReplacePart[
             priorSpecification,
@@ -43,6 +44,18 @@ ignorancePrior[
                             Method -> "Normalize"
                         ]& /@ Extract[variables, positionsScale]
                     )
+                ],
+                Thread[
+                    positionsDist -> MapThread[
+                        TruncatedDistribution[
+                            #2[[{2, 3}]],
+                            #1
+                        ]&,
+                        {
+                            Extract[priorSpecification, positionsDist],
+                            Extract[variables, positionsDist]
+                        }
+                    ]
                 ]
             ]
         ]
