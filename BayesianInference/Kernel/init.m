@@ -1,5 +1,12 @@
 (* Wolfram Language Init File *)
 
+ClearAll[
+    "BayesianUtilities`*", "BayesianUtilities`Private`*",
+    "BayesianStatistics`*","BayesianStatistics`Private`*",
+    "BayesianGaussianProcess`*", "BayesianGaussianProcess`Private`*",
+    "BayesianVisualisations`*", "BayesianVisualisations`Private`*",
+    "BayesianNeuralNetworks`*", "BayesianNeuralNetworks`Private`*"
+];
 Get["BayesianInference`BayesianUtilities`"];
 Get["BayesianInference`BayesianStatistics`"];
 Get["BayesianInference`BayesianGaussianProcess`"];
