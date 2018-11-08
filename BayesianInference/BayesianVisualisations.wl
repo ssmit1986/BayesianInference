@@ -228,7 +228,7 @@ Options[posteriorMarginalCDFDensityPlot2D] = Join[
 ];
 
 
-posteriorBubbleChart[result_, parameters : {Repeated[_Symbol, {2, 3}]}, frac_, opts : OptionsPattern[]] /;
+posteriorBubbleChart[result_, parameters : {Repeated[_Symbol, {2, 3}]}, opts : OptionsPattern[]] /;
     (ListQ[result["ParameterSymbols"]] && SubsetQ[result["ParameterSymbols"], parameters]):=
     posteriorBubbleChart[
         result,
@@ -240,18 +240,17 @@ posteriorBubbleChart[result_, parameters : {Repeated[_Symbol, {2, 3}]}, frac_, o
                 Length[parameters]
             ]
         ],
-        frac,
         opts
     ];
 
-posteriorBubbleChart[inferenceObject[result_?AssociationQ], plotIndices : {Repeated[_Integer, {2, 3}]}, frac : _?NumericQ : 1, opts : OptionsPattern[]] /; 
-    (KeyExistsQ[result, "Samples"] && Max[plotIndices] <= Length[result["Samples", 1, "Point"]] && Between[frac, {0, 1}]) :=
+posteriorBubbleChart[inferenceObject[result_?AssociationQ], plotIndices : {Repeated[_Integer, {2, 3}]}, opts : OptionsPattern[]] /; 
+    (KeyExistsQ[result, "Samples"] && Max[plotIndices] <= Length[result["Samples", 1, "Point"]]) :=
     Module[{
         data = Query[
             "Samples",
             Values,
             Flatten @ {#Point[[plotIndices]], #CrudePosteriorWeight}&
-        ] @ takePosteriorFraction[result, frac],
+        ] @ result,
         plotFunction,
         label
     },
