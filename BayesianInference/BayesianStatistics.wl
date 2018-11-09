@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-BeginPackage["BayesianStatistics`", {"BayesianUtilities`"}];
+BeginPackage["BayesianStatistics`", {"BayesianUtilities`", "GeneralUtilities`"}];
 
 directPosteriorDistribution;
 nestedSampling;
@@ -1057,8 +1057,9 @@ parallelNestedSampling[
         passOptionsDown[parallelNestedSampling, nestedSampling, {opts}]
     ]
 },
-
+    Quiet[LaunchKernels[], {LaunchKernels::nodef}];
     resultTable = ParallelTable[
+        Needs["GeneralUtilities`"];
         nestedSampling[
             inferenceObject[assoc],
             Sequence @@ nestedSamplingOptions
