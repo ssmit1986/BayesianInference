@@ -363,6 +363,12 @@ distributionDimension[dist_?DistributionParameterQ] := With[{dom = DistributionD
 ];
 
 varsToParamVector::duplicateSym = "Warning: symbol `1` already present in expression";
+varsToParamVector[expr_, rules : {({__Symbol} -> _Symbol)..}] := Fold[
+    varsToParamVector[#1, Sequence @@ #2]&,
+    expr,
+    rules
+];
+
 varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_Symbol] := (
     varsToParamVector[expr, vars, paramVectorSymbol] = (
         If[ !FreeQ[expr, paramVectorSymbol],
@@ -380,9 +386,9 @@ varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_Symbol] := (
     )
 );
 
-expressionToFunction[expr_, vars : {__Symbol}] := Function[
-    vectorSymbol,
-    Evaluate @ varsToParamVector[expr, vars, vectorSymbol]
+expressionToFunction[expr_, rules : {({__Symbol} -> _Symbol)..}] := Function[
+    Evaluate @ rules[[All, 2]],
+    Evaluate @ varsToParamVector[expr, rules]
 ];
 
 simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting expressions like Log[1. / x] to -Log[x]*)

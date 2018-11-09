@@ -283,7 +283,7 @@ logPDFFunction[
 logPDFFunction[
     pdf_,
     parameters : {paramSpecPattern..}
-] := Module[{
+] := Block[{
     constraints = FullSimplify[
         And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
         Element[
@@ -291,7 +291,8 @@ logPDFFunction[
             Reals
         ]
     ],
-    logPDF
+    logPDF,
+    paramVector
 },
     logPDF = expressionToFunction[
         simplifyLogPDF[
@@ -304,11 +305,11 @@ logPDFFunction[
                 ]
             ]
         ],
-        parameters[[All, 1]]
+        {parameters[[All, 1]] -> paramVector}
     ];
     constraints = expressionToFunction[
         constraints,
-        parameters[[All, 1]]
+        {parameters[[All, 1]] -> paramVector}
     ];
     
     Compile[{
@@ -1100,9 +1101,13 @@ predictiveDistribution[
 predictiveDistribution[
     inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]
 ] := With[{
-    dist = expressionToFunction[
-        result["GeneratingDistribution"],
-        result["ParameterSymbols"]
+    dist = Block[{
+        paramVector
+    },
+        expressionToFunction[
+            result["GeneratingDistribution"],
+            {result["ParameterSymbols"] -> paramVector}
+        ]
     ]
 },
     MixtureDistribution[
