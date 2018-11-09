@@ -404,17 +404,13 @@ logLikelihoodFunction[
     ];
     
     (* convert constraint equations into a boolean function that tells you if the constraints are satisfied for a given parameter vector *)
-    constraints = Activate @ Function @ Evaluate[
+    constraints = expressionToFunction[
         And @@ Cases[
             BooleanConvert[constraints, "CNF"],
             _Less | _Greater | _GreaterEqual | _LessEqual,
             {0, 1}
-        ] /. Thread[
-            parameters[[All, 1]] -> Table[
-                Inactive[Part][#, i],
-                {i, 1, dim}
-            ]
-        ]
+        ],
+        {parameters[[All, 1]] -> paramVector} 
     ];
     Compile[{
         {input, _Real, 1}
