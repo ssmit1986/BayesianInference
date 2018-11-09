@@ -46,8 +46,8 @@ compiledCovarianceMatrix[points_List, kernel_, nugget_, vars : {__Symbol}] := Wi
         paramSymbol,
         Evaluate @ Normal @ covarianceMatrix[
             points,
-            varsToParamVector[kernel, vars, paramSymbol],
-            varsToParamVector[nugget, vars, paramSymbol]
+            varsToParamVector[kernel, vars -> paramSymbol],
+            varsToParamVector[nugget, vars -> paramSymbol]
         ]
     ]
 },
@@ -243,7 +243,7 @@ gaussianProcessNestedSampling[
         {kernel, nugget, mean} = Function[
             Function[
                 paramVector,
-                Evaluate @ varsToParamVector[#, vars, paramVector]
+                Evaluate @ varsToParamVector[#, vars -> paramVector]
             ]
         ] /@ {kernelFunction, nuggetFunction, meanFunction};
         

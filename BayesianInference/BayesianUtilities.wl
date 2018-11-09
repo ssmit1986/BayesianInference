@@ -363,32 +363,39 @@ distributionDimension[dist_?DistributionParameterQ] := With[{dom = DistributionD
 ];
 
 varsToParamVector::duplicateSym = "Warning: symbol `1` already present in expression";
-varsToParamVector[expr_, rules : {({__Symbol} -> _Symbol)..}] := Fold[
-    varsToParamVector[#1, Sequence @@ #2]&,
+varsToParamVector[expr_, rules : {({__Symbol} -> (_Symbol | Slot[_]))..}] := Fold[
+    varsToParamVector[#1, #2]&,
     expr,
     rules
 ];
 
-varsToParamVector[expr_, vars : {__Symbol}, paramVectorSymbol_Symbol] := (
-    varsToParamVector[expr, vars, paramVectorSymbol] = (
-        If[ !FreeQ[expr, paramVectorSymbol],
-            Message[varsToParamVector::duplicateSym, paramVectorSymbol]
-        ];
-        ReplaceAll[
-            expr,
-            Thread[
-                vars -> Table[
-                    Indexed[paramVectorSymbol, i],
-                    {i, Length[vars]}
-                ]
+varsToParamVector[expr_, (vars : {__Symbol}) -> (paramVectorSymbol : (_Symbol | Slot[_]))] := (
+    If[ !FreeQ[expr, paramVectorSymbol],
+        Message[varsToParamVector::duplicateSym, paramVectorSymbol]
+    ];
+    ReplaceAll[
+        expr,
+        Thread[
+            vars -> Table[
+                Indexed[paramVectorSymbol, i],
+                {i, Length[vars]}
             ]
         ]
-    )
+    ]
 );
 
-expressionToFunction[expr_, rules : {({__Symbol} -> _Symbol)..}] := Function[
+expressionToFunction[expr_, rule_Rule, attributes___] := expressionToFunction[expr, {rule}, attributes];
+
+expressionToFunction[expr_, rules : {({__Symbol} -> _Symbol)..}, attributes___] := Function[
     Evaluate @ rules[[All, 2]],
-    Evaluate @ varsToParamVector[expr, rules]
+    Evaluate @ varsToParamVector[expr, rules],
+    {attributes}
+];
+
+expressionToFunction[expr_, rules : {({__Symbol} -> Slot[_])..}, attributes___] := Function[
+    Null,
+    Evaluate @ varsToParamVector[expr, rules],
+    {attributes}
 ];
 
 simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting expressions like Log[1. / x] to -Log[x]*)
