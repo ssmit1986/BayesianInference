@@ -258,6 +258,30 @@ distributionDomainTest[dist_?DistributionParameterQ, parameters : {paramSpecPatt
 ];
 distributionDomainTest[___] := False;
 
+parametersToConstraints[parameters : {paramSpecPattern..}, otherConstraints : _ : True] := FullSimplify[
+    And[
+        And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
+        Element[
+            Alternatives @@ parameters[[All, 1]],
+            Reals
+        ],
+        otherConstraints
+    ]
+];
+
+constraintsToFunction[constraints_, parameters : {paramSpecPattern..}] := Block[{
+    paramVector
+},
+    expressionToFunction[
+        And @@ Cases[
+            BooleanConvert[parametersToConstraints[parameters, constraints], "CNF"],
+            _Less | _Greater | _GreaterEqual | _LessEqual,
+            {0, 1}
+        ],
+        {parameters[[All, 1]] -> paramVector} 
+    ]
+];
+
 logPDFFunction[
     dist_?DistributionParameterQ,
     parameters : {paramSpecPattern..}
