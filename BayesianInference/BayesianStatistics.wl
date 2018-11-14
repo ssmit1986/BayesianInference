@@ -308,13 +308,7 @@ logPDFFunction[
     pdf_,
     parameters : {paramSpecPattern..}
 ] := Block[{
-    constraints = FullSimplify[
-        And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
-        Element[
-            Alternatives @@ parameters[[All, 1]],
-            Reals
-        ]
-    ],
+    constraints = parametersToConstraints[parameters],
     logPDF,
     paramVector
 },
@@ -331,10 +325,7 @@ logPDFFunction[
         ],
         {parameters[[All, 1]] -> paramVector}
     ];
-    constraints = expressionToFunction[
-        constraints,
-        {parameters[[All, 1]] -> paramVector}
-    ];
+    constraints = constraintsToFunction[constraints, parameters];
     
     Compile[{
         {param, _Real, 1}
@@ -362,14 +353,7 @@ logLikelihoodFunction[
     constraints,
     domain = DistributionDomain[dist]
 },
-    constraints = FullSimplify @ And[
-        DistributionParameterAssumptions[dist],
-        And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
-        Element[
-            Alternatives @@ parameters[[All, 1]],
-            Reals
-        ]
-    ];
+    constraints = parametersToConstraints[parameters, DistributionParameterAssumptions[dist]];
     logLike = Function[
         {paramVector, dataPoint},
         Evaluate[
@@ -428,14 +412,7 @@ logLikelihoodFunction[
     ];
     
     (* convert constraint equations into a boolean function that tells you if the constraints are satisfied for a given parameter vector *)
-    constraints = expressionToFunction[
-        And @@ Cases[
-            BooleanConvert[constraints, "CNF"],
-            _Less | _Greater | _GreaterEqual | _LessEqual,
-            {0, 1}
-        ],
-        {parameters[[All, 1]] -> paramVector} 
-    ];
+    constraints = constraintsToFunction[constraints, parameters];
     Compile[{
         {input, _Real, 1}
     },
