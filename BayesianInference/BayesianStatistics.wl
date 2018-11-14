@@ -269,18 +269,26 @@ parametersToConstraints[parameters : {paramSpecPattern..}, otherConstraints : _ 
     ]
 ];
 
-constraintsToFunction[constraints_, parameters : {paramSpecPattern..}] := Block[{
+constraintsToFunction[parameters : {paramSpecPattern..}, otherConstraints : _ : True] := Block[{
     paramVector
 },
     expressionToFunction[
         And @@ Cases[
-            BooleanConvert[parametersToConstraints[parameters, constraints], "CNF"],
+            BooleanConvert[parametersToConstraints[parameters, otherConstraints], "CNF"],
             _Less | _Greater | _GreaterEqual | _LessEqual,
             {0, 1}
         ],
         {parameters[[All, 1]] -> paramVector} 
     ]
 ];
+
+distributionDomainToConstraints[int_Interval, {sym_}] := distributionDomainToConstraints[int, sym];
+distributionDomainToConstraints[Interval[{min_, max_}], sym : Except[_List]] := FullSimplify[min < sym < max && Element[sym, Reals]];
+distributionDomainToConstraints[dom : {__Interval}, symbols_List] /; Length[dom] === Length[symbols] := And @@ MapThread[
+    distributionDomainToConstraints,
+    {dom, symbols}
+];
+distributionDomainToConstraints[___] := True;
 
 logPDFFunction[
     dist_?DistributionParameterQ,
@@ -325,7 +333,7 @@ logPDFFunction[
         ],
         {parameters[[All, 1]] -> paramVector}
     ];
-    constraints = constraintsToFunction[constraints, parameters];
+    constraints = constraintsToFunction[parameters, constraints];
     
     Compile[{
         {param, _Real, 1}
@@ -347,7 +355,6 @@ logLikelihoodFunction[
     data_List?(MatrixQ[#, NumericQ]&),
     parameters : {paramSpecPattern..}
 ] := Module[{
-    dim = Length[parameters],
     dataDim = Dimensions[data][[2]],
     logLike,
     constraints,
@@ -357,7 +364,7 @@ logLikelihoodFunction[
     logLike = Function[
         {paramVector, dataPoint},
         Evaluate[
-            N @ ReplaceAll[
+            N @ varsToParamVector[
                 With[{
                     vars = Table[
                         Indexed[dataPoint, i],
@@ -377,26 +384,11 @@ logLikelihoodFunction[
                         ],
                         And[
                             constraints,
-                            And @@ (Less @@@ Transpose @ Insert[
-                                Transpose[
-                                    Cases[
-                                        domain,
-                                        dom_Interval :> First[dom],
-                                        {0, 1}
-                                    ]
-                                ],
-                                vars,
-                                2
-                            ])
+                            distributionDomainToConstraints[domain, vars]
                         ] 
                     ]
                 ],
-                Thread[
-                    parameters[[All, 1]] -> Table[
-                        Indexed[paramVector, i],
-                        {i, 1, dim}
-                    ]
-                ]
+                parameters[[All, 1]] -> paramVector
             ]
         ]
     ];
@@ -412,7 +404,7 @@ logLikelihoodFunction[
     ];
     
     (* convert constraint equations into a boolean function that tells you if the constraints are satisfied for a given parameter vector *)
-    constraints = constraintsToFunction[constraints, parameters];
+    constraints = constraintsToFunction[parameters, constraints];
     Compile[{
         {input, _Real, 1}
     },
@@ -431,6 +423,85 @@ logLikelihoodFunction[dist_, ___] := (
     Message[defineInferenceProblem::logLike, dist];
     Throw[$Failed, "problemDef"]
 );
+
+regressionLogLikelihoodFunction[
+    regressionDistribution_?DistributionParameterQ,
+    (inputData_List?(MatrixQ[#, NumericQ]&)) -> (outputData_List?(MatrixQ[#, NumericQ]&)),
+    independentVariables  : {__Symbol},
+    parameters : {paramSpecPattern..}
+] := Module[{
+    constraints = parametersToConstraints[parameters, DistributionParameterAssumptions[regressionDistribution]],
+    domain = DistributionDomain[regressionDistribution],
+    dataDimOut = Dimensions[outputData][[2]],
+    logLike
+},
+    logLike = Function[
+        {paramVector, dataIn, dataOut},
+        Evaluate[
+            N @ varsToParamVector[
+                With[{
+                    varsOut = Table[
+                        Indexed[dataOut, i],
+                        {i, 1, dataDimOut}
+                    ]
+                },
+                    simplifyLogPDF[
+                        Replace[
+                            LogLikelihood[
+                                regressionDistribution,
+                                If[ Head[domain] === List , List @ varsOut, varsOut] (* Determine if dist is a scalar of vector distribution *)
+                            ],
+                            _LogLikelihood :> ( (* If LogLikelihood doesn't evaluate, no compiled function can be constructed *)
+                                Message[defineInferenceProblem::logLike, regressionDistribution];
+                                Throw[$Failed, "problemDef"]
+                            )
+                        ],
+                        And[
+                            constraints,
+                            distributionDomainToConstraints[domain, varsOut]
+                        ] 
+                    ]
+                ],
+                {parameters[[All, 1]] -> paramVector, independentVariables -> dataIn}
+            ]
+        ]
+    ];
+    logLike = Compile[{
+        {input, _Real, 1},
+        {ptIn, _Real, 1},
+        {ptOut, _Real, 1}
+    },
+        logLike[input, ptIn, ptOut],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        }
+    ];
+    constraints = constraintsToFunction[parameters];
+    Compile[{
+        {input, _Real, 1}
+    },
+        If[ constraints[input],
+            Total[
+                MapThread[
+                    logLike[input, ##]&,
+                    {inputData, outputData}
+                ]
+            ],
+            $MachineLogZero
+        ],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        },
+        RuntimeAttributes -> {Listable}
+    ]
+];
+regressionLogLikelihoodFunction[dist_, ___] := (
+    Message[defineInferenceProblem::logLike, dist];
+    Throw[$Failed, "problemDef"]
+);
+
 
 nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logThreshold_?NumericQ] := Compile[{
     {point, _Real, 1}
