@@ -128,6 +128,7 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
+defineInferenceProblem::dataFormat = "Data was provided in unusable format";
 defineInferenceProblem::insuffInfo = "Not enough information was provide to define the problem. Failed at: `1`";
 defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
 defineInferenceProblem::prior = "Unable to automatically construct the log prior PDF function for distribution `1`. Please construct one manually";
@@ -136,6 +137,7 @@ defineInferenceProblem::failed = "Failure. `1` does not yield numerical results 
 defineInferenceProblem[] := {
     "Data",
     "Parameters",
+    "IndependentVariables",
     "LogLikelihoodFunction",
     "LogPriorPDFFunction",
     "GeneratingDistribution",
@@ -152,9 +154,9 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
         tempKeys,
         randomTestPoints
     },
-        keys = Keys[assoc];
-        If[ MemberQ[keys, "Data"] && VectorQ[assoc["Data"]],
-            assoc["Data"] = List /@ assoc["Data"]
+        keys = Keys[DeleteMissing @ assoc];
+        If[ MemberQ[keys, "Data"],
+            assoc["Data"] = normalizeData @ assoc["Data"]
         ];
         Which[ 
             MatchQ[assoc["Parameters"], {paramSpecPattern..}],
@@ -164,6 +166,9 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
             True,
                 Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
                 Throw[$Failed, "problemDef"]
+        ];
+        If[ MemberQ[keys, "IndependentVariables"] && !ListQ[assoc["IndependentVariables"]],
+            assoc["IndependentVariables"] = {assoc["IndependentVariables"]}
         ];
         AppendTo[assoc, "ParameterSymbols" -> assoc["Parameters"][[All, 1]]];
         If[ ListQ[assoc["PriorDistribution"]],
@@ -183,8 +188,16 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
         Which[
             MemberQ[keys, "LogLikelihoodFunction"],
                 Null,
-            SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "Parameters"}],
+            And[
+                SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "Parameters"}],
+                ListQ[assoc["Data"]]
+            ],
                 AppendTo[assoc, "LogLikelihoodFunction" -> logLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
+            And[
+                SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "IndependentVariables", "Parameters"}],
+                Head[assoc["Data"]] === Rule
+            ],
+                AppendTo[assoc, "LogLikelihoodFunction" -> regressionLogLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
             True,
                 (
                     Message[defineInferenceProblem::insuffInfo, "LogLikelihood function"];
@@ -240,6 +253,16 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
     "problemDef"
 ];
 defineInferenceProblem[___] := inferenceObject[$Failed];
+
+normalizeData[miss_Missing] := miss;
+normalizeData[data_List?(MatrixQ[#, NumericQ]&)] := data;
+normalizeData[data_List?(VectorQ[#, NumericQ]&)] := List /@ data;
+normalizeData[data : {__Rule}] := normalizeData[Thread[data, Rule]];
+normalizeData[in_List -> out_List] := normalizeData[in] -> normalizeData[out];
+normalizeData[___] := (
+    Message[defineInferenceProblem::dataFormat];
+    Throw[$Failed, "problemDef"]
+);
 
 distributionDomainTest::paramSpec = "Warning! The support of distribution `1` could not be verified to contain the region specified by parameters `2`";
 distributionDomainTest[dist_?DistributionParameterQ, parameters : {paramSpecPattern..}] := With[{
