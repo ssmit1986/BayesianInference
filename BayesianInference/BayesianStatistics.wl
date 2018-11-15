@@ -258,7 +258,12 @@ normalizeData[miss_Missing] := miss;
 normalizeData[data_List?(MatrixQ[#, NumericQ]&)] := data;
 normalizeData[data_List?(VectorQ[#, NumericQ]&)] := List /@ data;
 normalizeData[data : {__Rule}] := normalizeData[Thread[data, Rule]];
-normalizeData[in_List -> out_List] := normalizeData[in] -> normalizeData[out];
+normalizeData[in_List -> out_List] := With[{
+    input = normalizeData[in],
+    output = normalizeData[out]
+},
+    (input -> output) /; Length[input] === Length[output]
+];
 normalizeData[___] := (
     Message[defineInferenceProblem::dataFormat];
     Throw[$Failed, "problemDef"]
@@ -432,7 +437,7 @@ logLikelihoodFunction[
         {input, _Real, 1}
     },
         If[ constraints[input],
-            Total[logLike[input, #]& /@ data],
+            Sum[logLike[input, i], {i, data}],
             $MachineLogZero
         ],
         CompilationOptions -> {
@@ -452,11 +457,12 @@ regressionLogLikelihoodFunction[
     (inputData_List?(MatrixQ[#, NumericQ]&)) -> (outputData_List?(MatrixQ[#, NumericQ]&)),
     independentVariables  : {__Symbol},
     parameters : {paramSpecPattern..}
-] := Module[{
+] /; Length[inputData] === Length[outputData] := Module[{
     constraints = parametersToConstraints[parameters, DistributionParameterAssumptions[regressionDistribution]],
     domain = DistributionDomain[regressionDistribution],
     dataDimOut = Dimensions[outputData][[2]],
-    logLike
+    logLike,
+    nDat = Length[inputData]
 },
     logLike = Function[
         {paramVector, dataIn, dataOut},
@@ -505,12 +511,7 @@ regressionLogLikelihoodFunction[
         {input, _Real, 1}
     },
         If[ constraints[input],
-            Total[
-                MapThread[
-                    logLike[input, ##]&,
-                    {inputData, outputData}
-                ]
-            ],
+            Sum[logLike[input, inputData[[i]], outputData[[i]]], {i, nDat}],
             $MachineLogZero
         ],
         CompilationOptions -> {
