@@ -16,6 +16,8 @@ posteriorDistribution;
 varsToParamVector;
 expressionToFunction;
 simplifyLogPDF;
+numericMatrixQ;
+numericVectorQ;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -35,6 +37,9 @@ $BayesianContexts = Flatten[
         "Global`"
     }
 ];
+
+numericMatrixQ = Function[MatrixQ[#, NumericQ]];
+numericVectorQ = Function[VectorQ[#, NumericQ]];
 
 (* Dummy code to make WL load everything related to MixtureDistribution *)
 MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
