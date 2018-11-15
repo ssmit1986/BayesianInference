@@ -62,6 +62,7 @@ Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
 Protect[MixtureDistribution];
 
 summaryForm[list_List] := ToString @ StringForm["List (``)", StringRiffle[ToString /@ Dimensions[list], " \[Times] "]];
+summaryForm[KeyValuePattern[{"Mean" -> mean_, "StandardError" -> err_}]] := ToString[mean \[PlusMinus] err];
 summaryForm[assoc_?AssociationQ] := ToString @ StringForm["Association (`` keys)", Length[assoc]];
 summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[dist]},
     ToString @ Switch[dim,
