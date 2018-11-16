@@ -62,8 +62,7 @@ compiledCovarianceMatrix[points_List, kernel_, nugget_, vars : {__Symbol}] := Wi
 compiledKandKappa[
     points1_List,
     kernel : nullKernelPattern,
-    nugget_,
-    opts : OptionsPattern[]
+    nugget_
 ] := With[{
     rank = Length[Dimensions[points1]] - 1,
     l1 = Length[points1]
@@ -76,8 +75,7 @@ compiledKandKappa[
             {points2, _Real, rank}
         },
             nugget[points2],
-            RuntimeAttributes -> {Listable},
-            opts
+            RuntimeAttributes -> {Listable}
         ]
     },
         Function[
@@ -318,8 +316,7 @@ gaussianProcessNestedSampling[
                 compiledKandKappa[
                     inputData,
                     ker,
-                    nug,
-                    Sequence @@ passOptionsDown[gaussianProcessNestedSampling, compiledKandKappa, {opts}]
+                    nug
                 ]
             ];
             
@@ -415,10 +412,13 @@ predictFromGaussianProcess[
                         With[{
                             kandKappa = #KandKappaFunction[predictionPoints]
                         },
-                            Function[params, NormalDistribution @@ params] /@ Transpose[{
-                                Flatten[Transpose[kandKappa["k"]] . #CInvY] + #MeanFunction /@ predictionPoints,
-                                kandKappa["kappa"] - Total[kandKappa["k"] * #InverseCovarianceMatrix[kandKappa["k"]]]
-                            }]
+                            MapThread[
+                                Function[{mu, stdev}, NormalDistribution[mu, stdev]],
+                                {
+                                    Flatten[Transpose[kandKappa["k"]] . #CInvY] + #MeanFunction /@ predictionPoints,
+                                    Sqrt[kandKappa["kappa"] - Total[kandKappa["k"] * #InverseCovarianceMatrix[kandKappa["k"]]]]
+                                }
+                            ]
                         ]&,
                         result[["Samples", All, "PredictionParameters"]]
                     ]
