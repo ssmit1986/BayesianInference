@@ -559,14 +559,12 @@ MCMC[
         ]
     },
         Statistics`MCMC`MarkovChainIterate[chain, {1, numberOfSteps}];
-        While[ True,
-            If[ Or[
-                    TrueQ @ Between[chain["AcceptanceRate"], minMaxAcceptanceRate],
-                    TrueQ[chain["StateData"][[2]] >= maxSteps + startingIteration]
-                ],
-                Break[],
-                Statistics`MCMC`MarkovChainIterate[chain, {1, extraSteps}]
-            ]
+        While[
+            Nor[
+                TrueQ @ Between[chain["AcceptanceRate"], minMaxAcceptanceRate],
+                TrueQ[chain["StateData"][[2]] >= maxSteps + startingIteration]
+            ],
+            Statistics`MCMC`MarkovChainIterate[chain, {1, extraSteps}]
         ];
         Append[
             AssociationThread[
