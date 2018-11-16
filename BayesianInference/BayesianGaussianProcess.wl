@@ -211,18 +211,18 @@ gaussianProcessNestedSampling[data_?(AssociationQ[#] && KeyExistsQ[#, "Input"] &
     ];
 
 gaussianProcessNestedSampling[
-    dataIn_?(MatrixQ[#, NumericQ] || VectorQ[#, NumericQ]&),
-    dataOut_?(VectorQ[#, NumericQ]&),
+    dataIn_List?(numericMatrixQ[#] || numericVectorQ[#]&),
+    dataOut_List?(numericMatrixQ[#] || numericVectorQ[#]&),
     kernelFunction_,
     nuggetFunction_,
     meanFunction_,
-    variablePrior_,
     variables : {paramSpecPattern..},
+    variablePrior_,
     opts : OptionsPattern[]
 ] := With[{
     vars = variables[[All, 1]],
-    inputData = Developer`ToPackedArray[dataIn],
-    outputData = Developer`ToPackedArray[dataOut],
+    inputData = Developer`ToPackedArray[dataNormalForm @ dataIn],
+    outputData = Developer`ToPackedArray[Flatten @ dataNormalForm @ dataOut],
     parallelRuns = OptionValue["ParallelRuns"]
 },
     Module[{
@@ -292,6 +292,7 @@ gaussianProcessNestedSampling[
             invCovFun = Function[matrixInverseAndDet[covarianceFunction[#]]];
             
             infObject = defineInferenceProblem[
+                "Data" -> dataNormalForm[dataIn -> dataOut],
                 "LogLikelihoodFunction" -> logLikelihood,
                 "PriorDistribution" -> variablePrior,
                 "Parameters" -> variables
@@ -365,12 +366,6 @@ gaussianProcessNestedSampling[
                                 "MeanFunction" -> meanFunction,
                                 "CovarianceFunction" -> covarianceFunction,
                                 "InverseCovarianceFunction" -> invCovFun
-                            |>,
-                            <|
-                                "OriginalData" -> <|
-                                    "Input" -> inputData,
-                                    "Output" -> outputData
-                                |>
                             |>
                         |>
                 |>
@@ -389,57 +384,48 @@ Options[gaussianProcessNestedSampling] = Join[
 SetOptions[gaussianProcessNestedSampling, "ParallelRuns" -> None];
 
 predictFromGaussianProcess[
-    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"]&)],
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"] && KeyExistsQ[#, "Data"]&)],
     predictionPoints_Integer /; predictionPoints > 1,
-    posteriorFraction : (_?(NumericQ[#] && Between[#, {0, 1}]&)) : 1,
     opts : OptionsPattern[]
 ] := predictFromGaussianProcess[
     inferenceObject[result],
-    If[ Length[Dimensions[result[["GaussianProcessData", "OriginalData", "Input"]]]] === 1,
-        Subdivide[
-            Sequence @@ MinMax @ result[["GaussianProcessData", "OriginalData", "Input"]],
-            predictionPoints - 1
-        ],
-        Tuples[
-            Subdivide[Sequence @@ #, predictionPoints - 1] & /@ MinMax /@ 
-                Transpose[
-                    result[["GaussianProcessData", "OriginalData", "Input"]]
-                ]
-        ]
+    CoordinateBoundsArray[
+        CoordinateBounds[result["Data"][[1]]],
+        Into[predictionPoints - 1]
     ],
-    posteriorFraction,
     opts
 ]
 
 predictFromGaussianProcess[
     inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"] && KeyExistsQ[#, "Samples"]&)],
-    predictionPoints_List,
-    posteriorFraction : (_?(NumericQ[#] && Between[#, {0, 1}]&)) : 1,
+    pts_List,
     opts : OptionsPattern[]
-] /; Between[posteriorFraction, {0, 1}]:= Module[{
-    truncatedResult = takePosteriorFraction[result, posteriorFraction],
-    weights
+] := Module[{
+    weights,
+    predictionPoints = dataNormalForm[pts]
 },
-    weights = Values @ truncatedResult[["Samples", All, "CrudePosteriorWeight"]];
-    AssociationThread[
-        predictionPoints,
-        Map[
-            MixtureDistribution[weights, #]&,
-            Transpose[
-                Values @ Map[
-                    With[{
-                        kandKappa = #KandKappaFunction[predictionPoints]
-                    },
-                        Function[params, NormalDistribution @@ params] /@ Transpose[{
-                            Flatten[Transpose[kandKappa["k"]] . #CInvY] + #MeanFunction /@ predictionPoints,
-                            kandKappa["kappa"] - Total[kandKappa["k"] * #InverseCovarianceMatrix[kandKappa["k"]]]
-                        }]
-                    ]&,
-                    truncatedResult[["Samples", All, "PredictionParameters"]]
+    (
+        weights = Values @ result[["Samples", All, "CrudePosteriorWeight"]];
+        AssociationThread[
+            predictionPoints,
+            Map[
+                MixtureDistribution[weights, #]&,
+                Transpose[
+                    Values @ Map[
+                        With[{
+                            kandKappa = #KandKappaFunction[predictionPoints]
+                        },
+                            Function[params, NormalDistribution @@ params] /@ Transpose[{
+                                Flatten[Transpose[kandKappa["k"]] . #CInvY] + #MeanFunction /@ predictionPoints,
+                                kandKappa["kappa"] - Total[kandKappa["k"] * #InverseCovarianceMatrix[kandKappa["k"]]]
+                            }]
+                        ]&,
+                        result[["Samples", All, "PredictionParameters"]]
+                    ]
                 ]
             ]
         ]
-    ]
+    ) /; numericMatrixQ[predictionPoints]
 ];
 
 Options[predictFromGaussianProcess] = {};

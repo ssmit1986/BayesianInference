@@ -5,6 +5,7 @@ BeginPackage["BayesianUtilities`", {"CompiledFunctionTools`"}]
 passOptionsDown::usage = "passOptionsDown[mainFunction, subFunction, {opts}] passes options down correctly from the main function into a sub function, even when the default options for both functions are different";
 quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the functionalities of Quiet and Check";
 normalizeData;
+dataNormalForm;
 takePosteriorFraction;
 $BayesianContexts;
 logSumExp;
@@ -170,6 +171,21 @@ xLogy := Compile[{
     ],
     RuntimeAttributes -> {Listable}
 ];
+
+dataNormalForm[miss_Missing] := miss;
+dataNormalForm[data_List?numericMatrixQ] := data;
+dataNormalForm[data_List?numericVectorQ] := List /@ data;
+dataNormalForm[data : {__Rule}] := dataNormalForm[Thread[data, Rule]];
+dataNormalForm[in_List -> out_List] := With[{
+    input = dataNormalForm[in],
+    output = dataNormalForm[out]
+},
+    (input -> output) /; Length[input] === Length[output]
+];
+dataNormalForm[___] := (
+    Message[defineInferenceProblem::dataFormat];
+    Throw[$Failed, "problemDef"]
+);
 
 normalizeData[data : {__Rule}, opts : OptionsPattern[]] := normalizeData[
     Developer`ToPackedArray[data[[All, 1]]],

@@ -6,7 +6,7 @@ covarianceMatrixPlot;
 posteriorMarginalPDFPlot1D;
 posteriorMarginalPDFDensityPlot2D;
 posteriorBubbleChart;
-gaussianProcessPredictionPlot;
+regressionPlot1D;
 
 
 Begin["`Private`"] (* Begin Private Context *) 
@@ -244,7 +244,7 @@ posteriorBubbleChart[result_, parameters : {Repeated[_Symbol, {2, 3}]}, opts : O
     ];
 
 posteriorBubbleChart[inferenceObject[result_?AssociationQ], plotIndices : {Repeated[_Integer, {2, 3}]}, opts : OptionsPattern[]] /; 
-    (KeyExistsQ[result, "Samples"] && Max[plotIndices] <= Length[result["Samples", 1, "Point"]]) :=
+    (KeyExistsQ[result, "Samples"] && Max[plotIndices] <= Length[result[["Samples", 1, "Point"]]]) :=
     Module[{
         data = Query[
             "Samples",
@@ -280,13 +280,13 @@ Options[posteriorBubbleChart] = Join[
     ]
 ];
 
-gaussianProcessPredictionPlot[
-    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "GaussianProcessData"]&)],
-    predictedDistributions : <|(_?NumericQ -> _) ..|>,
+regressionPlot1D[
+    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Data"]&)],
+    predictedDistributions : <|({_?NumericQ} -> _) ..|>,
     opts : OptionsPattern[]
 ] :=
     Show[
-        gaussianProcessPredictionPlot[
+        regressionPlot1D[
             predictedDistributions,
             opts,
             PlotLabel -> Style[StringForm[
@@ -300,15 +300,13 @@ gaussianProcessPredictionPlot[
             {
                 Red,
                 Point[
-                    Transpose[
-                        Values @ result[["GaussianProcessData", "OriginalData", {"Input", "Output"}]]
-                    ]
+                    Transpose[List @@ (Flatten /@ result["Data"])]
                 ]
             }
         ]
     ];
 
-gaussianProcessPredictionPlot[predictedDistributions : <|(_?NumericQ -> _) ..|>, opts : OptionsPattern[]] := Quiet[
+regressionPlot1D[predictedDistributions : <|({_?NumericQ} -> _) ..|>, opts : OptionsPattern[]] := Quiet[
     With[{
         DistributionPercentiles = Replace[
             OptionValue["DistributionPercentiles"],
@@ -344,7 +342,7 @@ gaussianProcessPredictionPlot[predictedDistributions : <|(_?NumericQ -> _) ..|>,
     ],
     {General::munfl}
 ];
-Options[gaussianProcessPredictionPlot] = Join[
+Options[regressionPlot1D] = Join[
     {
         "DistributionPercentiles" -> {0.05, 0.5, 0.95}
     },

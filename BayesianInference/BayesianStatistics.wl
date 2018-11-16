@@ -156,7 +156,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
     },
         keys = Keys[DeleteMissing @ assoc];
         If[ MemberQ[keys, "Data"],
-            assoc["Data"] = normalizeData @ assoc["Data"]
+            assoc["Data"] = dataNormalForm @ assoc["Data"]
         ];
         Which[ 
             MatchQ[assoc["Parameters"], {paramSpecPattern..}],
@@ -253,21 +253,6 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
     "problemDef"
 ];
 defineInferenceProblem[___] := inferenceObject[$Failed];
-
-normalizeData[miss_Missing] := miss;
-normalizeData[data_List?numericMatrixQ] := data;
-normalizeData[data_List?numericVectorQ] := List /@ data;
-normalizeData[data : {__Rule}] := normalizeData[Thread[data, Rule]];
-normalizeData[in_List -> out_List] := With[{
-    input = normalizeData[in],
-    output = normalizeData[out]
-},
-    (input -> output) /; Length[input] === Length[output]
-];
-normalizeData[___] := (
-    Message[defineInferenceProblem::dataFormat];
-    Throw[$Failed, "problemDef"]
-);
 
 distributionDomainTest::paramSpec = "Warning! The support of distribution `1` could not be verified to contain the region specified by parameters `2`";
 distributionDomainTest[dist_?DistributionParameterQ, parameters : {paramSpecPattern..}] := With[{
@@ -461,8 +446,7 @@ regressionLogLikelihoodFunction[
     constraints = parametersToConstraints[parameters, DistributionParameterAssumptions[regressionDistribution]],
     domain = DistributionDomain[regressionDistribution],
     dataDimOut = Dimensions[outputData][[2]],
-    logLike,
-    nDat = Length[inputData]
+    logLike
 },
     logLike = Function[
         {paramVector, dataIn, dataOut},
@@ -507,18 +491,20 @@ regressionLogLikelihoodFunction[
         }
     ];
     constraints = constraintsToFunction[parameters];
-    Compile[{
-        {input, _Real, 1}
-    },
-        If[ constraints[input],
-            Sum[logLike[input, inputData[[i]], outputData[[i]]], {i, nDat}],
-            $MachineLogZero
-        ],
-        CompilationOptions -> {
-            "InlineExternalDefinitions" -> True,
-            "InlineCompiledFunctions" -> True
+    With[{nDat = Length[inputData]},
+        Compile[{
+            {input, _Real, 1}
         },
-        RuntimeAttributes -> {Listable}
+            If[ constraints[input],
+                Sum[logLike[input, inputData[[i]], outputData[[i]]], {i, nDat}],
+                $MachineLogZero
+            ],
+            CompilationOptions -> {
+                "InlineExternalDefinitions" -> True,
+                "InlineCompiledFunctions" -> True
+            },
+            RuntimeAttributes -> {Listable}
+        ]
     ]
 ];
 regressionLogLikelihoodFunction[dist_, ___] := (
@@ -1210,7 +1196,7 @@ predictiveDistribution[
 predictiveDistribution[
     fst_,
     inputs : Except[_List?numericMatrixQ]
-] := predictiveDistribution[fst, normalizeData[inputs]]
+] := predictiveDistribution[fst, dataNormalForm[inputs]]
 
 predictiveDistribution[
     inferenceObject[result_?(
