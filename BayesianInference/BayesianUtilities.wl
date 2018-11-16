@@ -16,6 +16,8 @@ posteriorDistribution;
 varsToParamVector;
 expressionToFunction;
 simplifyLogPDF;
+numericMatrixQ;
+numericVectorQ;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -35,6 +37,9 @@ $BayesianContexts = Flatten[
         "Global`"
     }
 ];
+
+numericMatrixQ = Function[MatrixQ[#, NumericQ]];
+numericVectorQ = Function[VectorQ[#, NumericQ]];
 
 (* Dummy code to make WL load everything related to MixtureDistribution *)
 MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
@@ -57,6 +62,7 @@ Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
 Protect[MixtureDistribution];
 
 summaryForm[list_List] := ToString @ StringForm["List (``)", StringRiffle[ToString /@ Dimensions[list], " \[Times] "]];
+summaryForm[KeyValuePattern[{"Mean" -> mean_, "StandardError" -> err_}]] := ToString[mean \[PlusMinus] err];
 summaryForm[assoc_?AssociationQ] := ToString @ StringForm["Association (`` keys)", Length[assoc]];
 summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[dist]},
     ToString @ Switch[dim,

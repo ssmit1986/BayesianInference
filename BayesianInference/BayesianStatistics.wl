@@ -229,14 +229,14 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
             BayesianUtilities`Private`randomDomainPointDistribution[assoc["Parameters"][[All, {2, 3}]]],
             100
         ];
-        If[ !TrueQ @ VectorQ[assoc["LogPriorPDFFunction"] /@ randomTestPoints, NumericQ]
+        If[ !TrueQ @ numericVectorQ[assoc["LogPriorPDFFunction"] /@ randomTestPoints]
             ,
             (
                 Message[defineInferenceProblem::failed, "LogPriorPDFFunction"];
                 Throw[$Failed, "problemDef"]
             )
             ,
-            If[ !TrueQ @ VectorQ[assoc["LogLikelihoodFunction"] /@ randomTestPoints, NumericQ],
+            If[ !TrueQ @ numericVectorQ[assoc["LogLikelihoodFunction"] /@ randomTestPoints],
                 (
                     Message[defineInferenceProblem::failed, "LogLikelihoodFunction"];
                     Throw[$Failed, "problemDef"]
@@ -255,8 +255,8 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
 defineInferenceProblem[___] := inferenceObject[$Failed];
 
 normalizeData[miss_Missing] := miss;
-normalizeData[data_List?(MatrixQ[#, NumericQ]&)] := data;
-normalizeData[data_List?(VectorQ[#, NumericQ]&)] := List /@ data;
+normalizeData[data_List?numericMatrixQ] := data;
+normalizeData[data_List?numericVectorQ] := List /@ data;
 normalizeData[data : {__Rule}] := normalizeData[Thread[data, Rule]];
 normalizeData[in_List -> out_List] := With[{
     input = normalizeData[in],
@@ -380,7 +380,7 @@ logPDFFunction[
 
 logLikelihoodFunction[
     dist_?DistributionParameterQ,
-    data_List?(MatrixQ[#, NumericQ]&),
+    data_List?numericMatrixQ,
     parameters : {paramSpecPattern..}
 ] := Module[{
     dataDim = Dimensions[data][[2]],
@@ -454,7 +454,7 @@ logLikelihoodFunction[dist_, ___] := (
 
 regressionLogLikelihoodFunction[
     regressionDistribution_?DistributionParameterQ,
-    (inputData_List?(MatrixQ[#, NumericQ]&)) -> (outputData_List?(MatrixQ[#, NumericQ]&)),
+    (inputData_List?numericMatrixQ) -> (outputData_List?numericMatrixQ),
     independentVariables  : {__Symbol},
     parameters : {paramSpecPattern..}
 ] /; Length[inputData] === Length[outputData] := Module[{
@@ -727,9 +727,8 @@ nestedSamplingInternal[
         ],
         variableSamplePoints
     ];
-    If[ !VectorQ[
-            Values @ variableSamplePoints[[All, "LogLikelihood"]],
-            NumericQ
+    If[ !numericVectorQ[
+            Values @ variableSamplePoints[[All, "LogLikelihood"]]
         ],
         Return["Bad likelihood function"]
     ];
@@ -857,7 +856,7 @@ Options[generateStartingPoints] = {
 generateStartingPoints[inferenceObject[assoc_?AssociationQ], n_Integer, opts : OptionsPattern[]] := With[{
     pts = generateStartingPoints[assoc, n, opts]
 },
-    If[ MatrixQ[pts, NumericQ] && Dimensions[pts][[2]] === Length[assoc["Parameters"]],
+    If[ numericMatrixQ[pts] && Dimensions[pts][[2]] === Length[assoc["Parameters"]],
         inferenceObject[Append[assoc, "StartingPoints" -> pts]],
         inferenceObject[$Failed]
     ]
@@ -870,8 +869,8 @@ generateStartingPoints[
 ] := Replace[
     RandomVariate[dist, n],
     {
-        lst_List?(VectorQ[#, NumericQ]&) :> List /@ lst,
-        Except[_List?(MatrixQ[#, NumericQ]&)] :> generateStartingPoints[
+        lst_List?numericVectorQ :> List /@ lst,
+        Except[_List?numericMatrixQ] :> generateStartingPoints[
             KeyDrop[assoc, "PriorDistribution"], (* Try generating points from the LogPriorPDFFunction, if available *)
             n
         ]
@@ -910,24 +909,24 @@ generateStartingPoints[__] := $Failed
 nestedSampling[
     inferenceObject[assoc_?AssociationQ],
     opts : OptionsPattern[]
-] /; !MatrixQ[assoc["StartingPoints"], NumericQ] := With[{
+] /; !numericMatrixQ[assoc["StartingPoints"]] := With[{
     startingPoints = Replace[
         OptionValue["StartingPoints"],
         {
-            Except[_?(MatrixQ[#, NumericQ]&)] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
+            Except[_?numericMatrixQ] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
         }
     ]
 },
     nestedSampling[
         inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]]
-    ] /; MatrixQ[startingPoints, NumericQ]
+    ] /; numericMatrixQ[startingPoints]
 ];
 
 nestedSampling[
     inferenceObject[assoc_?AssociationQ],
     opts : OptionsPattern[]
 ] /; And[
-    MatrixQ[assoc["StartingPoints"], NumericQ],
+    numericMatrixQ[assoc["StartingPoints"]],
     MatchQ[assoc["Parameters"], {paramSpecPattern..}],
     Dimensions[assoc["StartingPoints"]][[2]] === Length[assoc["Parameters"]]
 ] := Module[{
@@ -1123,23 +1122,23 @@ Options[combineRuns] = Options[evidenceSampling];
 parallelNestedSampling[
     inferenceObject[assoc_?AssociationQ],
     opts : OptionsPattern[]
-] /; !MatrixQ[assoc["StartingPoints"], NumericQ] := With[{
+] /; !numericMatrixQ[assoc["StartingPoints"]] := With[{
     startingPoints = Replace[
         OptionValue["StartingPoints"],
         {
-            Except[_?(MatrixQ[#, NumericQ]&)] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
+            Except[_?numericMatrixQ] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
         }
     ]
 },
     parallelNestedSampling[
         inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]]
-    ] /; MatrixQ[startingPoints, NumericQ]
+    ] /; numericMatrixQ[startingPoints]
 ];
 
 parallelNestedSampling[
     inferenceObject[assoc_?AssociationQ],
     opts : OptionsPattern[]
-] /; MatrixQ[assoc["StartingPoints"], NumericQ] := Module[{
+] /; numericMatrixQ[assoc["StartingPoints"]] := Module[{
     resultTable,
     parallelRuns = OptionValue["ParallelRuns"],
     nestedSamplingOptions = Join[
@@ -1191,7 +1190,7 @@ predictiveDistribution[
 );
 
 predictiveDistribution[
-    inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]
+    inferenceObject[result_?(AssociationQ[#] && ListQ[#["Data"]] && !MissingQ[#["Samples"]] && !MissingQ[#["GeneratingDistribution"]]&)]
 ] := With[{
     dist = Block[{
         paramVector
@@ -1205,6 +1204,44 @@ predictiveDistribution[
     MixtureDistribution[
         Values @ result[["Samples", All, "CrudePosteriorWeight"]],
         dist /@ Values[result[["Samples", All, "Point"]]]
+    ]
+];
+
+predictiveDistribution[
+    fst_,
+    inputs : Except[_List?numericMatrixQ]
+] := predictiveDistribution[fst, normalizeData[inputs]]
+
+predictiveDistribution[
+    inferenceObject[result_?(
+        And[
+            AssociationQ[#],
+            Head[#["Data"]] === Rule, ListQ[#["IndependentVariables"]],
+            !MissingQ[#["Samples"]], !MissingQ[#["GeneratingDistribution"]]
+        ]&
+    )],
+    inputs_List?numericMatrixQ
+] := With[{
+    dist = Block[{
+        paramVector, inputData
+    },
+        expressionToFunction[
+            result["GeneratingDistribution"],
+            {
+                result["ParameterSymbols"] -> paramVector,
+                result["IndependentVariables"] -> inputData
+            }
+        ]
+    ]
+},
+    AssociationMap[
+        Function[{input},
+            MixtureDistribution[
+                Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+                dist[#, input]& /@ Values[result[["Samples", All, "Point"]]]
+            ]
+        ],
+        inputs
     ]
 ];
 
