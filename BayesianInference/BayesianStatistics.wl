@@ -687,7 +687,6 @@ nestedSamplingInternal[
     constrainedLogDensity,
     meanEst,
     covEst,
-    var,
     factor,
     estimatedMissingEvidence,
     evidence = 0,
@@ -717,7 +716,7 @@ nestedSamplingInternal[
         Return["Bad likelihood function"]
     ];
     meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
-    covEst = DiagonalMatrix @ Variance[Values @ variableSamplePoints[[All, "Point"]]];
+    covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
     
     estimatedMissingEvidence = With[{
         lmax = OptionValue["LikelihoodMaximum"]
@@ -783,9 +782,8 @@ nestedSamplingInternal[
             logLikelihoodFunction,
             likelihoodThreshold
         ];
-        var = Variance[bestPoints[[All, "Point"]]];
         factor = 1;
-        covEst = Divide[covEst + 3 * DiagonalMatrix[var], 4]; (* Retain a fraction of the previous covariance estimate *)
+        covEst = Divide[covEst + Covariance[Values @ bestPoints[[All, "Point"]]], 2]; (* Retain a fraction of the previous covariance estimate *)
         While[ True,
             newPoint = MCMC[
                 constrainedLogDensity,
@@ -1116,7 +1114,8 @@ parallelNestedSampling[
     ]
 },
     parallelNestedSampling[
-        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]]
+        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]],
+        opts
     ] /; numericMatrixQ[startingPoints]
 ];
 
