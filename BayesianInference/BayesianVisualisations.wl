@@ -282,10 +282,9 @@ Options[posteriorBubbleChart] = Join[
 
 regressionPlot1D[
     inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Data"]&)],
-    predictedDistributions : <|({_?NumericQ} -> _) ..|>,
+    predictedDistributions_?AssociationQ,
     opts : OptionsPattern[]
-] :=
-    Show[
+] := Show[
         regressionPlot1D[
             predictedDistributions,
             opts,
@@ -306,7 +305,7 @@ regressionPlot1D[
         ]
     ];
 
-regressionPlot1D[predictedDistributions : <|({_?NumericQ} -> _) ..|>, opts : OptionsPattern[]] := Quiet[
+regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] := Quiet[
     With[{
         DistributionPercentiles = Replace[
             OptionValue["DistributionPercentiles"],
