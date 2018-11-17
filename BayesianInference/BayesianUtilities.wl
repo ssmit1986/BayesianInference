@@ -20,6 +20,7 @@ expressionToFunction;
 simplifyLogPDF;
 numericMatrixQ;
 numericVectorQ;
+empiricalDistributionToWeightedData;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -345,6 +346,11 @@ simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting 
         ]
     ],
     Assumptions -> assum
+];
+
+empiricalDistributionToWeightedData[dist_DataDistribution /; dist["Type"] === EmpiricalDistribution] := WeightedData[
+    Replace[dist["Domain"], mat_?MatrixQ :> Transpose[mat]],
+    dist["Weights"]
 ];
 
 End[] (* End Private Context *)
