@@ -624,7 +624,8 @@ calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
         sorted,
         GeneralUtilities`AssociationTranspose @ <|
             "X" -> AssociationThread[keys, xValues],
-            "CrudePosteriorWeight" -> AssociationThread[keys, weights * Exp[Values @ sorted[[All, "LogLikelihood"]]]]
+            "CrudePosteriorWeight" -> AssociationThread[keys, weights * Exp[Values @ sorted[[All, "LogLikelihood"]]]],
+            "CrudeLogPosteriorWeight" -> AssociationThread[keys, Log[weights] + Values @ sorted[[All, "LogLikelihood"]]]
         |>,
         2
     ]
@@ -959,7 +960,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
     ],
     nRuns = OptionValue["PostProcessSamplingRuns"],
     keys,
-    evidenceWeigths,
+    logEvidenceWeigths,
     posteriorWeights,
     sampledX,
     parameterSamples,
@@ -987,37 +988,35 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
     ];
 
     keys = Keys[result["Samples"]];
-    evidenceWeigths = Times[
-        Exp[Values @ result[["Samples", All, "LogLikelihood"]]],
-        Transpose[
-            trapezoidWeigths[
-                sampledX = Map[
-                    Join[
-                        #,
-                        Reverse @ Sort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
-                    ]&,
-                    With[{
-                        randomNumbers = RandomVariate[
-                            BetaDistribution[result["SamplePoolSize"], 1],
-                            {result["GeneratedNestedSamples"], nRuns}
-                        ]
-                    },
-                        Transpose[
-                            FoldList[Times, randomNumbers]
-                        ]
+    logEvidenceWeigths = Plus[
+        ConstantArray[
+            Values @ result[["Samples", All, "LogLikelihood"]],
+            nRuns
+        ],
+        Log @ trapezoidWeigths[
+            sampledX = Map[
+                Join[
+                    #,
+                    ReverseSort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
+                ]&,
+                With[{
+                    randomNumbers = RandomVariate[
+                        BetaDistribution[result["SamplePoolSize"], 1],
+                        {result["GeneratedNestedSamples"], nRuns}
+                    ]
+                },
+                    Transpose[
+                        FoldList[Times, randomNumbers]
                     ]
                 ]
             ]
         ]
     ];
-    zSamples = Log @ Total[evidenceWeigths];
+    zSamples = logSumExp /@ logEvidenceWeigths;
+    posteriorWeights = Exp[logEvidenceWeigths - zSamples];
     parameterSamples = Transpose[
         Dot[
-            posteriorWeights = Replace[
-                Normalize[#, Total]& /@ Transpose[evidenceWeigths],
-                0. -> 0, (* Make zero values exact so that their Log flushes to -Inf *)
-                {2}
-            ],
+            posteriorWeights,
             Values[result[["Samples", All, "Point"]]]
         ]
     ];
@@ -1034,9 +1033,8 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
                     "SampledX" -> AssociationThread[keys, meanAndError[Transpose[sampledX]]],
                     "LogPosteriorWeight" -> AssociationThread[
                         keys,
-                        meanAndError @ Subtract[
-                            Transpose[Log[posteriorWeights]],
-                            logSumExp[Mean[Log @ posteriorWeights]] (* Adjust LogWeights by constant factor so that Total[Exp[meanLogweights]] == 1. *)
+                        meanAndError /@ Transpose[
+                            Subtract[logEvidenceWeigths, zSamples]
                         ]
                     ]
                 |>,
