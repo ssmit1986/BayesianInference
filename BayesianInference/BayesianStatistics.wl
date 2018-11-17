@@ -645,7 +645,7 @@ Options[nestedSampling] = Join[
         "TerminationFraction" -> 0.01,
         "Monitor" -> True,
         "LikelihoodMaximum" -> Automatic,
-        "MinMaxAcceptanceRate" -> {0.05, 0.95}
+        "MinMaxAcceptanceRate" -> {0, 1}
     },
     Options[evidenceSampling]
 ];
@@ -902,7 +902,8 @@ nestedSampling[
     ]
 },
     nestedSampling[
-        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]]
+        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]],
+        opts
     ] /; numericMatrixQ[startingPoints]
 ];
 
@@ -1305,7 +1306,7 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
                             DeleteCases[{}] @ splitPts,
                             PlotRange -> {{All, 1}, {All, 1}},
                             PlotLabel -> "Localisation of posterior distribution",
-                            Sequence @@ style["Enclosed prior mass", "Enclosed posterior mass"]
+                            Sequence @@ style["X; enclosed prior mass", "Enclosed posterior mass"]
                         ],
                         LogLogPlot[
                             fit, {\[FormalX], Min[points[[All, 1]]], 1},
