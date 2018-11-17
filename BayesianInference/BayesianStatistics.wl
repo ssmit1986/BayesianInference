@@ -513,10 +513,10 @@ regressionLogLikelihoodFunction[dist_, ___] := (
 );
 
 
-nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logThreshold_?NumericQ] := Compile[{
+nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logThreshold_?NumericQ, constraintFun_] := Compile[{
     {point, _Real, 1}
 },
-    If[ logLikelihood[point] > logThreshold,
+    If[ constraintFun[point] && logLikelihood[point] > logThreshold,
         logPriorDensity[point],
         $MachineLogZero
     ],
@@ -526,11 +526,11 @@ nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logT
     }
 ];
 
-nsDensity[logPriorDensity_, logLikelihood_, logThreshold_?NumericQ] := With[{
+nsDensity[logPriorDensity_, logLikelihood_, logThreshold_?NumericQ, constraintFun_] := With[{
     logzero = $MachineLogZero 
 },
     Function[
-        If[ TrueQ[logLikelihood[#] > logThreshold],
+        If[ TrueQ[constraintFun[#] && logLikelihood[#] > logThreshold],
             logPriorDensity[#],
             logzero
         ]
@@ -693,9 +693,11 @@ nestedSamplingInternal[
     entropy = 0,
     interrupted = False,
     statusCell,
-    output
+    output,
+    constraintFunction
 },
     {nSamples, parameterSpaceDimension} = Dimensions[startingPoints];
+    constraintFunction = constraintsToFunction[params];
     variableSamplePoints = SortBy[{#LogLikelihood, #Point}&] @ Association @ MapIndexed[
         Function[
             {point, index},
@@ -780,7 +782,8 @@ nestedSamplingInternal[
         constrainedLogDensity = nsDensity[
             logPriorDensityFunction,
             logLikelihoodFunction,
-            likelihoodThreshold
+            likelihoodThreshold,
+            constraintFunction
         ];
         factor = 1;
         covEst = Divide[covEst + Covariance[Values @ bestPoints[[All, "Point"]]], 2]; (* Retain a fraction of the previous covariance estimate *)
