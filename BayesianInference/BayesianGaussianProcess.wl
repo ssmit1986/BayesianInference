@@ -199,7 +199,7 @@ gaussianProcessNestedSampling[data_?(AssociationQ[#] && KeyExistsQ[#, "Input"] &
     Module[{
         tempResult = gaussianProcessNestedSampling[data["Input", "NormalizedData"], data["Output", "NormalizedData"], rest]
     },
-        If[ AssociationQ[tempResult] && AssociationQ[tempResult["GaussianProcessData"]],
+        If[ inferenceObjectQ[tempResult] && AssociationQ[tempResult["GaussianProcessData"]],
             AppendTo[
                 tempResult["GaussianProcessData"],
                 "DataPreProcessors" -> data[[All, {"Function", "InverseFunction"}]]

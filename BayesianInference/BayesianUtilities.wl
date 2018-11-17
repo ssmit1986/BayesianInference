@@ -13,6 +13,7 @@ $MachineLogZero;
 checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has calls to MainEvaluate. If it does, it will issue a message and return False. It will return True for CompiledFunctions that pass the test and $Failed for any expression other than a CompiledFunction";
 distributionDimension;
 inferenceObject;
+inferenceObjectQ;
 posteriorDistribution;
 varsToParamVector;
 expressionToFunction;
@@ -108,6 +109,8 @@ inferenceObject[first_, rest__] := inferenceObject[first];
 inferenceObject[assoc_?AssociationQ]["Properties"] := Sort @ Append[Keys[assoc], "Properties"];
 inferenceObject[assoc_?AssociationQ][prop : (_String | {__String})] := assoc[[prop]];
 
+inferenceObjectQ[inferenceObject[assoc_?AssociationQ]] := True;
+inferenceObjectQ[___] := False;
 
 SetAttributes[quietCheck, {HoldAll}];
 quietCheck[expr_, failexpr_, msgs : {__MessageName}] :=
@@ -187,71 +190,40 @@ dataNormalForm[___] := (
     Throw[$Failed, "problemDef"]
 );
 
-normalizeData[data : {__Rule}, opts : OptionsPattern[]] := normalizeData[
+normalizeData[data : {__Rule}] := normalizeData[
     Developer`ToPackedArray[data[[All, 1]]],
-    Developer`ToPackedArray[data[[All, 2]]],
-    opts
+    Developer`ToPackedArray[data[[All, 2]]]
 ];
 
-normalizeData[data : Rule[_List, _List], opts : OptionsPattern[]] := normalizeData[data[[1]], data[[2]], opts];
+normalizeData[data : Rule[_List, _List]] := normalizeData[data[[1]], data[[2]]];
 
-normalizeData[dataIn_List, dataOut_List, opts : OptionsPattern[]] := AssociationThread[
+normalizeData[dataIn_List, dataOut_List] := AssociationThread[
     {"Input", "Output"},
-    normalizeData[#, opts]& /@ {dataIn, dataOut}
+    normalizeData /@ {dataIn, dataOut}
 ];
 
-normalizeData[dataSequence : Repeated[_List, {3, Infinity}], opts : OptionsPattern[]] := AssociationThread[
+normalizeData[dataSequence : Repeated[_List, {3, Infinity}]] := AssociationThread[
     Range[Length[{dataSequence}]],
-    normalizeData[#, opts]& /@ {dataSequence}
+    normalizeData /@ {dataSequence}
 ];
 
-normalizeData[data_?(MatrixQ[#, NumericQ] || VectorQ[#, NumericQ]&), opts : OptionsPattern[]] := With[{
-    mean = First[OptionValue["StandardizationFunctions"], Mean] @ data,
-    std = Quiet[
-        Replace[
-            Last[OptionValue["StandardizationFunctions"], StandardDeviation] @ data,
-            _?PossibleZeroQ -> 1,
-            {-1}
-        ],
-        "Packing"
-    ]
+normalizeData[data_List?numericVectorQ] := normalizeData[dataNormalForm[data]];
+
+normalizeData[data_List?numericMatrixQ] := With[{
+    fe = FeatureExtraction[data, "StandardizedVector"]
 },
     With[{
-        fun = If[ MatrixQ[data]
-            ,
-            Function[
-                Transpose[
-                    Divide[Subtract[Transpose[#], mean], std]
-                ]
-            ]
-            ,
-            Function[
-                Divide[Subtract[#, mean], std]
-            ]
-        ],
-        inv = If[ MatrixQ[data]
-            ,
-            Function[
-                Transpose[
-                    Plus[Times[Transpose[#], std], mean]
-                ]
-            ]
-            ,
-            Function[
-                Plus[Times[#, std], mean]
-            ]
+        inv = Function[
+            fe[#, "OriginalData"]
         ]
     },
         <|
-            "NormalizedData" -> Developer`ToPackedArray[fun[data]],
-            "Function" -> fun,
+            "NormalizedData" -> Developer`ToPackedArray[fe[data]],
+            "Function" -> fe,
             "InverseFunction" -> inv
         |>
     ]
 ];
-Options[normalizeData] = {
-    "StandardizationFunctions" -> {Mean, StandardDeviation}
-};
 
 takePosteriorFraction[inferenceObject[assoc_?AssociationQ], rest___] := inferenceObject @ takePosteriorFraction[assoc, rest];
 
