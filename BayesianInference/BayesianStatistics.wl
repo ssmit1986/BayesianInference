@@ -359,7 +359,11 @@ logPDFFunction[
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
         },
-        RuntimeAttributes -> {Listable}
+        RuntimeAttributes -> {Listable},
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
+        }
     ]
 ];
 
@@ -398,7 +402,7 @@ logLikelihoodFunction[
                         And[
                             constraints,
                             distributionDomainToConstraints[domain, vars]
-                        ] 
+                        ]
                     ]
                 ],
                 parameters[[All, 1]] -> paramVector
@@ -413,6 +417,10 @@ logLikelihoodFunction[
         CompilationOptions -> {
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
+        },
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
         }
     ];
     
@@ -429,7 +437,11 @@ logLikelihoodFunction[
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
         },
-        RuntimeAttributes -> {Listable}
+        RuntimeAttributes -> {Listable},
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
+        }
     ]
 ];
 logLikelihoodFunction[dist_, ___] := (
@@ -488,6 +500,10 @@ regressionLogLikelihoodFunction[
         CompilationOptions -> {
             "InlineExternalDefinitions" -> True,
             "InlineCompiledFunctions" -> True
+        },
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
         }
     ];
     constraints = constraintsToFunction[parameters];
@@ -503,7 +519,11 @@ regressionLogLikelihoodFunction[
                 "InlineExternalDefinitions" -> True,
                 "InlineCompiledFunctions" -> True
             },
-            RuntimeAttributes -> {Listable}
+            RuntimeAttributes -> {Listable},
+            RuntimeOptions -> {
+                "RuntimeErrorHandler" -> Function[$MachineLogZero],
+                "WarningMessages" -> False
+            }
         ]
     ]
 ];
@@ -523,6 +543,10 @@ nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logT
     CompilationOptions -> {
         "InlineExternalDefinitions" -> True, 
         "InlineCompiledFunctions" -> False
+    },
+    RuntimeOptions -> {
+        "RuntimeErrorHandler" -> Function[$MachineLogZero],
+        "WarningMessages" -> False
     }
 ];
 

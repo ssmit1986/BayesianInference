@@ -340,10 +340,7 @@ expressionToFunction[expr_, rules : {({__Symbol} -> Slot[_])..}, attributes___] 
 simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting expressions like Log[1. / x] to -Log[x]*)
     FullSimplify[
         logPDF,
-        assum,
-        ComplexityFunction -> Function[ (* Force Log to expand as much as possible *)
-            LeafCount[#] + 100 * Count[#, Log[Except[_Symbol]], {0, Infinity}]
-        ]
+        assum
     ],
     Assumptions -> assum
 ];

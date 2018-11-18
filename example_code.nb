@@ -35,7 +35,7 @@ Cell[BoxData[{
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
  CellLabel->
-  "In[217]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+  "In[111]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -823,7 +823,7 @@ Cell[BoxData[
       "\"\<PDF of original distribution\>\""}], "}"}]}]}], 
   "\[IndentingNewLine]", "]"}]], "Input",
  CellLabel->"In[214]:=",ExpressionUUID->"97f91a6a-ea1c-4c7f-9959-e4123be4dd17"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -842,7 +842,7 @@ Cell[BoxData[{
  RowBox[{
   RowBox[{"result", "=", 
    RowBox[{"<|", "|>"}]}], ";"}]}], "Input",
- CellLabel->"In[27]:=",ExpressionUUID->"38adc9dc-eac0-479c-a54d-6998a43e56c4"],
+ CellLabel->"In[3]:=",ExpressionUUID->"38adc9dc-eac0-479c-a54d-6998a43e56c4"],
 
 Cell[BoxData[{
  RowBox[{
@@ -880,7 +880,8 @@ Cell[BoxData[
      RowBox[{"-", "3"}], ",", "3"}], "}"}], ",", "\[IndentingNewLine]", 
    RowBox[{"Filling", "\[Rule]", "Axis"}]}], "\[IndentingNewLine]", 
   "]"}]], "Input",
- CellLabel->"In[30]:=",ExpressionUUID->"73c88b0a-8a29-44a0-a23f-749ae325f129"],
+ CellLabel->
+  "In[127]:=",ExpressionUUID->"73c88b0a-8a29-44a0-a23f-749ae325f129"],
 
 Cell[BoxData[
  RowBox[{
@@ -899,9 +900,9 @@ Cell[BoxData[
         RowBox[{
          RowBox[{"{", 
           RowBox[{"a", ",", 
-           RowBox[{"-", "100"}], ",", "100"}], "}"}], ",", 
+           RowBox[{"-", "10"}], ",", "10"}], "}"}], ",", 
          RowBox[{"{", 
-          RowBox[{"b", ",", "0.01", ",", "100"}], "}"}]}], "}"}]}], ",", 
+          RowBox[{"b", ",", "0.1", ",", "10"}], "}"}]}], "}"}]}], ",", 
       "\[IndentingNewLine]", 
       RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
        RowBox[{"{", 
@@ -910,13 +911,14 @@ Cell[BoxData[
         "}"}]}], ",", "\[IndentingNewLine]", 
       RowBox[{"\"\<OriginalDistribution\>\"", " ", "\[Rule]", " ", "dist"}]}],
       "\[IndentingNewLine]", "]"}], ",", "\[IndentingNewLine]", 
-    RowBox[{"\"\<SamplePoolSize\>\"", "\[Rule]", "25"}], ",", 
+    RowBox[{"\"\<SamplePoolSize\>\"", "\[Rule]", "100"}], ",", 
     "\[IndentingNewLine]", 
     RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
     "\[IndentingNewLine]", 
-    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.001"}]}], 
+    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}]}], 
    "\[IndentingNewLine]", "]"}]}]], "Input",
- CellLabel->"In[40]:=",ExpressionUUID->"d2028e80-3d63-4c29-8f38-87b677d35f29"],
+ CellLabel->
+  "In[121]:=",ExpressionUUID->"d2028e80-3d63-4c29-8f38-87b677d35f29"],
 
 Cell[BoxData[
  RowBox[{
@@ -927,19 +929,6 @@ Cell[BoxData[
      RowBox[{
       RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "testdata"}], ",", 
       "\[IndentingNewLine]", 
-      RowBox[{"\"\<LogLikelihoodFunction\>\"", "\[Rule]", 
-       RowBox[{"Function", "[", "\[IndentingNewLine]", 
-        RowBox[{"Replace", "[", "\[IndentingNewLine]", 
-         RowBox[{
-          RowBox[{"LogLikelihood", "[", 
-           RowBox[{
-            RowBox[{"SkewNormalDistribution", "@@", "#"}], ",", "testdata"}], 
-           "]"}], ",", "\[IndentingNewLine]", 
-          RowBox[{
-           RowBox[{"Except", "[", 
-            RowBox[{"_", "?", "NumericQ"}], "]"}], "\[Rule]", 
-           "$MachineLogZero"}]}], "\[IndentingNewLine]", "]"}], 
-        "\[IndentingNewLine]", "]"}]}], ",", "\[IndentingNewLine]", 
       RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
        RowBox[{"SkewNormalDistribution", "[", 
         RowBox[{"a", ",", " ", "b", ",", " ", "c"}], "]"}]}], ",", 
@@ -949,12 +938,12 @@ Cell[BoxData[
         RowBox[{
          RowBox[{"{", 
           RowBox[{"a", ",", 
-           RowBox[{"-", "100"}], ",", "100"}], "}"}], ",", 
+           RowBox[{"-", "10"}], ",", "10"}], "}"}], ",", 
          RowBox[{"{", 
-          RowBox[{"b", ",", "0.01", ",", "100"}], "}"}], ",", 
+          RowBox[{"b", ",", "0.1", ",", "10"}], "}"}], ",", 
          RowBox[{"{", 
           RowBox[{"c", ",", 
-           RowBox[{"-", "100"}], ",", "100"}], "}"}]}], "}"}]}], ",", 
+           RowBox[{"-", "10"}], ",", "10"}], "}"}]}], "}"}]}], ",", 
       "\[IndentingNewLine]", 
       RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
        RowBox[{"{", 
@@ -964,13 +953,14 @@ Cell[BoxData[
       "\[IndentingNewLine]", 
       RowBox[{"\"\<OriginalDistribution\>\"", " ", "\[Rule]", " ", "dist"}]}],
       "\[IndentingNewLine]", "]"}], ",", "\[IndentingNewLine]", 
-    RowBox[{"\"\<SamplePoolSize\>\"", "\[Rule]", "25"}], ",", 
+    RowBox[{"\"\<SamplePoolSize\>\"", "\[Rule]", "100"}], ",", 
     "\[IndentingNewLine]", 
     RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
     "\[IndentingNewLine]", 
-    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.001"}]}], 
+    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}]}], 
    "\[IndentingNewLine]", "]"}]}]], "Input",
- CellLabel->"In[41]:=",ExpressionUUID->"58d033e7-defe-4661-99cf-cb348f5a9783"],
+ CellLabel->
+  "In[122]:=",ExpressionUUID->"b622be28-9d7d-492b-a5d5-2abcbde9e3af"],
 
 Cell[BoxData[{
  RowBox[{"posteriorBubbleChart", "[", 
@@ -997,10 +987,8 @@ Cell[BoxData[{
     ",", 
    RowBox[{"{", 
     RowBox[{"a", ",", "b", ",", "c"}], "}"}]}], "]"}]}], "Input",
- CellLabel->"In[42]:=",ExpressionUUID->"f1c4d1a3-c23d-4a42-a171-307b2577dd7d"],
-
-Cell[BoxData["\[IndentingNewLine]"], \
-"Input",ExpressionUUID->"0b8962fa-8c4a-48cc-802b-49d736788ea3"],
+ CellLabel->
+  "In[123]:=",ExpressionUUID->"f1c4d1a3-c23d-4a42-a171-307b2577dd7d"],
 
 Cell[BoxData[
  RowBox[{"Show", "[", "\[IndentingNewLine]", 
@@ -1037,15 +1025,13 @@ Cell[BoxData[
    ",", "\[IndentingNewLine]", 
    RowBox[{"PlotRange", "\[Rule]", "All"}]}], "\[IndentingNewLine]", 
   "]"}]], "Input",
- CellLabel->"In[45]:=",ExpressionUUID->"cb413159-1ef0-4b82-bad8-056199db4cb0"]
+ CellLabel->"In[126]:=",ExpressionUUID->"cb413159-1ef0-4b82-bad8-056199db4cb0"]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
 Cell["Regression", \
 "Subsubsection",ExpressionUUID->"005ca54c-da34-48e2-8493-06b12e6078d3"],
-
-Cell["", "Text",ExpressionUUID->"7eb32d9d-f08e-4488-aa5c-493339d7bb90"],
 
 Cell[BoxData[{
  RowBox[{"BlockRandom", "[", "\[IndentingNewLine]", 
