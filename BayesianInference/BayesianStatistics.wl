@@ -167,8 +167,14 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
                 Throw[$Failed, "problemDef"]
         ];
-        If[ MemberQ[keys, "IndependentVariables"] && !ListQ[assoc["IndependentVariables"]],
-            assoc["IndependentVariables"] = {assoc["IndependentVariables"]}
+        If[ MemberQ[keys, "IndependentVariables"],
+            If[ Head[assoc["Data"]] =!= Rule,
+                Message[defineInferenceProblem::dataFormat];
+                Throw[$Failed, "problemDef"]
+            ];
+            If[ !ListQ[assoc["IndependentVariables"]],
+                assoc["IndependentVariables"] = {assoc["IndependentVariables"]}
+            ]
         ];
         AppendTo[assoc, "ParameterSymbols" -> assoc["Parameters"][[All, 1]]];
         If[ ListQ[assoc["PriorDistribution"]],
