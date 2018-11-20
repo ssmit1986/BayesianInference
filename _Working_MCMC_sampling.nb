@@ -10,24 +10,11 @@ Cell[BoxData[{
    ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}], "\[IndentingNewLine]", 
  RowBox[{"Needs", "[", "\"\<CompiledFunctionTools`\>\"", "]"}]}], "Input",
- CellLabel->
-  "In[110]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
-
-Cell[CellGroupData[{
+ CellLabel->"In[1]:=",ExpressionUUID->"45f4969b-4ba4-40c0-b71c-cdcbb9db6bc5"],
 
 Cell[BoxData[
  RowBox[{"defineInferenceProblem", "[", "]"}]], "Input",
  CellLabel->"In[74]:=",ExpressionUUID->"0aba50b7-8be7-4282-9322-07cadc831c12"],
-
-Cell[BoxData[
- RowBox[{"{", 
-  RowBox[{"\<\"Data\"\>", ",", "\<\"Parameters\"\>", 
-   ",", "\<\"LogLikelihoodFunction\"\>", ",", "\<\"LogPriorPDFFunction\"\>", 
-   ",", "\<\"GeneratingDistribution\"\>", ",", "\<\"PriorDistribution\"\>", 
-   ",", "\<\"PriorDistribution\"\>", ",", "\<\"PriorPDF\"\>"}], 
-  "}"}]], "Output",
- CellLabel->"Out[74]=",ExpressionUUID->"46275fa3-433a-4fb0-b59d-aea2a3f1a2be"]
-}, Open  ]],
 
 Cell[BoxData[{
  RowBox[{
@@ -142,9 +129,7 @@ Cell[BoxData[{
    ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}], "\[IndentingNewLine]", 
  RowBox[{"Needs", "[", "\"\<CompiledFunctionTools`\>\"", "]"}]}], "Input",
- CellLabel->"In[73]:=",ExpressionUUID->"c27c1f0a-0d85-4b3d-8c16-d0a9531f391a"],
-
-Cell[CellGroupData[{
+ CellLabel->"In[95]:=",ExpressionUUID->"c27c1f0a-0d85-4b3d-8c16-d0a9531f391a"],
 
 Cell[BoxData[{
  RowBox[{
@@ -185,741 +170,124 @@ Cell[BoxData[{
  RowBox[{"ListPlot", "[", 
   RowBox[{"List", "@@@", 
    RowBox[{"Thread", "[", "testdata", "]"}]}], "]"}]}], "Input",
- CellLabel->"In[78]:=",ExpressionUUID->"ab1aad03-eca3-4e54-bba9-6e4b68526394"],
+ CellLabel->"In[5]:=",ExpressionUUID->"ab1aad03-eca3-4e54-bba9-6e4b68526394"],
 
 Cell[BoxData[
- GraphicsBox[{{}, {{}, 
-    {RGBColor[0.368417, 0.506779, 0.709798], PointSize[0.012833333333333334`],
-      AbsoluteThickness[1.6], PointBox[CompressedData["
-1:eJwBUQGu/iFib1JlAgAAABQAAAACAAAAINjfZycBEUBiRDZQGIMOQIKdpVMr
-8CJAvRRVlPnWEED6/1JEdgcRQNvl6OqRwQxA3OxBirWcAkAvHw2JMCwFQMzq
-1rs0qSFABaZVo91MDECIzOCCHkUYQNoO35finQZAGNXoL6wSIUB/surJYwAJ
-QKI0gESQDyJADHlYKfoqC0Ba9AlKXv4RQPPbnhJ3NgpAcMvQ2sU96j/u93CV
-MVwBQCizfyHziBZA/ETjt+2VCEDYPphcXq0cQIbzx0MVIhFAfNNuICB6GkDm
-e/tckowLQMRm/neI6R5APpU6zin+DkCQI0dk0dkFQCwjda1nKQlAEN9r6+pl
-IkAMTa8ZOIUJQIyKH3JQ0gdAmkhtMAjkBEBw0t/gK1sQQIiaBeEQKhBAFLRb
-WM1PIEBV1qQEAQsMQPgDa3A47R9A+Aqbn8RPCkBMwIe/
-      "]]}, {}}, {}, {}, {}, {}},
-  AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
-  Axes->{True, True},
-  AxesLabel->{None, None},
-  AxesOrigin->{0, 2.064353058749745},
-  DisplayFunction->Identity,
-  Frame->{{False, False}, {False, False}},
-  FrameLabel->{{None, None}, {None, None}},
-  FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
-  GridLines->{None, None},
-  GridLinesStyle->Directive[
-    GrayLevel[0.5, 0.4]],
-  ImagePadding->All,
-  Method->{"CoordinatesToolOptions" -> {"DisplayFunction" -> ({
-        (Identity[#]& )[
-         Part[#, 1]], 
-        (Identity[#]& )[
-         Part[#, 2]]}& ), "CopiedValueFunction" -> ({
-        (Identity[#]& )[
-         Part[#, 1]], 
-        (Identity[#]& )[
-         Part[#, 2]]}& )}},
-  PlotRange->{{0, 9.469080556837756}, {2.170016448507332, 
-    4.2832842436590735`}},
-  PlotRangeClipping->True,
-  PlotRangePadding->{{
-     Scaled[0.02], 
-     Scaled[0.02]}, {
-     Scaled[0.05], 
-     Scaled[0.05]}},
-  Ticks->{Automatic, Automatic}]], "Output",
- CellLabel->"Out[79]=",ExpressionUUID->"28d526bb-3cac-4f63-ab7a-e8ec475de855"]
-}, Open  ]],
-
-Cell[BoxData[
- RowBox[{
-  RowBox[{"obj", "=", 
-   RowBox[{"With", "[", 
-    RowBox[{
-     RowBox[{"{", 
-      RowBox[{"vars", "=", 
-       RowBox[{"{", "\[IndentingNewLine]", 
-        RowBox[{
-         RowBox[{"{", 
-          RowBox[{"s1", ",", "0.01", ",", "100"}], "}"}], ",", 
-         "\[IndentingNewLine]", 
-         RowBox[{"{", 
-          RowBox[{"l", ",", "0.05", ",", " ", "30"}], "}"}], ",", 
-         "\[IndentingNewLine]", 
-         RowBox[{"{", 
-          RowBox[{"s0", ",", "0.02", ",", "20"}], "}"}], ",", 
-         "\[IndentingNewLine]", 
-         RowBox[{"{", 
-          RowBox[{"m", ",", " ", 
-           RowBox[{"-", "10"}], ",", "10"}], "}"}]}], "\[IndentingNewLine]", 
-        "}"}]}], "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
-     RowBox[{"gaussianProcessNestedSampling", "[", "\[IndentingNewLine]", 
-      RowBox[{
-       RowBox[{"normalizeData", "[", "testdata", "]"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"Function", "[", 
-        RowBox[{"s1", " ", "*", 
-         RowBox[{"Boole", "[", 
-          RowBox[{
-           SuperscriptBox[
-            RowBox[{"Subtract", "[", 
-             RowBox[{"#1", ",", "#2"}], "]"}], "2"], "<", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"6", " ", "l"}], ")"}], "2"]}], "]"}], " ", 
-         RowBox[{"Exp", "[", 
-          RowBox[{"-", 
-           RowBox[{"Divide", "[", 
-            RowBox[{
-             SuperscriptBox[
-              RowBox[{"Subtract", "[", 
-               RowBox[{"#1", ",", "#2"}], "]"}], "2"], ",", 
-             SuperscriptBox["l", "2"]}], "]"}]}], "]"}]}], "]"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"Function", "[", "s0", "]"}], ",", "\[IndentingNewLine]", 
-       RowBox[{"Function", "[", "m", "]"}], ",", "\[IndentingNewLine]", 
-       RowBox[{"{", 
-        RowBox[{
-        "\"\<ScaleParameter\>\"", ",", " ", "\"\<ScaleParameter\>\"", ",", 
-         "\"\<ScaleParameter\>\"", ",", " ", "\"\<LocationParameter\>\""}], 
-        "}"}], ",", "\[IndentingNewLine]", "vars", ",", "\[IndentingNewLine]", 
-       RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "25"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "10000"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"\"\<MinIterations\>\"", "\[Rule]", "20"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], 
-       ",", "\[IndentingNewLine]", 
-       RowBox[{"\"\<Monitor\>\"", " ", "\[Rule]", " ", "True"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"\"\<Likelihood\>\"", " ", "\[Rule]", " ", "\"\<Custom\>\""}], 
-       ",", "\[IndentingNewLine]", 
-       RowBox[{"\"\<LikelihoodMaximum\>\"", "\[Rule]", "Automatic"}], ",", 
-       "\[IndentingNewLine]", 
-       RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "None"}]}], 
-      "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], 
-  ";"}]], "Input",
- CellLabel->"In[80]:=",ExpressionUUID->"93146f49-5e66-4c98-9ae4-fbe9f18aea2d"],
-
-Cell[BoxData[
- RowBox[{"obj", "[", "\"\<Properties\>\"", "]"}]], "Input",
- CellLabel->"In[83]:=",ExpressionUUID->"8db15a3d-c2cc-44dc-8160-4a0d693a7996"],
-
-Cell[BoxData[
- RowBox[{
-  RowBox[{"obj", "[", "\"\<Samples\>\"", "]"}], "//", "Dataset"}]], "Input",
- CellLabel->"In[85]:=",ExpressionUUID->"e4028959-b491-40ae-98a4-014aa444ad60"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell["Old", \
-"Subsubsection",ExpressionUUID->"2a683dc0-0998-4cf1-a94f-93e4e6de7bd4"],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"prob", "=", 
-   RowBox[{"ProbabilityDistribution", "[", 
-    RowBox[{
-     RowBox[{"Exp", "[", 
-      RowBox[{
-       RowBox[{"-", 
-        SuperscriptBox["x", "2"]}], "-", 
-       SuperscriptBox["y", "2"]}], "]"}], ",", 
-     RowBox[{"{", 
-      RowBox[{"x", ",", 
-       RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
-     RowBox[{"{", 
-      RowBox[{"y", ",", 
-       RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}]}], "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{"RandomVariate", "[", "\[IndentingNewLine]", 
+ RowBox[{"Show", "[", 
   RowBox[{
-  "prob", ",", "\[IndentingNewLine]", "10", ",", "\[IndentingNewLine]", 
-   RowBox[{"Method", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<MCMC\>\"", ",", 
-      RowBox[{"\"\<Thinning\>\"", "\[Rule]", "1"}], ",", 
-      RowBox[{"\"\<InitialPoint\>\"", "\[Rule]", 
-       RowBox[{"{", 
-        RowBox[{"0", ",", "0"}], "}"}]}], ",", 
-      RowBox[{"\"\<BurnInPeriod\>\"", "\[Rule]", "Automatic"}], ",", 
-      RowBox[{"\"\<InitialVariance\>\"", "\[Rule]", 
-       RowBox[{"{", 
-        RowBox[{
-         RowBox[{"{", 
-          RowBox[{"10", ",", "0"}], "}"}], ",", 
-         RowBox[{"{", 
-          RowBox[{"0", ",", "1"}], "}"}]}], "}"}]}]}], "}"}]}]}], 
-  "\[IndentingNewLine]", "]"}]}], "Input",
- CellLabel->"In[53]:=",ExpressionUUID->"700900b5-fe54-4cf3-9b39-3b712f178436"],
-
-Cell[BoxData[
- RowBox[{"{", 
-  RowBox[{
-   RowBox[{"{", 
+   RowBox[{"ListPlot", "[", 
+    RowBox[{"List", "@@@", 
+     RowBox[{"Thread", "[", "testdata", "]"}]}], "]"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"regressionPlot1D", "[", "\[IndentingNewLine]", " ", 
     RowBox[{
-     RowBox[{"-", "0.12744812305399097`"}], ",", 
-     RowBox[{"-", "0.7782475419103394`"}]}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{
-     RowBox[{"-", "0.060850339122023575`"}], ",", 
-     RowBox[{"-", "0.37000925418492486`"}]}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{
-     RowBox[{"-", "0.013835481447147094`"}], ",", 
-     RowBox[{"-", "0.0816733258362376`"}]}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.07849985137235203`", ",", "0.48440176044409994`"}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.12660867120166158`", ",", "0.7793851174448015`"}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.046685098197773764`", ",", "0.2897930994553432`"}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.046685098197773764`", ",", "0.2897930994553432`"}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.020003083475527907`", ",", "0.1247819227311269`"}], "}"}], ",", 
-   RowBox[{"{", 
-    RowBox[{"0.036463275295599645`", ",", "0.22442235781260983`"}], "}"}], 
-   ",", 
-   RowBox[{"{", 
-    RowBox[{"0.09632549823495337`", ",", "0.5926522425874081`"}], "}"}]}], 
-  "}"}]], "Output",
- CellLabel->"Out[54]=",ExpressionUUID->"d1255be4-3e8c-4db1-bd11-f27569c47297"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{"Options", "[", "Random`Private`MCMC", "]"}]], "Input",
- CellLabel->"In[60]:=",ExpressionUUID->"f0cbfa4f-e466-40fc-b1d4-2899e171b381"],
-
-Cell[BoxData[
- RowBox[{"{", 
-  RowBox[{
-   RowBox[{"\<\"Thinning\"\>", "\[Rule]", "Automatic"}], ",", 
-   RowBox[{"\<\"InitialPoint\"\>", "\[Rule]", "Automatic"}], ",", 
-   RowBox[{"\<\"InitialVariance\"\>", "\[Rule]", "Automatic"}], ",", 
-   RowBox[{"\<\"BurnInPeriod\"\>", "\[Rule]", "Automatic"}], ",", 
-   RowBox[{"\<\"MinEffectiveSampleSizeRatio\"\>", "\[Rule]", "Automatic"}]}], 
-  "}"}]], "Output",
- CellLabel->"Out[60]=",ExpressionUUID->"bd560495-98d3-468e-9c21-54c654a0d91d"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"Attributes", "[", "Random`Private`MCMC", "]"}], "=", 
-  RowBox[{"{", "Protected", "}"}]}], "\[IndentingNewLine]", 
- RowBox[{"Definition", "[", "Random`Private`MCMC", "]"}]}], "Input",
- CellLabel->"In[61]:=",ExpressionUUID->"60d7a07c-8659-4e2d-a071-97485552867d"],
-
-Cell[BoxData[
- RowBox[{"{", "Protected", "}"}]], "Output",
- CellLabel->"Out[61]=",ExpressionUUID->"d8d9f462-39df-453e-ac4f-fe457da5d060"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{
-  RowBox[{"Names", "[", "\"\<Random`Private`*\>\"", "]"}], "//", 
-  "TableForm"}]], "Input",
- CellLabel->"In[56]:=",ExpressionUUID->"2035f4fd-9834-433e-b10b-a4e724977eb2"],
-
-Cell[BoxData[
- TagBox[
-  TagBox[GridBox[{
-     {"\<\"Random`Private`AcceptanceRejection\"\>"},
-     {"\<\"Random`Private`BTPE\"\>"},
-     {"\<\"Random`Private`CompoundSum\"\>"},
-     {"\<\"Random`Private`ConditionalStandardBallUniformDistribution\"\>"},
-     {"\<\"Random`Private`DevroyeBinomial\"\>"},
-     {"\<\"Random`Private`DoublesToInteger\"\>"},
-     {"\<\"Random`Private`H2PE\"\>"},
-     {"\<\"Random`Private`IntegerToDoubles\"\>"},
-     {"\<\"Random`Private`IntegerUniformDistribution\"\>"},
-     {"\<\"Random`Private`InternalComplexNormalDistribution\"\>"},
-     {"\<\"Random`Private`InternalExponentialDistribution\"\>"},
-     {"\<\"Random`Private`InternalGammaDistribution\"\>"},
-     {"\<\"Random`Private`InternalNormalDistribution\"\>"},
-     {"\<\"Random`Private`InternalPoissonDistribution\"\>"},
-     {"\<\"Random`Private`InternalStandardBallUniformDistribution\"\>"},
-     {"\<\"Random`Private`InternalStandardSimplexUniformDistribution\"\>"},
-     {"\<\"Random`Private`InternalStandardSphereUniformDistribution\"\>"},
-     {"\<\"Random`Private`InverseTransform\"\>"},
-     {"\<\"Random`Private`LogBinomialPDF\"\>"},
-     {"\<\"Random`Private`LogPoissonPDF\"\>"},
-     {"\<\"Random`Private`MapThreadMax\"\>"},
-     {"\<\"Random`Private`MapThreadMin\"\>"},
-     {"\<\"Random`Private`MCMC\"\>"},
-     {"\<\"Random`Private`MPZipfDistribution\"\>"},
-     {"\<\"Random`Private`MultiUniformDistribution\"\>"},
-     {"\<\"Random`Private`OrderingAndCounts\"\>"},
-     {"\<\"Random`Private`PositionsOf\"\>"},
-     {"\<\"Random`Private`RandomVariateVector\"\>"},
-     {"\<\"Random`Private`RejectionStandardBallUniformDistribution\"\>"},
-     {"\<\"Random`Private`SelectWithinRange\"\>"},
-     {"\<\"Random`Private`StructureQuantityArrayRandomVector\"\>"},
-     {"\<\"Random`Private`ZigguratExponentialDistribution\"\>"},
-     {"\<\"Random`Private`ZigguratNormalDistribution\"\>"}
-    },
-    GridBoxAlignment->{
-     "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-      "RowsIndexed" -> {}},
-    GridBoxSpacings->{"Columns" -> {
-        Offset[0.27999999999999997`], {
-         Offset[0.5599999999999999]}, 
-        Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-        Offset[0.2], {
-         Offset[0.4]}, 
-        Offset[0.2]}, "RowsIndexed" -> {}}],
-   Column],
-  Function[BoxForm`e$, 
-   TableForm[BoxForm`e$]]]], "Output",
- CellLabel->
-  "Out[56]//TableForm=",ExpressionUUID->"a99aafaf-cfd2-4aa7-980e-\
-8a39c00d17d2"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{
-  RowBox[{"Attributes", "[", "Random`Private`MCMC", "]"}], "=", 
-  RowBox[{"{", "}"}]}]], "Input",
- CellLabel->
-  "In[113]:=",ExpressionUUID->"0966bc3f-aaaf-4f80-9fcc-e9b06de4ddb2"],
-
-Cell[BoxData[
- RowBox[{"{", "}"}]], "Output",
- CellLabel->"Out[113]=",ExpressionUUID->"d93db74b-2ded-494a-a331-71ffc0361644"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{"Definition", "[", "Random`Private`MCMC", "]"}]], "Input",
- CellLabel->
-  "In[114]:=",ExpressionUUID->"7cbdeea8-d401-4c87-92fa-18b7d3307c82"],
-
-Cell[BoxData[
- InterpretationBox[GridBox[{
-    {GridBox[{
-       {
-        RowBox[{
-         RowBox[{"Random`Private`MCMC", "[", 
-          RowBox[{
-          "Statistics`RandomVariateDump`dist_", ",", 
-           "Statistics`RandomVariateDump`len_Integer", ",", 
-           "Statistics`RandomVariateDump`prec_", ",", 
-           RowBox[{"{", 
-            RowBox[{
-            "Statistics`RandomVariateDump`thin_", ",", 
-             "Statistics`RandomVariateDump`initial_", ",", 
-             "Statistics`RandomVariateDump`ivar_", ",", 
-             "Statistics`RandomVariateDump`burnin_", ",", 
-             "Statistics`RandomVariateDump`minff_"}], "}"}]}], "]"}], ":=", 
-         RowBox[{"Module", "[", 
-          RowBox[{
-           RowBox[{"{", 
-            RowBox[{
-            "Statistics`RandomVariateDump`mineff", ",", 
-             "Statistics`RandomVariateDump`chainstate", ",", 
-             "Statistics`RandomVariateDump`mthd", ",", 
-             "Statistics`RandomVariateDump`head", ",", 
-             "Statistics`RandomVariateDump`contQ", ",", 
-             "Statistics`RandomVariateDump`sample"}], "}"}], ",", 
-           RowBox[{
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{"!", 
-               RowBox[{"(", 
-                RowBox[{
-                 RowBox[{
-                 "Statistics`RandomVariateDump`burnin", "===", "Automatic"}], 
-                 "||", 
-                 RowBox[{
-                 "Internal`NonNegativeIntegerQ", "[", 
-                  "Statistics`RandomVariateDump`burnin", "]"}]}], ")"}]}], 
-              ",", 
-              RowBox[{
-               RowBox[{"Message", "[", 
-                RowBox[{
-                 StyleBox[
-                  RowBox[{"RandomVariate", "::", "optvg"}], "MessageName"], 
-                 ",", "\<\"BurnInPeriod\"\>", ",", 
-                 "Statistics`RandomVariateDump`burnin", 
-                 ",", "\<\"Automatic or a non-negative integer\"\>"}], "]"}], 
-               ";", 
-               RowBox[{"Return", "[", "$Failed", "]"}]}]}], "]"}], ";", 
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{"!", 
-               RowBox[{"(", 
-                RowBox[{
-                 RowBox[{
-                 "Statistics`RandomVariateDump`minff", "===", "Automatic"}], "||", 
-                 RowBox[{"(", 
-                  RowBox[{
-                   RowBox[{
-                   "Internal`RealValuedNumericQ", "[", 
-                    "Statistics`RandomVariateDump`minff", "]"}], "&&", 
-                   RowBox[{
-                   "0", "\[LessEqual]", "Statistics`RandomVariateDump`minff", 
-                    "<", "1"}]}], ")"}]}], ")"}]}], ",", 
-              RowBox[{
-               RowBox[{"Message", "[", 
-                RowBox[{
-                 StyleBox[
-                  RowBox[{"RandomVariate", "::", "optvg"}], "MessageName"], 
-                 ",", "\<\"MinEffectiveSampleSizeRatio\"\>", ",", 
-                 "Statistics`RandomVariateDump`minff", 
-                 ",", "\<\"Automatic or a real number between 0 and 1\"\>"}], 
-                "]"}], ";", 
-               RowBox[{"Return", "[", "$Failed", "]"}]}]}], "]"}], ";", 
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{"!", 
-               RowBox[{"(", 
-                RowBox[{
-                 RowBox[{
-                 "Statistics`RandomVariateDump`thin", "===", "Automatic"}], "||", 
-                 RowBox[{
-                 "Internal`PositiveIntegerQ", "[", 
-                  "Statistics`RandomVariateDump`thin", "]"}]}], ")"}]}], ",", 
-              RowBox[{
-               RowBox[{"Message", "[", 
-                RowBox[{
-                 StyleBox[
-                  RowBox[{"RandomVariate", "::", "optvg"}], "MessageName"], 
-                 ",", "\<\"Thinning\"\>", ",", 
-                 "Statistics`RandomVariateDump`thin", 
-                 ",", "\<\"Automatic or a positive integer\"\>"}], "]"}], ";", 
-               RowBox[{"Return", "[", "$Failed", "]"}]}]}], "]"}], ";", 
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{"!", 
-               RowBox[{"(", 
-                RowBox[{
-                 RowBox[{
-                 "Statistics`RandomVariateDump`initial", "===", "Automatic"}],
-                  "||", 
-                 RowBox[{"(", 
-                  RowBox[{
-                   RowBox[{
-                   "Internal`RealValuedNumericQ", "[", 
-                    "Statistics`RandomVariateDump`initial", "]"}], "&&", 
-                   RowBox[{
-                    RowBox[{
-                    "Statistics`Library`DistributionDimensionality", "[", 
-                    "Statistics`RandomVariateDump`dist", "]"}], "\[Equal]", 
-                    "1"}]}], ")"}], "||", 
-                 RowBox[{"(", 
-                  RowBox[{
-                   RowBox[{
-                   "Statistics`Library`RealVectorQ", "[", 
-                    "Statistics`RandomVariateDump`initial", "]"}], "&&", 
-                   RowBox[{
-                    RowBox[{
-                    "Statistics`Library`DistributionDimensionality", "[", 
-                    "Statistics`RandomVariateDump`dist", "]"}], "\[Equal]", 
-                    RowBox[{
-                    "Length", "[", "Statistics`RandomVariateDump`initial", 
-                    "]"}]}]}], ")"}]}], ")"}]}], ",", 
-              RowBox[{
-               RowBox[{"Message", "[", 
-                RowBox[{
-                 StyleBox[
-                  RowBox[{"RandomVariate", "::", "mcmcin1"}], "MessageName"], 
-                 ",", "Statistics`RandomVariateDump`initial"}], "]"}], ";", 
-               RowBox[{"Return", "[", "$Failed", "]"}]}]}], "]"}], ";", 
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{
-               RowBox[{
-               "Statistics`RandomVariateDump`thin", "=!=", "Automatic"}], "&&", 
-               RowBox[{
-               "Statistics`RandomVariateDump`minff", "=!=", "Automatic"}]}], 
-              ",", 
-              RowBox[{"Message", "[", 
-               RowBox[{
-                StyleBox[
-                 RowBox[{"RandomVariate", "::", "szthin"}], "MessageName"], 
-                ",", "Statistics`RandomVariateDump`minff"}], "]"}]}], "]"}], 
-            ";", 
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{
-              "Statistics`RandomVariateDump`minff", "===", 
-               "Statistics`RandomVariateDump`thin", "===", "Automatic"}], ",", 
-              RowBox[{
-              "Statistics`RandomVariateDump`mineff", "=", 
-               "Statistics`RandomVariateDump`$EffectiveSampleSizeRatio"}], 
-              ",", 
-              RowBox[{
-              "Statistics`RandomVariateDump`mineff", "=", 
-               "Statistics`RandomVariateDump`minff"}]}], "]"}], ";", 
-            RowBox[{
-            "Statistics`RandomVariateDump`mthd", 
-             "=", "\<\"AdaptiveMetropolis\"\>"}], ";", 
-            RowBox[{"Switch", "[", 
-             RowBox[{
-             "Statistics`RandomVariateDump`dist", ",", "\[IndentingNewLine]", 
-              RowBox[{
-              "_", "?", 
-               "Statistics`Library`ContinuousUnivariateDistributionQ"}], ",", 
-              RowBox[{
-               RowBox[{
-               "Statistics`RandomVariateDump`head", "=", 
-                "Statistics`RandomVariateDump`iMCMC1D"}], ";", 
-               RowBox[{"Statistics`RandomVariateDump`contQ", "=", "True"}]}], 
-              ",", "\[IndentingNewLine]", 
-              RowBox[{
-              "_", "?", 
-               "Statistics`Library`ContinuousMultivariateDistributionQ"}], 
-              ",", 
-              RowBox[{
-               RowBox[{
-               "Statistics`RandomVariateDump`head", "=", 
-                "Statistics`RandomVariateDump`iMCMCND"}], ";", 
-               RowBox[{"Statistics`RandomVariateDump`contQ", "=", "True"}]}], 
-              ",", "\[IndentingNewLine]", 
-              RowBox[{
-              "_", "?", 
-               "Statistics`Library`DiscreteUnivariateDistributionQ"}], ",", 
-              RowBox[{
-               RowBox[{
-               "Statistics`RandomVariateDump`head", "=", 
-                "Statistics`RandomVariateDump`iMCMC1D"}], ";", 
-               RowBox[{"Statistics`RandomVariateDump`contQ", "=", "False"}]}],
-               ",", "\[IndentingNewLine]", 
-              RowBox[{
-              "_", "?", 
-               "Statistics`Library`DiscreteMultivariateDistributionQ"}], ",", 
-              RowBox[{
-               RowBox[{
-               "Statistics`RandomVariateDump`head", "=", 
-                "Statistics`RandomVariateDump`iMCMCND"}], ";", 
-               RowBox[{"Statistics`RandomVariateDump`contQ", "=", "False"}]}],
-               ",", "\[IndentingNewLine]", "_", ",", 
-              RowBox[{"Return", "[", "$Failed", "]"}]}], "]"}], ";", 
-            RowBox[{"Statistics`RandomVariateDump`chainstate", "=", 
-             RowBox[{"Statistics`RandomVariateDump`head", "[", 
-              RowBox[{
-              "Statistics`RandomVariateDump`dist", ",", 
-               "Statistics`RandomVariateDump`len", ",", 
-               "Statistics`RandomVariateDump`prec", ",", 
-               "Statistics`RandomVariateDump`mthd", ",", 
-               RowBox[{"{", 
-                RowBox[{
-                "Statistics`RandomVariateDump`thin", ",", 
-                 "Statistics`RandomVariateDump`initial", ",", 
-                 "Statistics`RandomVariateDump`ivar", ",", 
-                 "Statistics`RandomVariateDump`burnin", ",", 
-                 "Statistics`RandomVariateDump`mineff"}], "}"}], ",", 
-               "Statistics`RandomVariateDump`contQ"}], "]"}]}], ";", 
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{
-              "Statistics`RandomVariateDump`chainstate", "===", "$Failed"}], 
-              ",", 
-              RowBox[{
-               RowBox[{"Message", "[", 
-                RowBox[{
-                 StyleBox[
-                  RowBox[{"RandomVariate", "::", "mcmc"}], "MessageName"], 
-                 ",", "Statistics`RandomVariateDump`dist", ",", 
-                 "Statistics`RandomVariateDump`mthd"}], "]"}], ";", 
-               RowBox[{"Return", "[", "$Failed", "]"}]}]}], "]"}], ";", 
-            RowBox[{"Statistics`RandomVariateDump`sample", "=", 
-             RowBox[{"Statistics`RandomVariateDump`iSampleFromChain", "[", 
-              RowBox[{
-              "Statistics`RandomVariateDump`chainstate", ",", 
-               "Statistics`RandomVariateDump`len", ",", 
-               RowBox[{"{", 
-                RowBox[{
-                "Statistics`RandomVariateDump`mineff", ",", 
-                 "Statistics`RandomVariateDump`thin"}], "}"}]}], "]"}]}], ";", 
-            RowBox[{"If", "[", 
-             RowBox[{
-              RowBox[{
-              "Statistics`RandomVariateDump`sample", "===", "$Failed"}], ",", 
-              RowBox[{
-               RowBox[{"Message", "[", 
-                RowBox[{
-                 StyleBox[
-                  RowBox[{"RandomVariate", "::", "mcmc"}], "MessageName"], 
-                 ",", "Statistics`RandomVariateDump`dist", ",", 
-                 "Statistics`RandomVariateDump`mthd"}], "]"}], ";", 
-               RowBox[{"Return", "[", "$Failed", "]"}]}]}], "]"}], ";", 
-            RowBox[{
-            "Statistics`RandomVariateDump`RandomSamplingExprStore", "[", 
-             RowBox[{"Statistics`RandomVariateDump`put", "[", 
-              RowBox[{
-              "Statistics`RandomVariateDump`dist", ",", "\<\"MCobj\"\>", ",", 
-               "Statistics`RandomVariateDump`chainstate"}], "]"}], "]"}], ";",
-             "Statistics`RandomVariateDump`sample"}]}], "]"}]}]}
-      },
-      BaselinePosition->{Baseline, {1, 1}},
-      GridBoxAlignment->{
-       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-        "RowsIndexed" -> {}},
-      GridBoxItemSize->{"Columns" -> {{
-           Scaled[0.999]}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-        "RowsIndexed" -> {}}]},
-    {" "},
-    {GridBox[{
-       {
-        RowBox[{
-         RowBox[{"Options", "[", "Random`Private`MCMC", "]"}], "=", 
-         RowBox[{"{", 
-          RowBox[{
-           RowBox[{"\<\"Thinning\"\>", "\[Rule]", "Automatic"}], ",", 
-           RowBox[{"\<\"InitialPoint\"\>", "\[Rule]", "Automatic"}], ",", 
-           RowBox[{"\<\"InitialVariance\"\>", "\[Rule]", "Automatic"}], ",", 
-           RowBox[{"\<\"BurnInPeriod\"\>", "\[Rule]", "Automatic"}], ",", 
-           RowBox[{"\<\"MinEffectiveSampleSizeRatio\"\>", "\[Rule]", 
-            "Automatic"}]}], "}"}]}]}
-      },
-      BaselinePosition->{Baseline, {1, 1}},
-      GridBoxAlignment->{
-       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-        "RowsIndexed" -> {}},
-      GridBoxItemSize->{"Columns" -> {{
-           Scaled[0.999]}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-        "RowsIndexed" -> {}}]}
-   },
-   BaselinePosition->{Baseline, {1, 1}},
-   GridBoxAlignment->{
-    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-     "RowsIndexed" -> {}}],
-  Definition[Random`Private`MCMC],
-  Editable->False]], "Output",
- CellLabel->"Out[114]=",ExpressionUUID->"4a2608c0-6561-4316-8f40-bc1b4e163265"]
-}, Open  ]],
-
-Cell[BoxData[
- RowBox[{"Statistics`RandomVariateDump`head", "[", 
-  RowBox[{
-  "Statistics`RandomVariateDump`dist", ",", 
-   "Statistics`RandomVariateDump`len", ",", 
-   "Statistics`RandomVariateDump`prec", ",", 
-   "Statistics`RandomVariateDump`mthd", ",", 
-   RowBox[{"{", 
-    RowBox[{
-    "Statistics`RandomVariateDump`thin", ",", 
-     "Statistics`RandomVariateDump`initial", ",", 
-     "Statistics`RandomVariateDump`ivar", ",", 
-     "Statistics`RandomVariateDump`burnin", ",", 
-     "Statistics`RandomVariateDump`mineff"}], "}"}], ",", 
-   "Statistics`RandomVariateDump`contQ"}], 
-  "]"}]], "Input",ExpressionUUID->"8a6c4345-ae57-47b1-848e-2d383f689f7c"],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{
-  RowBox[{
-   InterpretationBox["MarkovChainObject",
-    Statistics`MCMC`MarkovChainObject], "[", 
-   InterpretationBox[
-    PanelBox[
-     InterpretationBox[Cell[BoxData[
-       FormBox["\<\"Random walk Metrolopis-Hastings, Adaptive(Log)\"\>", 
-        TextForm]], "InlineText",ExpressionUUID->
-       "4c651631-5404-46b4-8743-088423988660"],
-      Text["Random walk Metrolopis-Hastings, Adaptive(Log)"]]],
-    Association[
-    "StateData" -> {0.4242615163789306, 0, 0., 0.}, 
-     "IteratorFunction" -> (
-      Statistics`MCMCSamplersDump`iAdaptiveMonteCarlo[#, #2, 
-       Statistics`MCMCSamplersDump`ff$946, {0.5, 10}, #3, MachinePrecision, 
-       Statistics`MCMCSamplersDump`validDensityQ$946, {
-       Statistics`MCMCSamplersDump`logQ$946, 
-        Statistics`MCMCSamplersDump`discreteQ$946}]& ), 
-     "RandomInputFunction" -> ({
-       RandomVariate[
-        NormalDistribution[], #, WorkingPrecision -> MachinePrecision], 
-       Log[
-        RandomReal[1, #, WorkingPrecision -> MachinePrecision]]}& ), 
-     WorkingPrecision -> MachinePrecision, "MarkovChainType" -> 
-     "Random walk Metrolopis-Hastings, Adaptive(Log)", "AcceptanceRate" -> 
-     None]], "]"}], "//", "First"}]], "Input",
- CellLabel->
-  "In[115]:=",ExpressionUUID->"d5dcbcb8-a75d-4212-9eb4-b654013e5564"],
-
-Cell[BoxData[
- RowBox[{"\[LeftAssociation]", 
-  RowBox[{
-   RowBox[{"\<\"StateData\"\>", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"0.4242615163789306`", ",", "0", ",", "0.`", ",", "0.`"}], 
-     "}"}]}], ",", 
-   RowBox[{"\<\"IteratorFunction\"\>", "\[Rule]", 
-    RowBox[{"(", 
-     RowBox[{
-      RowBox[{"Statistics`MCMCSamplersDump`iAdaptiveMonteCarlo", "[", 
+     RowBox[{"predictFromGaussianProcess", "[", "\[IndentingNewLine]", 
+      RowBox[{"testdata", ",", "\[IndentingNewLine]", 
+       RowBox[{"Range", "[", 
+        RowBox[{"0", ",", "10", ",", "0.1"}], "]"}], ",", 
+       "\[IndentingNewLine]", 
        RowBox[{
-       "#1", ",", "#2", ",", "Statistics`MCMCSamplersDump`ff$946", ",", 
-        RowBox[{"{", 
-         RowBox[{"0.5`", ",", "10"}], "}"}], ",", "#3", ",", 
-        "MachinePrecision", ",", 
-        "Statistics`MCMCSamplersDump`validDensityQ$946", ",", 
-        RowBox[{"{", 
-         RowBox[{
-         "Statistics`MCMCSamplersDump`logQ$946", ",", 
-          "Statistics`MCMCSamplersDump`discreteQ$946"}], "}"}]}], "]"}], 
-      "&"}], ")"}]}], ",", 
-   RowBox[{"\<\"RandomInputFunction\"\>", "\[Rule]", 
-    RowBox[{"(", 
+        RowBox[{"Exp", "[", 
+         RowBox[{"-", 
+          SuperscriptBox[
+           RowBox[{"(", 
+            FractionBox[
+             RowBox[{"First", "[", 
+              RowBox[{"#1", "-", "#2"}], "]"}], "0.5"], ")"}], "2"]}], "]"}], 
+        "&"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"0.1", "&"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"2.5", "&"}]}], "\[IndentingNewLine]", "]"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"InterpolationOrder", "\[Rule]", "2"}]}], "\[IndentingNewLine]", 
+    "]"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"PlotRange", "->", "All"}]}], "\[IndentingNewLine]", 
+  "]"}]], "Input",
+ CellLabel->
+  "In[100]:=",ExpressionUUID->"5f5bb338-14ed-4638-9b78-b22105ca8d91"],
+
+Cell[BoxData[
+ RowBox[{"obj", "=", 
+  RowBox[{"gaussianProcessNestedSampling", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"normalizeData", "[", "testdata", "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Function", "[", 
+     RowBox[{"With", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"dsq", "=", 
+         SuperscriptBox[
+          RowBox[{"First", "[", 
+           RowBox[{"Subtract", "[", 
+            RowBox[{"#1", ",", "#2"}], "]"}], "]"}], "2"]}], "}"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"s1", " ", "*", 
+        RowBox[{"Boole", "[", 
+         RowBox[{"dsq", "<", 
+          SuperscriptBox[
+           RowBox[{"(", 
+            RowBox[{"6", " ", "l"}], ")"}], "2"]}], "]"}], " ", 
+        RowBox[{"Exp", "[", 
+         RowBox[{"-", 
+          RowBox[{"Divide", "[", 
+           RowBox[{"dsq", ",", 
+            SuperscriptBox["l", "2"]}], "]"}]}], "]"}]}]}], 
+      "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Function", "[", "s0", "]"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"Function", "[", "m", "]"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"{", "\[IndentingNewLine]", 
      RowBox[{
       RowBox[{"{", 
-       RowBox[{
-        RowBox[{"RandomVariate", "[", 
-         RowBox[{
-          RowBox[{"NormalDistribution", "[", "]"}], ",", "#1", ",", 
-          RowBox[{"WorkingPrecision", "\[Rule]", "MachinePrecision"}]}], 
-         "]"}], ",", 
-        RowBox[{"Log", "[", 
-         RowBox[{"RandomReal", "[", 
-          RowBox[{"1", ",", "#1", ",", 
-           RowBox[{"WorkingPrecision", "\[Rule]", "MachinePrecision"}]}], 
-          "]"}], "]"}]}], "}"}], "&"}], ")"}]}], ",", 
-   RowBox[{"WorkingPrecision", "\[Rule]", "MachinePrecision"}], ",", 
-   RowBox[{"\<\"MarkovChainType\"\>", 
-    "\[Rule]", "\<\"Random walk Metrolopis-Hastings, Adaptive(Log)\"\>"}], 
-   ",", 
-   RowBox[{"\<\"AcceptanceRate\"\>", "\[Rule]", "None"}]}], 
-  "\[RightAssociation]"}]], "Output",
- CellLabel->"Out[115]=",ExpressionUUID->"98685b56-c313-4809-979d-a8a8e6099699"]
-}, Open  ]],
+       RowBox[{"s1", ",", "0.01", ",", "100"}], "}"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"l", ",", "0.05", ",", " ", "30"}], "}"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"s0", ",", "0.02", ",", "20"}], "}"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"m", ",", " ", 
+        RowBox[{"-", "10"}], ",", "10"}], "}"}]}], "\[IndentingNewLine]", 
+     "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+     "\"\<ScaleParameter\>\"", ",", " ", "\"\<ScaleParameter\>\"", ",", 
+      "\"\<ScaleParameter\>\"", ",", " ", "\"\<LocationParameter\>\""}], 
+     "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "25"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "10000"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<MinIterations\>\"", "\[Rule]", "20"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], ",",
+     "\[IndentingNewLine]", 
+    RowBox[{"\"\<Monitor\>\"", " ", "\[Rule]", " ", "True"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<Likelihood\>\"", " ", "\[Rule]", " ", "\"\<Custom\>\""}], 
+    ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<LikelihoodMaximum\>\"", "\[Rule]", "Automatic"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], "\[IndentingNewLine]",
+    "]"}]}]], "Input",
+ CellLabel->
+  "In[109]:=",ExpressionUUID->"93146f49-5e66-4c98-9ae4-fbe9f18aea2d"],
 
 Cell[BoxData[
- RowBox[{"Statistics`RandomVariateDump`iMCMCND", "//", 
-  "Definition"}]], "Input",
- CellLabel->
-  "In[116]:=",ExpressionUUID->"273dc754-7a5e-4fa9-896c-05d8798da001"],
-
-Cell[CellGroupData[{
-
-Cell[BoxData["Statistics`RandomVariateDump`$InitialBurnIn"], "Input",
- CellLabel->
-  "In[117]:=",ExpressionUUID->"8cc0a2d4-d2ce-4457-8efc-f887bdb9ed4c"],
-
-Cell[BoxData["100"], "Output",
- CellLabel->"Out[117]=",ExpressionUUID->"dd62045c-6fba-4358-b489-4dbd7de60230"]
+ RowBox[{"regressionPlot1D", "[", 
+  RowBox[{"obj", ",", 
+   RowBox[{"predictFromGaussianProcess", "[", 
+    RowBox[{
+     RowBox[{"takePosteriorFraction", "[", 
+      RowBox[{"obj", ",", "0.95"}], "]"}], ",", "20"}], "]"}]}], 
+  "]"}]], "Input",
+ CellLabel->"In[107]:=",ExpressionUUID->"ec843261-546a-417c-be21-40012ab6e63a"]
 }, Open  ]]
-}, Closed]]
 },
-WindowSize->{1244, 700},
-WindowMargins->{{Automatic, 176}, {Automatic, 86}},
+WindowSize->{1406, 996},
+WindowMargins->{{Automatic, 14}, {19, Automatic}},
 PrivateNotebookOptions->{"FileOutlineCache"->False},
 TrackCellChangeTimes->False,
 Magnification:>1.2 Inherited,
