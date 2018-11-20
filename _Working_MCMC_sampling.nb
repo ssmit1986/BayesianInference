@@ -118,6 +118,9 @@ Cell[CellGroupData[{
 Cell["GP", \
 "Subsubsection",ExpressionUUID->"1575acdb-1f02-4eda-8782-8cef04d6c005"],
 
+Cell[BoxData["Quit"], "Input",
+ CellLabel->"In[15]:=",ExpressionUUID->"c1a0b55e-60ce-4d96-806c-af354e85e80b"],
+
 Cell[BoxData[{
  RowBox[{
   RowBox[{"SetDirectory", "[", 
@@ -129,7 +132,7 @@ Cell[BoxData[{
    ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}], "\[IndentingNewLine]", 
  RowBox[{"Needs", "[", "\"\<CompiledFunctionTools`\>\"", "]"}]}], "Input",
- CellLabel->"In[95]:=",ExpressionUUID->"c27c1f0a-0d85-4b3d-8c16-d0a9531f391a"],
+ CellLabel->"In[1]:=",ExpressionUUID->"c27c1f0a-0d85-4b3d-8c16-d0a9531f391a"],
 
 Cell[BoxData[{
  RowBox[{
@@ -173,37 +176,55 @@ Cell[BoxData[{
  CellLabel->"In[5]:=",ExpressionUUID->"ab1aad03-eca3-4e54-bba9-6e4b68526394"],
 
 Cell[BoxData[
- RowBox[{"Show", "[", 
+ RowBox[{"Manipulate", "[", "\[IndentingNewLine]", 
   RowBox[{
-   RowBox[{"ListPlot", "[", 
-    RowBox[{"List", "@@@", 
-     RowBox[{"Thread", "[", "testdata", "]"}]}], "]"}], ",", 
-   "\[IndentingNewLine]", 
-   RowBox[{"regressionPlot1D", "[", "\[IndentingNewLine]", " ", 
-    RowBox[{
-     RowBox[{"predictFromGaussianProcess", "[", "\[IndentingNewLine]", 
-      RowBox[{"testdata", ",", "\[IndentingNewLine]", 
-       RowBox[{"Range", "[", 
-        RowBox[{"0", ",", "10", ",", "0.1"}], "]"}], ",", 
-       "\[IndentingNewLine]", 
+   RowBox[{"Quiet", "@", 
+    RowBox[{"Show", "[", 
+     RowBox[{
+      RowBox[{"ListPlot", "[", 
+       RowBox[{"List", "@@@", 
+        RowBox[{"Thread", "[", "testdata", "]"}]}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"regressionPlot1D", "[", "\[IndentingNewLine]", " ", 
        RowBox[{
-        RowBox[{"Exp", "[", 
-         RowBox[{"-", 
-          SuperscriptBox[
-           RowBox[{"(", 
-            FractionBox[
-             RowBox[{"First", "[", 
-              RowBox[{"#1", "-", "#2"}], "]"}], "0.5"], ")"}], "2"]}], "]"}], 
-        "&"}], ",", "\[IndentingNewLine]", 
-       RowBox[{"0.1", "&"}], ",", "\[IndentingNewLine]", 
-       RowBox[{"2.5", "&"}]}], "\[IndentingNewLine]", "]"}], ",", 
-     "\[IndentingNewLine]", 
-     RowBox[{"InterpolationOrder", "\[Rule]", "2"}]}], "\[IndentingNewLine]", 
-    "]"}], ",", "\[IndentingNewLine]", 
-   RowBox[{"PlotRange", "->", "All"}]}], "\[IndentingNewLine]", 
-  "]"}]], "Input",
- CellLabel->
-  "In[100]:=",ExpressionUUID->"5f5bb338-14ed-4638-9b78-b22105ca8d91"],
+        RowBox[{"predictFromGaussianProcess", "[", "\[IndentingNewLine]", 
+         RowBox[{"testdata", ",", "\[IndentingNewLine]", 
+          RowBox[{"Range", "[", 
+           RowBox[{"0", ",", "10", ",", "0.1"}], "]"}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"Exp", "[", 
+            RowBox[{"-", 
+             SuperscriptBox[
+              RowBox[{"(", 
+               FractionBox[
+                RowBox[{"First", "[", 
+                 RowBox[{"#1", "-", "#2"}], "]"}], "d"], ")"}], "2"]}], "]"}],
+            "&"}], ",", 
+          RowBox[{"s", "&"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"m", "&"}]}], "\[IndentingNewLine]", "]"}], ",", 
+        "\[IndentingNewLine]", 
+        RowBox[{"InterpolationOrder", "\[Rule]", "2"}]}], 
+       "\[IndentingNewLine]", "]"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"PlotRange", "->", "All"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"ImageSize", "\[Rule]", "500"}]}], "\[IndentingNewLine]", 
+     "]"}]}], ",", "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"d", ",", "1", ",", "\"\<Length scale\>\""}], "}"}], ",", "0.2",
+      ",", "5"}], "}"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"s", ",", "1", ",", "\"\<Noise level\>\""}], "}"}], ",", "0.1", 
+     ",", "2"}], "}"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"m", ",", "0", ",", "\"\<Mean\>\""}], "}"}], ",", "0", ",", 
+     "5"}], "}"}]}], "\[IndentingNewLine]", "]"}]], "Input",
+ CellLabel->"In[13]:=",ExpressionUUID->"5f5bb338-14ed-4638-9b78-b22105ca8d91"],
 
 Cell[BoxData[
  RowBox[{"obj", "=", 
@@ -272,8 +293,7 @@ Cell[BoxData[
     "\[IndentingNewLine]", 
     RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], "\[IndentingNewLine]",
     "]"}]}]], "Input",
- CellLabel->
-  "In[109]:=",ExpressionUUID->"93146f49-5e66-4c98-9ae4-fbe9f18aea2d"],
+ CellLabel->"In[7]:=",ExpressionUUID->"93146f49-5e66-4c98-9ae4-fbe9f18aea2d"],
 
 Cell[BoxData[
  RowBox[{"regressionPlot1D", "[", 
@@ -283,7 +303,7 @@ Cell[BoxData[
      RowBox[{"takePosteriorFraction", "[", 
       RowBox[{"obj", ",", "0.95"}], "]"}], ",", "20"}], "]"}]}], 
   "]"}]], "Input",
- CellLabel->"In[107]:=",ExpressionUUID->"ec843261-546a-417c-be21-40012ab6e63a"]
+ CellLabel->"In[8]:=",ExpressionUUID->"ec843261-546a-417c-be21-40012ab6e63a"]
 }, Open  ]]
 },
 WindowSize->{1406, 996},
