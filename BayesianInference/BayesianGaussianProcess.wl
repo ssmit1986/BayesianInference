@@ -448,7 +448,7 @@ predictFromGaussianProcess[ex_, in_, kf_, nf_, mf_] := Catch[
         {kernelFunction, nuggetFunction, meanFunction} = Replace[{kf, nf, mf}, None -> (0&), {1}];
         examples[[2]] -= meanFunction /@ examples[[1]];
         invCov = matrixInverseAndDet[covarianceMatrix[examples[[1]], kernelFunction, nuggetFunction]]["Inverse"];
-        kandKappa = compiledKandKappa[examples[[2]], kernelFunction, nuggetFunction][inputs];
+        kandKappa = compiledKandKappa[examples[[1]], kernelFunction, nuggetFunction][inputs];
         CInvY = invCov[Flatten @ examples[[2]]];
         AssociationThread[
             inputs,

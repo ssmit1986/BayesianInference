@@ -307,15 +307,15 @@ regressionPlot1D[
 
 regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] := Quiet[
     With[{
-        DistributionPercentiles = Replace[
+        distributionPercentiles = Replace[
             OptionValue["DistributionPercentiles"],
             {
                 "Moments" -> Function[
                     Dot[
                         {
-                            {1, -1,   1},
+                            {1,  1,   1},
                             {1,  0,   0},
-                            {1,  1,   1}
+                            {1,  -1,  1}
                         },
                         {Mean[#], StandardDeviation[#], Surd[CentralMoment[#, 3], 3]}
                     ]
@@ -328,14 +328,15 @@ regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] 
     },
         Module[{
             plotPoints = Map[
-                DistributionPercentiles,
+                distributionPercentiles,
                 KeySort[predictedDistributions]
             ]
         },
             ListPlot[
                 plotPoints[[All, #]]& /@ Range[Length[First @ plotPoints]],
                 Sequence @@ FilterRules[{opts}, Options[ListPlot]],
-                Joined -> True
+                Joined -> True,
+                PlotLegends -> Quiet[Thread @ distributionPercentiles["y[x]"]]
             ]
         ]
     ],
@@ -343,7 +344,7 @@ regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] 
 ];
 Options[regressionPlot1D] = Join[
     {
-        "DistributionPercentiles" -> {0.05, 0.5, 0.95}
+        "DistributionPercentiles" -> {0.95, 0.5, 0.05}
     },
     Options[ListPlot]
 ];
