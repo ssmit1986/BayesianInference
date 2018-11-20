@@ -1225,7 +1225,10 @@ predictiveDistribution[
 predictiveDistribution[
     fst_,
     inputs : Except[_List?numericMatrixQ]
-] := predictiveDistribution[fst, dataNormalForm[inputs]]
+] := Catch[
+    predictiveDistribution[fst, dataNormalForm[inputs]],
+    "problemDef"
+]
 
 predictiveDistribution[
     inferenceObject[result_?(
