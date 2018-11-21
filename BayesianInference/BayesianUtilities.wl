@@ -21,6 +21,8 @@ simplifyLogPDF;
 numericMatrixQ;
 numericVectorQ;
 empiricalDistributionToWeightedData;
+matrixBlockInverse::usage = "matrixBlockInverse[mat, columns] gives Inverse[mat][[columns, colums]]";
+inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] gives Inverse[Inverse[mat][[columns, colums]]]. This function is faster than inverting the result of matrixBlockInverse[mat, columns]";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -348,6 +350,32 @@ simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting 
 empiricalDistributionToWeightedData[dist_DataDistribution /; dist["Type"] === EmpiricalDistribution] := WeightedData[
     Replace[dist["Domain"], mat_?MatrixQ :> Transpose[mat]],
     dist["Weights"]
+];
+
+matrixBlockInverse[
+    mat_?SquareMatrixQ,
+    columns : {__Integer}
+] /; DuplicateFreeQ[columns] && Max[columns] <= Length[mat] && MatrixQ[mat, NumericQ] := LinearSolve[
+    inverseMatrixBlockInverse[mat, columns],
+    IdentityMatrix[Length[columns]]
+];
+
+inverseMatrixBlockInverse[
+    mat_?SquareMatrixQ,
+    columns : {__Integer}
+] /; DuplicateFreeQ[columns] && Max[columns] <= Length[mat] && MatrixQ[mat, NumericQ] := Block[{
+    droppedColumns = Complement[Range[Length[mat]], columns],
+    splitMatrix
+},
+    splitMatrix = Table[
+        mat[[i, j]],
+        {i, {droppedColumns, columns}},
+        {j, {droppedColumns, columns}}
+    ];
+    Subtract[
+        splitMatrix[[2, 2]],
+        splitMatrix[[2, 1]] . LinearSolve[splitMatrix[[1, 1]], splitMatrix[[1, 2]]]
+    ]
 ];
 
 End[] (* End Private Context *)
