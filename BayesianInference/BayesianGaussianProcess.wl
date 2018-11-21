@@ -211,9 +211,7 @@ gaussianProcessNestedSampling[data_?(AssociationQ[#] && KeyExistsQ[#, "Input"] &
 gaussianProcessNestedSampling[
     dataIn_List?(numericMatrixQ[#] || numericVectorQ[#]&),
     dataOut_List?(numericMatrixQ[#] || numericVectorQ[#]&),
-    kernelFunction_,
-    nuggetFunction_,
-    meanFunction_,
+    kerf_, nugf_, meanf_,
     variables : {paramSpecPattern..},
     variablePrior_,
     opts : OptionsPattern[]
@@ -225,7 +223,10 @@ gaussianProcessNestedSampling[
         parallelRuns = OptionValue["ParallelRuns"]
     },
         Module[{
-            nullKernelQ = MatchQ[kernelFunction, nullKernelPattern],
+            nullKernelQ,
+            kernelFunction,
+            nuggetFunction,
+            meanFunction,
             kernel,
             nugget,
             mean,
@@ -239,10 +240,12 @@ gaussianProcessNestedSampling[
                 Return["Input and output data are not of same length"]
             ];
             
+            {kernelFunction, nuggetFunction, meanFunction} = Replace[{kerf, nugf, meanf}, None -> (0&), {1}];
+            nullKernelQ = MatchQ[kernelFunction, nullKernelPattern];
             {kernel, nugget, mean} = Function[
-                Function[
-                    paramVector,
-                    Evaluate @ varsToParamVector[#, vars -> paramVector]
+                expressionToFunction[
+                    #,
+                    vars -> paramVector
                 ]
             ] /@ {kernelFunction, nuggetFunction, meanFunction};
             
@@ -359,9 +362,9 @@ gaussianProcessNestedSampling[
                         "GaussianProcessData" ->
                             <|
                                 "ModelFunctions" -> <|
-                                    "Kernel" -> kernelFunction,
-                                    "Nugget" -> nuggetFunction,
-                                    "MeanFunction" -> meanFunction,
+                                    "Kernel" -> kernel,
+                                    "Nugget" -> nugget,
+                                    "MeanFunction" -> mean,
                                     "CovarianceFunction" -> covarianceFunction,
                                     "InverseCovarianceFunction" -> invCovFun
                                 |>
