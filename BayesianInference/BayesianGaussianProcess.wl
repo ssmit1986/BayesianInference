@@ -277,8 +277,7 @@ gaussianProcessNestedSampling[
                                     {outputData - mean[#] /@ inputData}
                                 ]
                             ]
-                        ]
-                        ,
+                        ],
                     _Function,
                         OptionValue["Likelihood"],
                     _,
