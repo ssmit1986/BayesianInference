@@ -195,14 +195,13 @@ Cell[BoxData[
           RowBox[{
            RowBox[{
             SuperscriptBox["s1", "2"], " ", 
-            RowBox[{"Exp", "[", 
-             RowBox[{"-", 
-              SuperscriptBox[
-               RowBox[{"(", 
-                FractionBox[
-                 RowBox[{"First", "[", 
-                  RowBox[{"#1", "-", "#2"}], "]"}], "d"], ")"}], "2"]}], 
-             "]"}]}], "&"}], ",", "\[IndentingNewLine]", 
+            RowBox[{"fun", "@", 
+             RowBox[{"Abs", "[", 
+              RowBox[{"(", 
+               FractionBox[
+                RowBox[{"First", "[", 
+                 RowBox[{"#1", "-", "#2"}], "]"}], "d"], ")"}], "]"}]}]}], 
+           "&"}], ",", "\[IndentingNewLine]", 
           RowBox[{
            SuperscriptBox["s0", "2"], "&"}], ",", "\[IndentingNewLine]", 
           RowBox[{"m", "&"}]}], "\[IndentingNewLine]", "]"}], ",", 
@@ -212,6 +211,30 @@ Cell[BoxData[
       RowBox[{"PlotRange", "->", "All"}], ",", "\[IndentingNewLine]", 
       RowBox[{"ImageSize", "\[Rule]", "500"}]}], "\[IndentingNewLine]", 
      "]"}]}], ",", "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"fun", ",", 
+       RowBox[{
+        RowBox[{"Exp", "[", 
+         RowBox[{"-", 
+          SuperscriptBox["#", "2"]}], "]"}], "&"}], ",", "\"\<Type\>\""}], 
+      "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{"Exp", "[", 
+          RowBox[{"-", 
+           SuperscriptBox["#", "2"]}], "]"}], "&"}], "\[Rule]", " ", 
+        "\"\<Exp[-\!\(\*SuperscriptBox[\(d\), \(2\)]\)]\>\""}], ",", 
+       RowBox[{
+        RowBox[{
+         FractionBox["1", 
+          RowBox[{"1", "+", 
+           SuperscriptBox["#", "2"]}]], "&"}], "\[Rule]", " ", 
+        "\"\<\!\(\*FractionBox[\(1\), \(1 + \*SuperscriptBox[\(d\), \(2\)]\)]\
+\)\>\""}]}], "}"}]}], "}"}], ",", "\[IndentingNewLine]", 
    RowBox[{"{", 
     RowBox[{
      RowBox[{"{", 
@@ -230,9 +253,9 @@ Cell[BoxData[
    RowBox[{"{", 
     RowBox[{
      RowBox[{"{", 
-      RowBox[{"m", ",", "0", ",", "\"\<Mean\>\""}], "}"}], ",", "0", ",", 
+      RowBox[{"m", ",", "3", ",", "\"\<Mean\>\""}], "}"}], ",", "0", ",", 
      "5"}], "}"}]}], "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->"In[29]:=",ExpressionUUID->"5f5bb338-14ed-4638-9b78-b22105ca8d91"],
+ CellLabel->"In[55]:=",ExpressionUUID->"5f5bb338-14ed-4638-9b78-b22105ca8d91"],
 
 Cell[BoxData[
  RowBox[{"obj", "=", 
