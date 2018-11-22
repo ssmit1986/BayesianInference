@@ -27,7 +27,7 @@ nullKernelPattern = HoldPattern[Function[Repeated[_, {0, 1}], 0 | 0., ___]];
 covarianceMatrix[points_List, kernel : nullKernelPattern, nugget_] :=
     nugget /@ points;
 
-covarianceMatrix[points_List, kernel : Except[nullKernelPattern], nugget_] :=
+covarianceMatrix[points_List, kernel : Except[nullKernelPattern], nugget_] := Quiet[
     Plus[
         SymmetrizedArray[
             {i_, j_} :> kernel @@ points[[{i, j}]],
@@ -39,7 +39,9 @@ covarianceMatrix[points_List, kernel : Except[nullKernelPattern], nugget_] :=
             ConstantArray[Length[points], 2],
             Symmetric[{1, 2}]
         ]
-    ];
+    ],
+    {General::munfl}
+];
 
 compiledCovarianceMatrix[points_List, kernel_, nugget_, vars : {__Symbol}] := With[{
     matrix = Function[
