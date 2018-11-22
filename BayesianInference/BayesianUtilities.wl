@@ -5,6 +5,7 @@ BeginPackage["BayesianUtilities`", {"CompiledFunctionTools`"}]
 passOptionsDown::usage = "passOptionsDown[mainFunction, subFunction, {opts}] passes options down correctly from the main function into a sub function, even when the default options for both functions are different";
 quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the functionalities of Quiet and Check";
 normalizeData;
+normalizedDataQ;
 dataNormalForm;
 takePosteriorFraction;
 $BayesianContexts;
@@ -227,6 +228,16 @@ normalizeData[data_List?numericMatrixQ] := With[{
         |>
     ]
 ];
+
+normalizedDataQ = Function[
+    And[
+        AssociationQ[#],
+        Or[
+            SubsetQ[Keys[#], {"NormalizedData", "Function", "InverseFunction"}],
+            AllTrue[#, normalizedDataQ]
+        ]
+    ]
+]
 
 takePosteriorFraction[inferenceObject[assoc_?AssociationQ], rest___] := inferenceObject @ takePosteriorFraction[assoc, rest];
 
