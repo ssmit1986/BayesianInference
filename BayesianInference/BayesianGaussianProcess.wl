@@ -127,7 +127,11 @@ logTotal = Function[ (* Take Abs because the covariance matrix has positive dete
 ];
 
 matrixInverseAndDet[matrix_List?numericMatrixQ] := With[{
-    ls = LinearSolve[matrix]
+    ls = quietCheck[
+        LinearSolve[matrix],
+        Throw[$MachineLogZero, "MatInv"], (* If matrix is (nearly) singular, the log-likelihood will be -infinite *)
+        {LinearSolve::luc, LinearSolve::sing1}
+    ]
 },
     <|
         "Inverse" -> ls,
@@ -136,7 +140,11 @@ matrixInverseAndDet[matrix_List?numericMatrixQ] := With[{
 ];
 
 matrixInverseAndDet[matrix : ((_SparseArray | _StructuredArray)?numericMatrixQ)] := With[{
-    ls = LinearSolve[matrix]
+    ls = quietCheck[
+        LinearSolve[matrix],
+        Throw[$MachineLogZero, "MatInv"],
+        {LinearSolve::luc, LinearSolve::sing1}
+    ]
 },
     <|
         "Inverse" -> ls,
@@ -157,13 +165,16 @@ gaussianProcessLogLikelihood[
     kernel_, (* Kernel has to give numerical results after evaluation *)
     nugget_,
     meanFunction : _ : Function[0]
-] := gaussianProcessLogLikelihood[][
-    dataOut - meanFunction /@ dataIn,
-    matrixInverseAndDet @ covarianceMatrix[
-        dataIn,
-        kernel,
-        nugget
-    ]
+] := Catch[
+    gaussianProcessLogLikelihood[][
+        dataOut - meanFunction /@ dataIn,
+        matrixInverseAndDet @ covarianceMatrix[
+            dataIn,
+            kernel,
+            nugget
+        ]
+    ],
+    "MatInv"
 ];
 
 With[{
@@ -287,9 +298,12 @@ gaussianProcessNestedSampling[
                     _,
                         With[{fun = gaussianProcessLogLikelihood[]},
                             Function[
-                                fun[
-                                    outputData - (mean[#]) /@ inputData,
-                                    matrixInverseAndDet[covarianceFunction[#]]
+                                Catch[
+                                    fun[
+                                        outputData - (mean[#]) /@ inputData,
+                                        matrixInverseAndDet[covarianceFunction[#]]
+                                    ],
+                                    "MatInv"
                                 ]
                             ]
                         ]

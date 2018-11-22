@@ -34,7 +34,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[7]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -1341,8 +1341,7 @@ In this package, a GP is defined by 3 functions:"
 Cell[TextData[{
  "A covariance kernel function that accepts to ",
  Cell[BoxData[
-  FormBox["x", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["x", TraditionalForm]],ExpressionUUID->
   "220bb9e8-8c30-4168-981c-b49bb6743b45"],
  "-values (note that our conventions stipulate that these are always lists, \
 even for 1D regression) and produces a real number. A typical covariance \
@@ -1371,11 +1370,10 @@ Cell[TextData[{
  "A noise level function (sometimes also called \[OpenCurlyDoubleQuote]nugget\
 \[CloseCurlyDoubleQuote]). This is a function from a single ",
  Cell[BoxData[
-  FormBox["x", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["x", TraditionalForm]],ExpressionUUID->
   "ca0cc0d9-c107-4c1d-9a31-89dcdf4c68f2"],
  " value to a positive real number. To model a constant noise level, you \
-simply specify a constant function"
+simply specify a constant function:"
 }], "Item",ExpressionUUID->"0ec2d0e2-64ad-4369-b04a-18835e213fd4"],
 
 Cell[BoxData[
@@ -1389,8 +1387,7 @@ Cell[TextData[{
  "However, it\[CloseCurlyQuote]s not necessary to make the nugget constant: \
 it can be any function of ",
  Cell[BoxData[
-  FormBox["x", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["x", TraditionalForm]],ExpressionUUID->
   "519b2c18-6c24-4327-96c6-efb11cbddca3"],
  " that is deemed appropriate. The nugget is allowed to be zero, but usually \
 the calculations are more numerically stable if there\[CloseCurlyQuote]s at \
@@ -1415,8 +1412,7 @@ Cell[TextData[{
  " in the code, in which case they get replaced by the zero function ",
  Cell[BoxData[
   FormBox[
-   RowBox[{"0", "&"}], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+   RowBox[{"0", "&"}], TraditionalForm]],ExpressionUUID->
   "d650dd3c-b3a3-401c-8323-9f7201504b23"],
  "."
 }], "Text",ExpressionUUID->"37e4b6c5-4ee0-4ecd-8707-b045a4204c4a"],
@@ -1431,8 +1427,7 @@ value at a given point ",
   FontSlant->"Italic"],
  " rather than the measurement result at a given point ",
  Cell[BoxData[
-  FormBox["x", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["x", TraditionalForm]],ExpressionUUID->
   "88f1ac05-09f4-4cef-aa8f-da6fd055b58f"],
  ". In other words, the code in this package will always model the \
 measurements. "
@@ -1541,7 +1536,7 @@ Cell[BoxData[{
  RowBox[{"norm", "[", 
   RowBox[{"[", 
    RowBox[{"All", ",", "\"\<NormalizedData\>\""}], "]"}], "]"}]}], "Input",
- CellLabel->"In[15]:=",ExpressionUUID->"dbd56840-4c5a-4f76-b312-8e0928231023"],
+ CellLabel->"In[12]:=",ExpressionUUID->"dbd56840-4c5a-4f76-b312-8e0928231023"],
 
 Cell["Reconstruct the original inputs:", \
 "Text",ExpressionUUID->"95462184-e3c6-4a1c-8959-c7f8ded55dd3"],
@@ -1554,7 +1549,7 @@ Cell[BoxData[
    RowBox[{"\"\<Input\>\"", ",", "\"\<NormalizedData\>\""}], "]"}]}]], "Input",
  CellLabel->"In[17]:=",ExpressionUUID->"14c3470f-5cb7-4576-bc02-2d6c52f6b5b2"],
 
-Cell["Perform nested sampling on a Gaussian process.", \
+Cell["Perform nested sampling on a Gaussian process:", \
 "Text",ExpressionUUID->"a2d8e085-6e62-4d7f-8966-7a5b6f263b7d"],
 
 Cell[BoxData[
@@ -1638,12 +1633,6 @@ Cell[BoxData[
        "use", " ", "the", " ", "build"}], "-", 
       RowBox[{"in", " ", "functionality", " ", "of", " ", "LogLikelihood"}]}],
       " ", "*)"}], "\[IndentingNewLine]", 
-    RowBox[{"(*", 
-     RowBox[{
-      RowBox[{"\"\<MinMaxAcceptanceRate\>\"", "\[Rule]", 
-       RowBox[{"{", 
-        RowBox[{"0.1", ",", "0.9"}], "}"}]}], ","}], "*)"}], 
-    "\[IndentingNewLine]", 
     RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], " ", 
    RowBox[{"(*", " ", 
     RowBox[{"Use", " ", "parallel", " ", "nested", " ", "sampling"}], " ", 
@@ -1652,7 +1641,7 @@ Cell[BoxData[
 
 Cell[BoxData[
  RowBox[{"covarianceMatrixPlot", "[", "obj", "]"}]], "Input",
- CellLabel->"In[39]:=",ExpressionUUID->"93091536-6b82-464c-9ddd-e795673cb45c"],
+ CellLabel->"In[29]:=",ExpressionUUID->"93091536-6b82-464c-9ddd-e795673cb45c"],
 
 Cell[BoxData[
  RowBox[{"posteriorBubbleChart", "[", 
@@ -1679,12 +1668,12 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"obj", ",", " ", "predictions"}], "]"}]}], "Input",
- CellLabel->"In[43]:=",ExpressionUUID->"18f7fd72-b160-4bdb-9712-01cd3a87a018"],
+ CellLabel->"In[32]:=",ExpressionUUID->"18f7fd72-b160-4bdb-9712-01cd3a87a018"],
 
 Cell[BoxData[
  RowBox[{"calculationReport", "[", "obj", "]"}]], "Input",
- CellLabel->"In[45]:=",ExpressionUUID->"1ad9895f-d50c-4eb6-ab16-e35bc4035b66"]
-}, Open  ]]
+ CellLabel->"In[34]:=",ExpressionUUID->"1ad9895f-d50c-4eb6-ab16-e35bc4035b66"]
+}, Closed]]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]]

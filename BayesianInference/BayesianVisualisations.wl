@@ -11,7 +11,13 @@ regressionPlot1D;
 
 Begin["`Private`"] (* Begin Private Context *) 
 
-covarianceMatrixPlot[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "EmpiricalPosteriorDistribution"]&)], opts : OptionsPattern[]] :=
+covarianceMatrixPlot[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "EmpiricalPosteriorDistribution"]&)], opts : OptionsPattern[]] := Column[{
+    BarChart[
+        Mean @ result["EmpiricalPosteriorDistribution"], 
+        ChartLabels -> result["ParameterSymbols"],
+        ImageSize -> 400,
+        PlotLabel -> "Posterior mean values"
+    ],
     MatrixPlot[
         Covariance[result["EmpiricalPosteriorDistribution"]],
         Sequence @@ FilterRules[{opts}, Options[MatrixPlot]],
@@ -19,8 +25,11 @@ covarianceMatrixPlot[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "
         FrameTicks -> ConstantArray[
             Transpose[{Range[Length[result["ParameterSymbols"]]], result["ParameterSymbols"]}],
             {2, 2}
-        ]
-    ];
+        ],
+        ImageSize -> 400,
+        PlotLabel -> "Posterior covariance"
+    ]
+}, Alignment -> Left];
 
 Options[covarianceMatrixPlot] = Join[
     {},
