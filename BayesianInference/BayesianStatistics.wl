@@ -2,15 +2,16 @@
 
 BeginPackage["BayesianStatistics`", {"BayesianUtilities`", "GeneralUtilities`"}];
 
-directPosteriorDistribution;
-nestedSampling;
-combineRuns;
-predictiveDistribution;
-calculationReport;
-parallelNestedSampling;
-defineInferenceProblem;
-bayesianInferenceObject;
-generateStartingPoints;
+defineInferenceProblem::usage = "defineInferenceProblem[rules...] creates an inferenceObject that holds all relevant information for an inference problem. It will try to validate the inputs and bring them to a standardised form. defineInferenceProblem[] shows properties that can be defined, though optional extra properties the user defines will be kept as well";
+directPosteriorDistribution::usage = "directPosteriorDistribution[data, dist, prior, variables] tries to find the posterior by direct integration";
+nestedSampling::usage = "nestedSampling[inferenceObject] performs the nested sampling algorithm on the inference problem defined by inferenceObject to find the log evidence and sample the posterior";
+combineRuns::usage = "combineRuns[obj1, obj2, ...] aggregate independent nested sambling runs on the same problem into one object";
+predictiveDistribution::usage = "predictiveDistribution[obj] and predictiveDistribution[obj, points] (for regression problems) gives the posterior predictive distribution of the data";
+calculationReport::usage = "calculationReport[obj] gives an overview of the nested sampling run, showing graphs such as Skilling's L(X) plot and the MCMC acceptance rate evolution";
+parallelNestedSampling::usage = "parallelNestedSampling[obj] uses parallel kernel to run independent nested sampling runs and combines them. This effectively raises the number of living points used, but with faster convergence";
+generateStartingPoints::usage = "generateStartingPoints[obj, n] generates n samples from the prior as a starting point for the inference procedure. The value of n will also be the number of living points used";
+evidenceSampling::usage = "evidenceSampling[obj] estimates the error in the log evidence after a nested sampling run by Monte Carlo simulation of the X values corresponding to the log likelihood values found";
+
 
 Begin["`Private`"];
 
@@ -65,11 +66,11 @@ directPosteriorDistribution[data_NumericQ, generatingDistribution_, prior_, vari
     directPosteriorDistribution[{data}, generatingDistribution, prior, variables, opts];
 
 directPosteriorDistribution[data_List, generatingDistribution_, prior_,
-    variables : {_Symbol, _?NumericQ, _?NumericQ}, opts : OptionsPattern[]
+    variables : paramSpecPattern, opts : OptionsPattern[]
 ] := directPosteriorDistribution[data, generatingDistribution, prior, {variables}, opts];
 
 directPosteriorDistribution[data_List, generatingDistribution_, prior_List,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..}, opts : OptionsPattern[]
+    variables : {paramSpecPattern..}, opts : OptionsPattern[]
 ] := directPosteriorDistribution[
         data,
         generatingDistribution,
@@ -82,7 +83,7 @@ directPosteriorDistribution[
     data_List,
     generatingDistribution_?DistributionParameterQ,
     priorDistribution_?DistributionParameterQ,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
+    variables : {paramSpecPattern..},
     opts : OptionsPattern[]
 ] := directPosteriorDistribution[
     Simplify[
@@ -97,7 +98,7 @@ directPosteriorDistribution[
 directPosteriorDistribution[
     likelihood_,
     priorDistribution_?DistributionParameterQ,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
+    variables : {paramSpecPattern..},
     opts : OptionsPattern[]
 ] := Module[{
     pdf = Simplify[
@@ -998,6 +999,9 @@ meanAndError[data_List /; Length[Dimensions[data]] === 2] := Map[
     data
 ];
 
+evidenceSampling[obj_?inferenceObjectQ, opts : OptionsPattern[]] := inferenceObject[
+    evidenceSampling[Normal[obj], obj["ParameterSymbols"], opts]
+];
 
 evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPattern[]] := Module[{
     result = MapAt[

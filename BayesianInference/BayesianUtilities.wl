@@ -4,27 +4,27 @@ BeginPackage["BayesianUtilities`", {"CompiledFunctionTools`"}]
 (* Exported symbols added here with SymbolName::usage *)
 passOptionsDown::usage = "passOptionsDown[mainFunction, subFunction, {opts}] passes options down correctly from the main function into a sub function, even when the default options for both functions are different";
 quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the functionalities of Quiet and Check";
-normalizeData;
-normalizedDataQ;
-dataNormalForm;
-dataNormalFormQ;
-takePosteriorFraction;
-$BayesianContexts;
-logSumExp;
-$MachineLogZero;
+normalizeData::usage = "normalizeData[data] will center and scale the data and return an association containing the transformed data together with the scaling functions used";
+normalizedDataQ::usage = "normalizedDataQ[data] tests if dat is an association produced by normalizedData";
+dataNormalForm::usage = "dataNormalForm[data] brings the data to the standard form that is used throughout this package";
+dataNormalFormQ::usage = "dataNormalFormQ[data] tests if the data are in the standard format produced by dataNormalForm";
+takePosteriorFraction::usage = "takePosteriorFraction[obj, frac] drops the samples with the smallest weights from the posterior distribution, leaving fraction frac of the posterior mass";
+logSumExp::usage = "logSumExp[list] calculates Log[Total[Exp[list]]], but in a numerically stable fashion. Does not thread automatically";
+$MachineLogZero::usage = "A number that is used to represent the the log of zero probabilities in machine numbers";
 checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has calls to MainEvaluate. If it does, it will issue a message and return False. It will return True for CompiledFunctions that pass the test and $Failed for any expression other than a CompiledFunction";
-distributionDimension;
-inferenceObject;
-inferenceObjectQ;
-posteriorDistribution;
-varsToParamVector;
-expressionToFunction;
-simplifyLogPDF;
-numericMatrixQ;
-numericVectorQ;
-empiricalDistributionToWeightedData;
+distributionDimension::usage = "distributionDimension[dist] checks the dimension of the domain of dist. Note that it returns {1} for 1D vector distributions like MultinormalDistribution[{{1}}]";
+inferenceObject::usage = "A wrapper for an Association containing all relevant information for an inference problem. Can be converted to an Association with Normal";
+inferenceObjectQ::usage = "inferenceObjectQ[obj] returns True for valid inference objects";
+posteriorDistribution::usage = "posteriorDistribution is a wrapper that typesets large MixtureDistributions";
+varsToParamVector::usage = "varsToParamVector[expr, {sym1, sym2...} -> vectorSym] replaces instances of sym_i in expr with Indexed[vectorSym, i]";
+expressionToFunction::usage = "expressionToFunction[expr, {sym1, sym2...} -> vectorSym] returns the function Function[vectorSym, varsToParamVector[expr, {sym1, sym2...} -> vectorSym]]";
+simplifyLogPDF::usage = "simplifyLogPDF[pdf, assum] Attempts to simplify analytical log probability densities";
+numericMatrixQ::usage = "numericMatrixQ[data] tests if data is a numeric matrix";
+numericVectorQ::usage = "numericVectorQ[data] tests if data is a numeric vector";
+empiricalDistributionToWeightedData::usage = "empiricalDistributionToWeightedData[dist] convert an empirical data distribution to a WeightedData object";
 matrixBlockInverse::usage = "matrixBlockInverse[mat, columns] gives Inverse[mat][[columns, colums]]";
 inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] gives Inverse[Inverse[mat][[columns, colums]]]. This function is faster than inverting the result of matrixBlockInverse[mat, columns]";
+$BayesianContexts;
 
 Begin["`Private`"] (* Begin Private Context *)
 

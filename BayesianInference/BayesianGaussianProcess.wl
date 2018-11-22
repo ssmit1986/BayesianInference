@@ -3,8 +3,8 @@
 BeginPackage["BayesianGaussianProcess`", { "BayesianUtilities`", "BayesianStatistics`"}]
 (* Exported symbols added here with SymbolName::usage *)  
 
-defineGaussianProcess;
-predictFromGaussianProcess;
+defineGaussianProcess::usage = "defineGaussianProcess[data, kernel, nugget, meanFunction, variables, rules...] defines an inference object for a GP";
+predictFromGaussianProcess::usage = "predictFromGaussianProcess[obj, pts] predicts the posterior values of the GP at pts";
 
 Begin["`Private`"] (* Begin Private Context *) 
 
