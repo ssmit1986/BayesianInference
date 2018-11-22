@@ -156,7 +156,24 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
     },
         keys = Keys[DeleteMissing @ assoc];
         If[ MemberQ[keys, "Data"],
-            assoc["Data"] = dataNormalForm @ assoc["Data"]
+            Which[
+                dataNormalFormQ[assoc["Data"]],
+                    Null,
+                normalizedDataQ[assoc["Data"]] && dataNormalFormQ[assoc["Data", "NormalizedData"]],
+                    assoc["Data"] = dataNormalForm @ assoc["Data", "NormalizedData"];
+                    assoc["DataPreProcessors"] = assoc[["Data", {"Function", "InverseFunction"}]],
+                normalizedDataQ[assoc["Data"]],
+                    assoc["Data"] = dataNormalForm[Rule @@ Values[assoc[["Data", All, "NormalizedData"]]]];
+                    assoc["DataPreProcessors"] = assoc[["Data", All, {"Function", "InverseFunction"}]],
+                True,
+                    assoc["Data"] = dataNormalForm @ assoc["Data"]
+            ];
+            If[ !dataNormalFormQ[assoc["Data"]],
+                (
+                    Message[defineInferenceProblem::dataFormat];
+                    Throw[$Failed, "problemDef"]
+                )
+            ]
         ];
         Which[ 
             MatchQ[assoc["Parameters"], {paramSpecPattern..}],
@@ -1225,10 +1242,7 @@ predictiveDistribution[
 predictiveDistribution[
     fst_,
     inputs : Except[_List?numericMatrixQ]
-] := Catch[
-    predictiveDistribution[fst, dataNormalForm[inputs]],
-    "problemDef"
-]
+] := predictiveDistribution[fst, dataNormalForm[inputs]]
 
 predictiveDistribution[
     inferenceObject[result_?(

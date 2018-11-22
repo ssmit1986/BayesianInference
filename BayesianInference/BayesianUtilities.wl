@@ -7,6 +7,7 @@ quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the f
 normalizeData;
 normalizedDataQ;
 dataNormalForm;
+dataNormalFormQ;
 takePosteriorFraction;
 $BayesianContexts;
 logSumExp;
@@ -111,7 +112,7 @@ inferenceObject /: FailureQ[inferenceObject[$Failed]] := True;
 inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
 inferenceObject[first_, rest__] := inferenceObject[first];
 inferenceObject[assoc_?AssociationQ]["Properties"] := Sort @ Append[Keys[assoc], "Properties"];
-inferenceObject[assoc_?AssociationQ][prop : (_String | {__String})] := assoc[[prop]];
+inferenceObject[assoc_?AssociationQ][prop : (_String | {__String} | All)..] := assoc[[prop]];
 
 inferenceObjectQ[inferenceObject[assoc_?AssociationQ]] := True;
 inferenceObjectQ[___] := False;
@@ -189,10 +190,13 @@ dataNormalForm[in_List -> out_List] := With[{
 },
     (input -> output) /; Length[input] === Length[output]
 ];
-dataNormalForm[___] := (
-    Message[defineInferenceProblem::dataFormat];
-    Throw[$Failed, "problemDef"]
-);
+dataNormalForm[___] := $Failed;
+dataNormalFormQ = Function[
+    Or[
+        numericMatrixQ[#],
+        Head[#] === Rule && AllTrue[#, numericMatrixQ]
+    ]
+]
 
 normalizeData[data : {__Rule}] := normalizeData[
     Developer`ToPackedArray[data[[All, 1]]],
@@ -229,15 +233,26 @@ normalizeData[data_List?numericMatrixQ] := With[{
     ]
 ];
 
-normalizedDataQ = Function[
-    And[
-        AssociationQ[#],
-        Or[
+normalizedDataQ = With[{
+    test = Function[
+        And[
+            AssociationQ[#],
             SubsetQ[Keys[#], {"NormalizedData", "Function", "InverseFunction"}],
-            AllTrue[#, normalizedDataQ]
+            numericMatrixQ[#["NormalizedData"]]
         ]
     ]
-]
+},
+    Function[
+        Or[
+            test[#],
+            And[
+                AssociationQ[#],
+                Sort @ Keys[#] === Sort @ {"Input", "Output"},
+                AllTrue[#, test]
+            ]
+        ]
+    ]
+];
 
 takePosteriorFraction[inferenceObject[assoc_?AssociationQ], rest___] := inferenceObject @ takePosteriorFraction[assoc, rest];
 

@@ -442,7 +442,7 @@ Cell["General nested sampling problems", \
 
 Cell[CellGroupData[{
 
-Cell["Cauchy distribution", \
+Cell["Fitting a Cauchy distribution", \
 "Subsubsection",ExpressionUUID->"d999f0a5-3322-4d46-9a9d-41c72825f113"],
 
 Cell["\<\
@@ -1517,7 +1517,7 @@ Cell[BoxData[
      RowBox[{"{", 
       RowBox[{"m", ",", "3", ",", "\"\<Mean\>\""}], "}"}], ",", "0", ",", 
      "5"}], "}"}]}], "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->"In[13]:=",ExpressionUUID->"8aca103c-4e6e-4eee-a936-66dbbb668224"],
+ CellLabel->"In[56]:=",ExpressionUUID->"8aca103c-4e6e-4eee-a936-66dbbb668224"],
 
 Cell[TextData[{
  "To perform GP regression, it\[CloseCurlyQuote]s usually a good idea to \
@@ -1536,7 +1536,7 @@ Cell[BoxData[{
  RowBox[{"norm", "[", 
   RowBox[{"[", 
    RowBox[{"All", ",", "\"\<NormalizedData\>\""}], "]"}], "]"}]}], "Input",
- CellLabel->"In[12]:=",ExpressionUUID->"dbd56840-4c5a-4f76-b312-8e0928231023"],
+ CellLabel->"In[62]:=",ExpressionUUID->"dbd56840-4c5a-4f76-b312-8e0928231023"],
 
 Cell["Reconstruct the original inputs:", \
 "Text",ExpressionUUID->"95462184-e3c6-4a1c-8959-c7f8ded55dd3"],
@@ -1549,12 +1549,12 @@ Cell[BoxData[
    RowBox[{"\"\<Input\>\"", ",", "\"\<NormalizedData\>\""}], "]"}]}]], "Input",
  CellLabel->"In[17]:=",ExpressionUUID->"14c3470f-5cb7-4576-bc02-2d6c52f6b5b2"],
 
-Cell["Perform nested sampling on a Gaussian process:", \
+Cell["Define a GP and perform nested sampling on it:", \
 "Text",ExpressionUUID->"a2d8e085-6e62-4d7f-8966-7a5b6f263b7d"],
 
 Cell[BoxData[
  RowBox[{"obj", "=", 
-  RowBox[{"gaussianProcessNestedSampling", "[", "\[IndentingNewLine]", 
+  RowBox[{"defineGaussianProcess", "[", "\[IndentingNewLine]", 
    RowBox[{"norm", ",", "\[IndentingNewLine]", 
     RowBox[{"Function", "[", " ", 
      RowBox[{"(*", " ", 
@@ -1590,8 +1590,7 @@ Cell[BoxData[
     RowBox[{"(*", " ", 
      RowBox[{
      "nugget", " ", "function", " ", "with", " ", "free", " ", "parameters"}],
-      " ", "*)"}], "\[IndentingNewLine]", 
-    RowBox[{"Function", "[", "m", "]"}], ",", 
+      " ", "*)"}], "\[IndentingNewLine]", "None", ",", 
     RowBox[{"(*", " ", 
      RowBox[{
      "mean", " ", "function", " ", "with", " ", "free", " ", "parameters"}], 
@@ -1616,41 +1615,43 @@ Cell[BoxData[
      "\"\<ScaleParameter\>\"", ",", " ", "\"\<ScaleParameter\>\"", ",", 
       "\"\<ScaleParameter\>\"", ",", " ", "\"\<LocationParameter\>\""}], 
      "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+    "\"\<LogLikelihoodFunction\>\"", " ", "\[Rule]", " ", 
+     "\"\<Compiled\>\""}]}], " ", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{
+     "Setting", " ", "this", " ", "to", " ", "Automatic", " ", "will", " ", 
+      "use", " ", "the", " ", "build"}], "-", 
+     RowBox[{"in", " ", "functionality", " ", "of", " ", 
+      RowBox[{"LogLikelihood", ".", " ", "You"}], " ", "can", " ", "also", 
+      " ", "specify", " ", "a", " ", "function", " ", "explicitely"}]}], " ", 
+    "*)"}], "\[IndentingNewLine]", "]"}]}]], "Input",
+ CellLabel->"In[90]:=",ExpressionUUID->"1aa21abf-8a3e-4e4e-9f6a-1625bab22d65"],
+
+Cell[BoxData[
+ RowBox[{"result", "=", 
+  RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
+   RowBox[{"obj", ",", "\[IndentingNewLine]", 
     RowBox[{"\"\<SamplePoolSize\>\"", " ", "\[Rule]", " ", "25"}], ",", 
     "\[IndentingNewLine]", 
     RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "1000"}], ",", 
     "\[IndentingNewLine]", 
     RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "10000"}], ",", 
     "\[IndentingNewLine]", 
-    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], ",",
-     "\[IndentingNewLine]", 
-    RowBox[{"\"\<Likelihood\>\"", " ", "\[Rule]", " ", "\"\<Compiled\>\""}], 
-    ",", 
-    RowBox[{"(*", " ", 
-     RowBox[{
-      RowBox[{
-      "Setting", " ", "this", " ", "to", " ", "Automatic", " ", "will", " ", 
-       "use", " ", "the", " ", "build"}], "-", 
-      RowBox[{"in", " ", "functionality", " ", "of", " ", "LogLikelihood"}]}],
-      " ", "*)"}], "\[IndentingNewLine]", 
-    RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], " ", 
-   RowBox[{"(*", " ", 
-    RowBox[{"Use", " ", "parallel", " ", "nested", " ", "sampling"}], " ", 
-    "*)"}], "\[IndentingNewLine]", 
-   "]"}]}]], "Input",ExpressionUUID->"1aa21abf-8a3e-4e4e-9f6a-1625bab22d65"],
+    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}]}], 
+   "\[IndentingNewLine]", 
+   "]"}]}]], "Input",ExpressionUUID->"3232c939-b35d-4150-930a-3d100c4211b3"],
 
-Cell[BoxData[
- RowBox[{"covarianceMatrixPlot", "[", "obj", "]"}]], "Input",
- CellLabel->"In[29]:=",ExpressionUUID->"93091536-6b82-464c-9ddd-e795673cb45c"],
-
-Cell[BoxData[
+Cell[BoxData[{
+ RowBox[{"covarianceMatrixPlot", "[", "result", "]"}], "\n", 
  RowBox[{"posteriorBubbleChart", "[", 
   RowBox[{
    RowBox[{"takePosteriorFraction", "[", 
-    RowBox[{"obj", ",", "0.99"}], "]"}], ",", 
+    RowBox[{"result", ",", "0.99"}], "]"}], ",", 
    RowBox[{"{", 
-    RowBox[{"1", ",", "2", ",", "3"}], "}"}]}], "]"}]], "Input",
- CellLabel->"In[40]:=",ExpressionUUID->"c58b19c5-5467-4e72-87d2-2ede0e009a67"],
+    RowBox[{"s0", ",", "s1", ",", "l"}], "}"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"93091536-6b82-464c-9ddd-e795673cb45c"],
 
 Cell["Visualise the predictions:", \
 "Text",ExpressionUUID->"ea5dd347-5301-4b01-a412-c61318e6a009"],
@@ -1661,18 +1662,18 @@ Cell[BoxData[{
    RowBox[{"predictFromGaussianProcess", "[", 
     RowBox[{
      RowBox[{"takePosteriorFraction", "[", 
-      RowBox[{"obj", ",", "0.99"}], "]"}], ",", " ", 
+      RowBox[{"result", ",", "0.99"}], "]"}], ",", " ", 
      RowBox[{"Range", "[", 
       RowBox[{
        RowBox[{"-", "2.5"}], ",", "2.5", ",", "0.2"}], "]"}]}], "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"regressionPlot1D", "[", 
-  RowBox[{"obj", ",", " ", "predictions"}], "]"}]}], "Input",
- CellLabel->"In[32]:=",ExpressionUUID->"18f7fd72-b160-4bdb-9712-01cd3a87a018"],
+  RowBox[{"result", ",", " ", "predictions"}], "]"}]}], "Input",
+ CellLabel->"In[88]:=",ExpressionUUID->"18f7fd72-b160-4bdb-9712-01cd3a87a018"],
 
 Cell[BoxData[
- RowBox[{"calculationReport", "[", "obj", "]"}]], "Input",
- CellLabel->"In[34]:=",ExpressionUUID->"1ad9895f-d50c-4eb6-ab16-e35bc4035b66"]
+ RowBox[{"calculationReport", "[", "result", 
+  "]"}]], "Input",ExpressionUUID->"1ad9895f-d50c-4eb6-ab16-e35bc4035b66"]
 }, Closed]]
 }, Open  ]]
 }, Open  ]]
