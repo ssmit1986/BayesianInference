@@ -270,11 +270,15 @@ gaussianProcessNestedSampling[
                                 ]
                         },
                             Function[
-                                LogLikelihood[
-                                    MultinormalDistribution[
-                                        f[covarianceFunction[#]]
+                                Quiet @ Replace[
+                                    LogLikelihood[
+                                        MultinormalDistribution[
+                                            mean[#] /@ inputData,
+                                            f[covarianceFunction[#]]
+                                        ],
+                                        {outputData}
                                     ],
-                                    {outputData - mean[#] /@ inputData}
+                                    _LogLikelihood -> $MachineLogZero
                                 ]
                             ]
                         ],
