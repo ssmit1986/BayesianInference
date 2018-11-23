@@ -11,7 +11,8 @@ calculationReport::usage = "calculationReport[obj] gives an overview of the nest
 parallelNestedSampling::usage = "parallelNestedSampling[obj] uses parallel kernel to run independent nested sampling runs and combines them. This effectively raises the number of living points used, but with faster convergence";
 generateStartingPoints::usage = "generateStartingPoints[obj, n] generates n samples from the prior as a starting point for the inference procedure. The value of n will also be the number of living points used";
 evidenceSampling::usage = "evidenceSampling[obj] estimates the error in the log evidence after a nested sampling run by Monte Carlo simulation of the X values corresponding to the log likelihood values found";
-
+createMCMCChain::usage = "createMCMCChain[obj] or createMCMCChain[obj, start] creates an MCMC object that can be iterated by iterateMCMC to generate samples from the posterior directly";
+iterateMCMC::usage = "iterateMCMC[MCMCObj, n] performs n MCMC steps, returning the visited points and updating MCMCObj";
 
 Begin["`Private`"];
 
@@ -566,7 +567,7 @@ nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logT
     ],
     CompilationOptions -> {
         "InlineExternalDefinitions" -> True, 
-        "InlineCompiledFunctions" -> False
+        "InlineCompiledFunctions" -> True
     },
     RuntimeOptions -> {
         "RuntimeErrorHandler" -> Function[$MachineLogZero],
@@ -584,6 +585,75 @@ nsDensity[logPriorDensity_, logLikelihood_, logThreshold_?NumericQ, constraintFu
         ]
     ]
 ];
+
+posteriorDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, constraintFun : _ : Function[True] ] := Compile[{
+    {pt, _Real, 1}
+},
+    If[ constraintFun[pt],
+        logPriorDensity[pt] + logLikelihood[pt],
+        $MachineLogZero
+    ],
+    CompilationOptions -> {"InlineExternalDefinitions" -> True, "InlineCompiledFunctions" -> True},
+    RuntimeOptions -> {"RuntimeErrorHandler" -> Function[$MachineLogZero], "WarningMessages" -> False},
+    RuntimeAttributes -> {Listable}
+];
+
+posteriorDensity[logPriorDensity_, logLikelihood_, constraintFun : _ : Function[True]] := Function[
+    If[ constraintFun[#],
+        logPriorDensity[#] + logLikelihood[#],
+        $MachineLogZero
+    ]
+];
+
+createMCMCChain::start = "Please specify a starting point";
+createMCMCChain[obj_?inferenceObjectQ, opts : OptionsPattern[]] /; !numericMatrixQ[obj["StartingPoints"]]:= (
+    Message[createMCMCChain::start];
+    inferenceObject[$Failed]
+);
+
+createMCMCChain[obj_?inferenceObjectQ, opts : OptionsPattern[]] /; numericMatrixQ[obj["StartingPoints"]] := 
+    createMCMCChain[obj, First[obj["StartingPoints"]]];
+
+createMCMCChain[obj_?inferenceObjectQ, startPt_List?numericVectorQ, opts : OptionsPattern[]] /; Nor[
+    MissingQ[obj["LogLikelihoodFunction"]],
+    MissingQ[obj["LogPriorPDFFunction"]],
+    MissingQ[obj["Parameters"]]
+]:= With[{
+    unnormPostLogPDF = posteriorDensity[
+        obj["LogPriorPDFFunction"],
+        obj["LogLikelihoodFunction"],
+        constraintsToFunction[obj["Parameters"]]
+    ],
+    dim = Length[startPt]
+},
+    Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
+        startPt,
+        unnormPostLogPDF,
+        {
+            Replace[
+                OptionValue["InitialCovariance"],
+                {
+                    n_?NumericQ :> DiagonalMatrix[ConstantArray[n, dim]],
+                    lst_List?numericVectorQ /; Length[lst] === dim :> DiagonalMatrix[lst],
+                    Except[mat_List?numericMatrixQ] :> DiagonalMatrix[ConstantArray[1, dim]]
+                }
+            ],
+            Replace[
+                OptionValue["CovarianceLearnDelay"],
+                {
+                    Except[n_Integer] :> 20
+                }
+            ]
+        },
+        Real,
+        Compiled -> Head[unnormPostLogPDF] === CompiledFunction
+    ]
+];
+Options[createMCMCChain] = {
+    "CovarianceLearnDelay" -> 20,
+    "InitialCovariance" -> 1
+};
+iterateMCMC = Statistics`MCMC`MarkovChainIterate;
 
 MCMC[
     logDensity_,
@@ -606,13 +676,13 @@ MCMC[
             Compiled -> Head[logDensity] === CompiledFunction
         ]
     },
-        Statistics`MCMC`MarkovChainIterate[chain, {1, numberOfSteps}];
+        iterateMCMC[chain, {1, numberOfSteps}];
         While[
             Nor[
                 TrueQ @ Between[chain["AcceptanceRate"], minMaxAcceptanceRate],
                 TrueQ[chain["StateData"][[2]] >= maxSteps + startingIteration]
             ],
-            Statistics`MCMC`MarkovChainIterate[chain, {1, extraSteps}]
+            iterateMCMC[chain, {1, extraSteps}]
         ];
         Append[
             AssociationThread[
@@ -929,8 +999,8 @@ generateStartingPoints[
     ],
     samples
 },
-    Statistics`MCMC`MarkovChainIterate[chain, {1, OptionValue["BurnInPeriod"]}];
-    samples = Statistics`MCMC`MarkovChainIterate[chain, {n, OptionValue["Thinning"]}];
+    iterateMCMC[chain, {1, OptionValue["BurnInPeriod"]}];
+    samples = iterateMCMC[chain, {n, OptionValue["Thinning"]}];
     Print @ StringForm[
         "Generated `1` inital samples using MCMC. Acceptance rate: `2`",
         n,
