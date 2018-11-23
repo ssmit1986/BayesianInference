@@ -21,7 +21,8 @@ pp. 833 - 860; available at ",
     "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.117.5542&rep=\
 rep1&type=pdf"},
    "HyperlinkURL"]],ExpressionUUID->"d90716e5-c339-4a0f-bef1-e6bd26265ab8"],
- "). "
+ "). There is also some functionality for ordinary Markov Chain Monte Carlo \
+(MCMC) sampling."
 }], "Text",ExpressionUUID->"fe56e51f-9879-46b8-bd1b-3b8a3cf97438"],
 
 Cell["Load the package:", \
@@ -34,7 +35,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[7]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -488,8 +489,7 @@ Cell[BoxData[{
     "This", " ", "is", " ", "an", " ", "optional", " ", "property", " ", 
      "that", " ", "we", " ", "attach", " ", "for", " ", "convenience"}], " ", 
     "*)"}], "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->
-  "In[219]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
+ CellLabel->"In[3]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
 
 Cell["\<\
 Note that the data has been transformed from a vector to a matrix as part of \
@@ -827,6 +827,124 @@ Cell[BoxData[
       "\"\<PDF of original distribution\>\""}], "}"}]}]}], 
   "\[IndentingNewLine]", "]"}]], "Input",
  CellLabel->"In[214]:=",ExpressionUUID->"97f91a6a-ea1c-4c7f-9959-e4123be4dd17"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["MCMC", \
+"Subsubsection",ExpressionUUID->"6df0983c-1b1b-440c-a4c4-51b695ade390"],
+
+Cell[TextData[{
+ "You can also sample the posterior directly. First create a \
+MarkovChainObject for this problem with ",
+ StyleBox["createMCMCChain",
+  FontWeight->"Bold"],
+ ":"
+}], "Text",ExpressionUUID->"24a082b4-e90d-4cdb-8922-95838712bba9"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dist", "=", 
+   RowBox[{"CauchyDistribution", "[", 
+    RowBox[{"0", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"RandomVariate", "[", 
+    RowBox[{"dist", ",", "25"}], "]"}]}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{"obj", " ", "=", 
+   RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "testdata"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
+      RowBox[{"CauchyDistribution", "[", 
+       RowBox[{"a", ",", " ", "b"}], "]"}]}], ",", "\[IndentingNewLine]", 
+     RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"a", ",", 
+          RowBox[{"-", "100"}], ",", "100"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"b", ",", "0.01", ",", "100"}], "}"}]}], "}"}]}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
+      RowBox[{"{", 
+       RowBox[{
+       "\"\<LocationParameter\>\"", ",", " ", "\"\<ScaleParameter\>\""}], 
+       "}"}]}], ",", "\[IndentingNewLine]", 
+     RowBox[{"\"\<OriginalDistribution\>\"", " ", "\[Rule]", " ", "dist"}]}], 
+    " ", 
+    RowBox[{"(*", " ", 
+     RowBox[{
+     "This", " ", "is", " ", "an", " ", "optional", " ", "property", " ", 
+      "that", " ", "we", " ", "attach", " ", "for", " ", "convenience"}], " ",
+      "*)"}], "\[IndentingNewLine]", "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"chain", " ", "=", 
+  RowBox[{"createMCMCChain", "[", 
+   RowBox[{"obj", ",", 
+    RowBox[{"{", 
+     RowBox[{"0", ",", "1"}], "}"}]}], 
+   RowBox[{"(*", " ", 
+    RowBox[{"starting", " ", "point"}], "*)"}], "]"}]}]}], "Input",
+ CellLabel->"In[78]:=",ExpressionUUID->"c03cda6e-aab6-4f26-85db-e64f054d65ee"],
+
+Cell["\<\
+This function also accepts log PDF functions directly. Use compiled functions \
+for the best performance:\
+\>", "Text",ExpressionUUID->"678c55f5-37b9-4f0b-86a2-b780be6284ab"],
+
+Cell[BoxData[
+ RowBox[{"chain", "=", 
+  RowBox[{"createMCMCChain", "[", 
+   RowBox[{
+    RowBox[{"Compile", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"{", 
+        RowBox[{"pt", ",", "_Real", ",", "1"}], "}"}], "}"}], ",", 
+      RowBox[{"-", " ", 
+       RowBox[{"pt", ".", " ", "pt"}]}]}], "]"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"0", ",", "0"}], "}"}]}], "]"}]}]], "Input",
+ CellLabel->"In[73]:=",ExpressionUUID->"b3d93961-d5b6-494b-9730-45ac35e8bfff"],
+
+Cell["\<\
+The MCMC sampler uses an adaptive algorithm that tries to learn the \
+covariance of the distribution. Use the options of createMCMCChain to \
+influence this behaviour:\
+\>", "Text",ExpressionUUID->"30a92aa7-4b1d-4ddd-91f2-d79bdd62eea1"],
+
+Cell[BoxData[
+ RowBox[{"Options", "[", "createMCMCChain", "]"}]], "Input",
+ CellLabel->"In[31]:=",ExpressionUUID->"c2cbac19-e555-4e00-a2b2-24fb2aa3d0f9"],
+
+Cell[TextData[{
+ "Use ",
+ StyleBox["iterateMCMC",
+  FontWeight->"Bold"],
+ " to sample the distribution. Note that this function changes the state of \
+the chain:"
+}], "Text",ExpressionUUID->"0db6235f-8c03-4840-a8a5-17e66708441c"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"iterateMCMC", "[", 
+   RowBox[{"chain", ",", "10000"}], "]"}], ";", " ", 
+  RowBox[{"(*", " ", 
+   RowBox[{"Burn", " ", "it", " ", "in", " ", "first"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"samples", "=", 
+   RowBox[{"iterateMCMC", "[", 
+    RowBox[{"chain", ",", "1000"}], "]"}]}], ";"}]], "Input",
+ CellLabel->"In[86]:=",ExpressionUUID->"1786c3e3-853e-469c-9b62-b3fc5eb40963"],
+
+Cell[BoxData[{
+ RowBox[{"Mean", "[", "samples", "]"}], "\[IndentingNewLine]", 
+ RowBox[{"Covariance", "[", "samples", "]"}], "\[IndentingNewLine]", 
+ RowBox[{"SmoothDensityHistogram", "[", "samples", "]"}]}], "Input",
+ CellLabel->"In[87]:=",ExpressionUUID->"00ce2e35-e314-41b4-8752-909a7ab05a94"]
 }, Closed]],
 
 Cell[CellGroupData[{
