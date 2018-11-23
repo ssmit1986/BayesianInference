@@ -11,8 +11,8 @@ calculationReport::usage = "calculationReport[obj] gives an overview of the nest
 parallelNestedSampling::usage = "parallelNestedSampling[obj] uses parallel kernel to run independent nested sampling runs and combines them. This effectively raises the number of living points used, but with faster convergence";
 generateStartingPoints::usage = "generateStartingPoints[obj, n] generates n samples from the prior as a starting point for the inference procedure. The value of n will also be the number of living points used";
 evidenceSampling::usage = "evidenceSampling[obj] estimates the error in the log evidence after a nested sampling run by Monte Carlo simulation of the X values corresponding to the log likelihood values found";
-createMCMCChain::usage = "createMCMCChain[obj] or createMCMCChain[obj, start] creates an MCMC object that can be iterated by iterateMCMC to generate samples from the posterior directly";
-iterateMCMC::usage = "iterateMCMC[MCMCObj, n] performs n MCMC steps, returning the visited points and updating MCMCObj";
+createMCMCChain::usage = "createMCMCChain[obj] or createMCMCChain[obj, start] creates a MarkovChainObject that can be iterated by iterateMCMC to generate samples from the posterior directly. createMCMCChain[logPDF, start] directly creates a MarkovChainObject for an arbitrary unnormalised logPDF";
+iterateMCMC::usage = "iterateMCMC[MarkovChainObject, n] performs n MCMC steps, returning the visited points and updating the state of MarkovChainObject";
 
 Begin["`Private`"];
 
@@ -617,13 +617,18 @@ createMCMCChain[obj_?inferenceObjectQ, opts : OptionsPattern[]] /; numericMatrix
 createMCMCChain[obj_?inferenceObjectQ, startPt_List?numericVectorQ, opts : OptionsPattern[]] /; Nor[
     MissingQ[obj["LogLikelihoodFunction"]],
     MissingQ[obj["LogPriorPDFFunction"]],
-    MissingQ[obj["Parameters"]]
-]:= With[{
-    unnormPostLogPDF = posteriorDensity[
+    !MatchQ[obj["Parameters"], {paramSpecPattern..}]
+] := createMCMCChain[
+    posteriorDensity[
         obj["LogPriorPDFFunction"],
         obj["LogLikelihoodFunction"],
         constraintsToFunction[obj["Parameters"]]
     ],
+    startPt,
+    opts
+];
+
+createMCMCChain[unnormPostLogPDF : Except[_?inferenceObjectQ], startPt_List?numericVectorQ, opts : OptionsPattern[]] := With[{
     dim = Length[startPt]
 },
     Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
@@ -649,13 +654,14 @@ createMCMCChain[obj_?inferenceObjectQ, startPt_List?numericVectorQ, opts : Optio
         Compiled -> Head[unnormPostLogPDF] === CompiledFunction
     ]
 ];
+
 Options[createMCMCChain] = {
     "CovarianceLearnDelay" -> 20,
     "InitialCovariance" -> 1
 };
 iterateMCMC = Statistics`MCMC`MarkovChainIterate;
 
-MCMC[
+nsMCMC[
     logDensity_,
     initialPoint_List,
     meanEst_List,
@@ -907,7 +913,7 @@ nestedSamplingInternal[
         factor = 1;
         covEst = Divide[covEst + Covariance[Values @ bestPoints[[All, "Point"]]], 2]; (* Retain a fraction of the previous covariance estimate *)
         While[ True,
-            newPoint = MCMC[
+            newPoint = nsMCMC[
                 constrainedLogDensity,
                 RandomChoice[Values @ bestPoints[[All, "Point"]]],
                 meanEst,
