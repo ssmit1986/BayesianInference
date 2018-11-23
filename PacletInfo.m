@@ -1,11 +1,11 @@
 (* Paclet Info File *)
 
-(* created 2017/09/26*)
+(* created 2018/11/23*)
 
 Paclet[
     Name -> "BayesianStatistics",
     Version -> "0.0.1",
-    MathematicaVersion -> "11+",
+    MathematicaVersion -> "11.3",
     Creator -> "Sjoerd Smit",
     Extensions -> 
         {

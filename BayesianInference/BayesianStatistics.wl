@@ -1,23 +1,22 @@
 (* ::Package:: *)
 
-BeginPackage["BayesianStatistics`", {"BayesianUtilities`"}];
+BeginPackage["BayesianStatistics`", {"BayesianUtilities`", "GeneralUtilities`"}];
 
-directPosteriorDistribution;
-nestedSampling;
-posteriorDistribution;
-combineRuns;
-predictiveDistribution;
-calculationReport;
-parallelNestedSampling;
+defineInferenceProblem::usage = "defineInferenceProblem[rules...] creates an inferenceObject that holds all relevant information for an inference problem. It will try to validate the inputs and bring them to a standardised form. defineInferenceProblem[] shows properties that can be defined, though optional extra properties the user defines will be kept as well";
+directPosteriorDistribution::usage = "directPosteriorDistribution[data, dist, prior, variables] tries to find the posterior by direct integration";
+nestedSampling::usage = "nestedSampling[inferenceObject] performs the nested sampling algorithm on the inference problem defined by inferenceObject to find the log evidence and sample the posterior";
+combineRuns::usage = "combineRuns[obj1, obj2, ...] aggregate independent nested sambling runs on the same problem into one object";
+predictiveDistribution::usage = "predictiveDistribution[obj] and predictiveDistribution[obj, points] (for regression problems) gives the posterior predictive distribution of the data";
+calculationReport::usage = "calculationReport[obj] gives an overview of the nested sampling run, showing graphs such as Skilling's L(X) plot and the MCMC acceptance rate evolution";
+parallelNestedSampling::usage = "parallelNestedSampling[obj] uses parallel kernel to run independent nested sampling runs and combines them. This effectively raises the number of living points used, but with faster convergence";
+generateStartingPoints::usage = "generateStartingPoints[obj, n] generates n samples from the prior as a starting point for the inference procedure. The value of n will also be the number of living points used";
+evidenceSampling::usage = "evidenceSampling[obj] estimates the error in the log evidence after a nested sampling run by Monte Carlo simulation of the X values corresponding to the log likelihood values found";
+createMCMCChain::usage = "createMCMCChain[obj] or createMCMCChain[obj, start] creates a MarkovChainObject that can be iterated by iterateMCMC to generate samples from the posterior directly. createMCMCChain[logPDF, start] directly creates a MarkovChainObject for an arbitrary unnormalised logPDF";
+iterateMCMC::usage = "iterateMCMC[MarkovChainObject, n] performs n MCMC steps, returning the visited points and updating the state of MarkovChainObject";
 
 Begin["`Private`"];
 
-(* Dummy code to make WL load everything related to MixtureDistribution *)
-MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
-
-Unprotect[MixtureDistribution];
-Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution["Mixture of " <> ToString @ Length[list1] <> " distributions"];
-Protect[MixtureDistribution];
+paramSpecPattern = {_Symbol, _?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]};
 
 (*
     If the prior is a list, convert all strings "LocationParameter" and "ScaleParameter" to distributions automatically
@@ -25,17 +24,18 @@ Protect[MixtureDistribution];
 *)
 ignorancePrior[
     priorSpecification : {(_?DistributionParameterQ | "LocationParameter" | "ScaleParameter")..},
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..}
+    variables : {paramSpecPattern..}
 ] /; Length[priorSpecification] === Length[variables] := Module[{
     positionsLoc = Position[priorSpecification, "LocationParameter"],
-    positionsScale = Position[priorSpecification, "ScaleParameter"]
+    positionsScale = Position[priorSpecification, "ScaleParameter"],
+    positionsDist = Position[priorSpecification, _?DistributionParameterQ]
 },
         ProductDistribution @@ ReplacePart[
             priorSpecification,
             Join[
                 Thread[
                     positionsLoc -> (
-                        UniformDistribution[{#[[2 ;;]]}]& /@ Extract[variables, positionsLoc]
+                        UniformDistribution[{#[[{2, 3}]]}]& /@ Extract[variables, positionsLoc]
                     )
                 ],
                 Thread[
@@ -46,21 +46,32 @@ ignorancePrior[
                             Method -> "Normalize"
                         ]& /@ Extract[variables, positionsScale]
                     )
+                ],
+                Thread[
+                    positionsDist -> MapThread[
+                        TruncatedDistribution[
+                            #2[[{2, 3}]],
+                            #1
+                        ]&,
+                        {
+                            Extract[priorSpecification, positionsDist],
+                            Extract[variables, positionsDist]
+                        }
+                    ]
                 ]
             ]
         ]
     ];
 
-
 directPosteriorDistribution[data_NumericQ, generatingDistribution_, prior_, variables_, opts : OptionsPattern[]] :=
     directPosteriorDistribution[{data}, generatingDistribution, prior, variables, opts];
 
 directPosteriorDistribution[data_List, generatingDistribution_, prior_,
-    variables : {_Symbol, _?NumericQ, _?NumericQ}, opts : OptionsPattern[]
+    variables : paramSpecPattern, opts : OptionsPattern[]
 ] := directPosteriorDistribution[data, generatingDistribution, prior, {variables}, opts];
 
 directPosteriorDistribution[data_List, generatingDistribution_, prior_List,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..}, opts : OptionsPattern[]
+    variables : {paramSpecPattern..}, opts : OptionsPattern[]
 ] := directPosteriorDistribution[
         data,
         generatingDistribution,
@@ -73,7 +84,7 @@ directPosteriorDistribution[
     data_List,
     generatingDistribution_?DistributionParameterQ,
     priorDistribution_?DistributionParameterQ,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
+    variables : {paramSpecPattern..},
     opts : OptionsPattern[]
 ] := directPosteriorDistribution[
     Simplify[
@@ -88,7 +99,7 @@ directPosteriorDistribution[
 directPosteriorDistribution[
     likelihood_,
     priorDistribution_?DistributionParameterQ,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
+    variables : {paramSpecPattern..},
     opts : OptionsPattern[]
 ] := Module[{
     pdf = Simplify[
@@ -119,56 +130,574 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
-constrainedMarkovChainMonteCarlo[
-    pdfFunction_,
-    livingPoints_List,
-    stepDistribution_,
-    numberOfSteps_Integer,
-    constraintFunction_,
-    constraintLimit : (_?NumericQ | DirectedInfinity[-1])
-] := Module[{
-    acceptReject = {0, 0},
-    tempPDF,
-    tempConstraint
-},
-    {
-        Fold[
-            Function[{
-                pnt, step
+defineInferenceProblem::dataFormat = "Data was provided in unusable format";
+defineInferenceProblem::insuffInfo = "Not enough information was provide to define the problem. Failed at: `1`";
+defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
+defineInferenceProblem::prior = "Unable to automatically construct the log prior PDF function for distribution `1`. Please construct one manually";
+defineInferenceProblem::failed = "Failure. `1` does not yield numerical results in the required domain";
+
+defineInferenceProblem[] := {
+    "Data",
+    "Parameters",
+    "IndependentVariables",
+    "LogLikelihoodFunction",
+    "LogPriorPDFFunction",
+    "GeneratingDistribution",
+    "PriorDistribution",
+    "PriorPDF"
+};
+defineInferenceProblem[rules : __Rule] := defineInferenceProblem[Association[{rules}]];
+defineInferenceProblem[inferenceObject[assoc_?AssociationQ]] := defineInferenceProblem[assoc];
+
+defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
+    Module[{
+        assoc = input,
+        keys,
+        tempKeys,
+        randomTestPoints
+    },
+        keys = Keys[DeleteMissing @ assoc];
+        If[ MemberQ[keys, "Data"],
+            Which[
+                dataNormalFormQ[assoc["Data"]],
+                    Null,
+                normalizedDataQ[assoc["Data"]] && dataNormalFormQ[assoc["Data", "NormalizedData"]],
+                    assoc["Data"] = dataNormalForm @ assoc["Data", "NormalizedData"];
+                    assoc["DataPreProcessors"] = assoc[["Data", {"Function", "InverseFunction"}]],
+                normalizedDataQ[assoc["Data"]],
+                    assoc["Data"] = dataNormalForm[Rule @@ Values[assoc[["Data", All, "NormalizedData"]]]];
+                    assoc["DataPreProcessors"] = assoc[["Data", All, {"Function", "InverseFunction"}]],
+                True,
+                    assoc["Data"] = dataNormalForm @ assoc["Data"]
+            ];
+            If[ !dataNormalFormQ[assoc["Data"]],
+                (
+                    Message[defineInferenceProblem::dataFormat];
+                    Throw[$Failed, "problemDef"]
+                )
+            ]
+        ];
+        Which[ 
+            MatchQ[assoc["Parameters"], {paramSpecPattern..}],
+                Null,
+            MatchQ[assoc["Parameters"], paramSpecPattern],
+                assoc["Parameters"] = {assoc["Parameters"]},
+            True,
+                Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
+                Throw[$Failed, "problemDef"]
+        ];
+        If[ MemberQ[keys, "IndependentVariables"],
+            If[ Head[assoc["Data"]] =!= Rule,
+                Message[defineInferenceProblem::dataFormat];
+                Throw[$Failed, "problemDef"]
+            ];
+            If[ !ListQ[assoc["IndependentVariables"]],
+                assoc["IndependentVariables"] = {assoc["IndependentVariables"]}
+            ]
+        ];
+        AppendTo[assoc, "ParameterSymbols" -> assoc["Parameters"][[All, 1]]];
+        If[ ListQ[assoc["PriorDistribution"]],
+            With[{
+                priorDist = ignorancePrior[
+                    assoc["PriorDistribution"],
+                    assoc["Parameters"]
+                ]
             },
-                Function[
-                    If[ And[
-                            Greater[
-                                tempPDF = pdfFunction[##],
-                                0
-                            ],
-                            Or[
-                                tempPDF >= pnt[[2]],
-                                Divide[tempPDF, pnt[[2]]] > RandomReal[]
-                            ],
-                            Greater[
-                                tempConstraint = constraintFunction[##],
-                                constraintLimit
-                            ]
-                        ]
-                        ,
-                        PreIncrement[acceptReject[[1]]];
-                        {
-                            {##},
-                            tempPDF,
-                            tempConstraint
-                        }
-                        ,
-                        PreIncrement[acceptReject[[2]]];
-                        pnt
-                    ]
-                ] @@ (pnt[[1]] + step)
+                If[ TrueQ @ DistributionParameterQ[priorDist],
+                    assoc["PriorDistribution"] = priorDist,
+                    Message[defineInferenceProblem::insuffInfo, "Prior distribution construction"];
+                    Throw[$Failed, "problemDef"]
+                ]
+            ]
+        ];
+        Which[
+            MemberQ[keys, "LogLikelihoodFunction"],
+                Null,
+            And[
+                SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "Parameters"}],
+                ListQ[assoc["Data"]]
             ],
-            RandomChoice[livingPoints[[All, "Prior"]] -> livingPoints],
-            RandomVariate[stepDistribution, numberOfSteps]
+                AppendTo[assoc, "LogLikelihoodFunction" -> logLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
+            And[
+                SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "IndependentVariables", "Parameters"}],
+                Head[assoc["Data"]] === Rule
+            ],
+                AppendTo[assoc, "LogLikelihoodFunction" -> regressionLogLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
+            True,
+                (
+                    Message[defineInferenceProblem::insuffInfo, "LogLikelihood function"];
+                    Throw[$Failed, "problemDef"]
+                )
+        ];
+        Which[
+            MemberQ[keys, "LogPriorPDFFunction"],
+                Null,
+            SubsetQ[keys, tempKeys = {"PriorDistribution", "Parameters"}],
+                AppendTo[
+                    assoc,
+                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[[tempKeys]]]
+                ],
+            SubsetQ[keys, tempKeys = {"PriorPDF", "Parameters"}],
+                AppendTo[
+                    assoc,
+                    "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[[tempKeys]]]
+                ],
+            True,
+                (
+                    Message[defineInferenceProblem::insuffInfo, "Log prior PDF"];
+                    Throw[$Failed, "problemDef"]
+                )
+        ];
+        
+        (* Simple test to check if the functions work as required *)
+        randomTestPoints = RandomVariate[
+            BayesianUtilities`Private`randomDomainPointDistribution[assoc["Parameters"][[All, {2, 3}]]],
+            100
+        ];
+        If[ !TrueQ @ numericVectorQ[assoc["LogPriorPDFFunction"] /@ randomTestPoints]
+            ,
+            (
+                Message[defineInferenceProblem::failed, "LogPriorPDFFunction"];
+                Throw[$Failed, "problemDef"]
+            )
+            ,
+            If[ !TrueQ @ numericVectorQ[assoc["LogLikelihoodFunction"] /@ randomTestPoints],
+                (
+                    Message[defineInferenceProblem::failed, "LogLikelihoodFunction"];
+                    Throw[$Failed, "problemDef"]
+                )
+            ]
+        ];
+        
+        (* Issue a message if a sub-optimal compiled function is found *)
+        KeyValueMap[checkCompiledFunction[#2, #1]&,
+            assoc[[{"LogPriorPDFFunction", "LogLikelihoodFunction"}]]
+        ];
+        assoc
+    ],
+    "problemDef"
+];
+defineInferenceProblem[___] := inferenceObject[$Failed];
+
+distributionDomainTest::paramSpec = "Warning! The support of distribution `1` could not be verified to contain the region specified by parameters `2`";
+distributionDomainTest[dist_?DistributionParameterQ, parameters : {paramSpecPattern..}] := With[{
+    reg1 = Replace[DistributionDomain[dist], int_Interval :> {int}],
+    reg2 = Map[
+        Interval,
+        parameters[[All, {2, 3}]]
+    ]
+},
+    TrueQ[
+        And @@ IntervalMemberQ[reg1, reg2]
+    ] /; And[
+        AllTrue[{reg1, reg2}, MatchQ[{__Interval}]],
+        Length[reg1] === Length[reg2]
+    ]
+];
+distributionDomainTest[___] := False;
+
+parametersToConstraints[parameters : {paramSpecPattern..}, otherConstraints : _ : True] := FullSimplify[
+    And[
+        And @@ (Less @@@ parameters[[All, {2, 1, 3}]]),
+        Element[
+            Alternatives @@ parameters[[All, 1]],
+            Reals
         ],
-        acceptReject
+        otherConstraints
+    ]
+];
+
+constraintsToFunction[parameters : {paramSpecPattern..}, otherConstraints : _ : True] := Block[{
+    paramVector
+},
+    expressionToFunction[
+        And @@ Cases[
+            BooleanConvert[parametersToConstraints[parameters, otherConstraints], "CNF"],
+            _Less | _Greater | _GreaterEqual | _LessEqual,
+            {0, 1}
+        ],
+        {parameters[[All, 1]] -> paramVector} 
+    ]
+];
+
+distributionDomainToConstraints[int_Interval, {sym_}] := distributionDomainToConstraints[int, sym];
+distributionDomainToConstraints[Interval[{min_, max_}], sym : Except[_List]] := FullSimplify[min < sym < max && Element[sym, Reals]];
+distributionDomainToConstraints[dom : {__Interval}, symbols_List] /; Length[dom] === Length[symbols] := And @@ MapThread[
+    distributionDomainToConstraints,
+    {dom, symbols}
+];
+distributionDomainToConstraints[___] := True;
+
+logPDFFunction[
+    dist_?DistributionParameterQ,
+    parameters : {paramSpecPattern..}
+] := (
+    If[ !TrueQ[distributionDomainTest[dist, parameters]],
+        Message[distributionDomainTest::paramSpec, dist, parameters]
+    ];
+    logPDFFunction[
+        Replace[
+            If[ Head[DistributionDomain[dist]] === List,
+                PDF[dist, parameters[[All, 1]]],
+                PDF[dist, parameters[[1, 1]]]
+            ],
+            _PDF :> (
+                Message[defineInferenceProblem::prior, dist];
+                Throw[$Failed, "problemDef"]
+            )
+        ],
+        parameters
+    ]
+);
+
+logPDFFunction[
+    pdf_,
+    parameters : {paramSpecPattern..}
+] := Block[{
+    constraints = parametersToConstraints[parameters],
+    logPDF,
+    paramVector
+},
+    logPDF = expressionToFunction[
+        simplifyLogPDF[
+            N @ Log[pdf],
+            And[
+                constraints,
+                Element[
+                    Alternatives @@ parameters[[All, 1]],
+                    Reals
+                ]
+            ]
+        ],
+        {parameters[[All, 1]] -> paramVector}
+    ];
+    constraints = constraintsToFunction[parameters, constraints];
+    
+    Compile[{
+        {param, _Real, 1}
+    },
+        If[ constraints[param],
+            logPDF[param],
+            $MachineLogZero
+        ],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        },
+        RuntimeAttributes -> {Listable},
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
+        }
+    ]
+];
+
+logLikelihoodFunction[
+    dist_?DistributionParameterQ,
+    data_List?numericMatrixQ,
+    parameters : {paramSpecPattern..}
+] := Module[{
+    dataDim = Dimensions[data][[2]],
+    logLike,
+    constraints,
+    domain = DistributionDomain[dist]
+},
+    constraints = parametersToConstraints[parameters, DistributionParameterAssumptions[dist]];
+    logLike = Function[
+        {paramVector, dataPoint},
+        Evaluate[
+            N @ varsToParamVector[
+                With[{
+                    vars = Table[
+                        Indexed[dataPoint, i],
+                        {i, 1, dataDim}
+                    ]
+                },
+                    simplifyLogPDF[
+                        Replace[
+                            LogLikelihood[
+                                dist,
+                                If[ Head[domain] === List , List @ vars, vars] (* Determine if dist is a scalar of vector distribution *)
+                            ],
+                            _LogLikelihood :> ( (* If LogLikelihood doesn't evaluate, no compiled function can be constructed *)
+                                Message[defineInferenceProblem::logLike, dist];
+                                Throw[$Failed, "problemDef"]
+                            )
+                        ],
+                        And[
+                            constraints,
+                            distributionDomainToConstraints[domain, vars]
+                        ]
+                    ]
+                ],
+                parameters[[All, 1]] -> paramVector
+            ]
+        ]
+    ];
+    logLike = Compile[{
+        {input, _Real, 1},
+        {pt, _Real, 1}
+    },
+        logLike[input, pt],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        },
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
+        }
+    ];
+    
+    (* convert constraint equations into a boolean function that tells you if the constraints are satisfied for a given parameter vector *)
+    constraints = constraintsToFunction[parameters, constraints];
+    Compile[{
+        {input, _Real, 1}
+    },
+        If[ constraints[input],
+            Sum[logLike[input, i], {i, data}],
+            $MachineLogZero
+        ],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        },
+        RuntimeAttributes -> {Listable},
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
+        }
+    ]
+];
+logLikelihoodFunction[dist_, ___] := (
+    Message[defineInferenceProblem::logLike, dist];
+    Throw[$Failed, "problemDef"]
+);
+
+regressionLogLikelihoodFunction[
+    regressionDistribution_?DistributionParameterQ,
+    (inputData_List?numericMatrixQ) -> (outputData_List?numericMatrixQ),
+    independentVariables  : {__Symbol},
+    parameters : {paramSpecPattern..}
+] /; Length[inputData] === Length[outputData] := Module[{
+    constraints = parametersToConstraints[parameters, DistributionParameterAssumptions[regressionDistribution]],
+    domain = DistributionDomain[regressionDistribution],
+    dataDimOut = Dimensions[outputData][[2]],
+    logLike
+},
+    logLike = Function[
+        {paramVector, dataIn, dataOut},
+        Evaluate[
+            N @ varsToParamVector[
+                With[{
+                    varsOut = Table[
+                        Indexed[dataOut, i],
+                        {i, 1, dataDimOut}
+                    ]
+                },
+                    simplifyLogPDF[
+                        Replace[
+                            LogLikelihood[
+                                regressionDistribution,
+                                If[ Head[domain] === List , List @ varsOut, varsOut] (* Determine if dist is a scalar of vector distribution *)
+                            ],
+                            _LogLikelihood :> ( (* If LogLikelihood doesn't evaluate, no compiled function can be constructed *)
+                                Message[defineInferenceProblem::logLike, regressionDistribution];
+                                Throw[$Failed, "problemDef"]
+                            )
+                        ],
+                        And[
+                            constraints,
+                            distributionDomainToConstraints[domain, varsOut]
+                        ] 
+                    ]
+                ],
+                {parameters[[All, 1]] -> paramVector, independentVariables -> dataIn}
+            ]
+        ]
+    ];
+    logLike = Compile[{
+        {input, _Real, 1},
+        {ptIn, _Real, 1},
+        {ptOut, _Real, 1}
+    },
+        logLike[input, ptIn, ptOut],
+        CompilationOptions -> {
+            "InlineExternalDefinitions" -> True,
+            "InlineCompiledFunctions" -> True
+        },
+        RuntimeOptions -> {
+            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "WarningMessages" -> False
+        }
+    ];
+    constraints = constraintsToFunction[parameters];
+    With[{nDat = Length[inputData]},
+        Compile[{
+            {input, _Real, 1}
+        },
+            If[ constraints[input],
+                Sum[logLike[input, inputData[[i]], outputData[[i]]], {i, nDat}],
+                $MachineLogZero
+            ],
+            CompilationOptions -> {
+                "InlineExternalDefinitions" -> True,
+                "InlineCompiledFunctions" -> True
+            },
+            RuntimeAttributes -> {Listable},
+            RuntimeOptions -> {
+                "RuntimeErrorHandler" -> Function[$MachineLogZero],
+                "WarningMessages" -> False
+            }
+        ]
+    ]
+];
+regressionLogLikelihoodFunction[dist_, ___] := (
+    Message[defineInferenceProblem::logLike, dist];
+    Throw[$Failed, "problemDef"]
+);
+
+
+nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logThreshold_?NumericQ, constraintFun_] := Compile[{
+    {point, _Real, 1}
+},
+    If[ constraintFun[point] && logLikelihood[point] > logThreshold,
+        logPriorDensity[point],
+        $MachineLogZero
+    ],
+    CompilationOptions -> {
+        "InlineExternalDefinitions" -> True, 
+        "InlineCompiledFunctions" -> True
+    },
+    RuntimeOptions -> {
+        "RuntimeErrorHandler" -> Function[$MachineLogZero],
+        "WarningMessages" -> False
     }
+];
+
+nsDensity[logPriorDensity_, logLikelihood_, logThreshold_?NumericQ, constraintFun_] := With[{
+    logzero = $MachineLogZero 
+},
+    Function[
+        If[ TrueQ[constraintFun[#] && logLikelihood[#] > logThreshold],
+            logPriorDensity[#],
+            logzero
+        ]
+    ]
+];
+
+posteriorDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, constraintFun : _ : Function[True] ] := Compile[{
+    {pt, _Real, 1}
+},
+    If[ constraintFun[pt],
+        logPriorDensity[pt] + logLikelihood[pt],
+        $MachineLogZero
+    ],
+    CompilationOptions -> {"InlineExternalDefinitions" -> True, "InlineCompiledFunctions" -> True},
+    RuntimeOptions -> {"RuntimeErrorHandler" -> Function[$MachineLogZero], "WarningMessages" -> False},
+    RuntimeAttributes -> {Listable}
+];
+
+posteriorDensity[logPriorDensity_, logLikelihood_, constraintFun : _ : Function[True]] := Function[
+    If[ constraintFun[#],
+        logPriorDensity[#] + logLikelihood[#],
+        $MachineLogZero
+    ]
+];
+
+createMCMCChain::start = "Please specify a starting point";
+createMCMCChain[obj_?inferenceObjectQ, opts : OptionsPattern[]] /; !numericMatrixQ[obj["StartingPoints"]]:= (
+    Message[createMCMCChain::start];
+    inferenceObject[$Failed]
+);
+
+createMCMCChain[obj_?inferenceObjectQ, opts : OptionsPattern[]] /; numericMatrixQ[obj["StartingPoints"]] := 
+    createMCMCChain[obj, First[obj["StartingPoints"]]];
+
+createMCMCChain[obj_?inferenceObjectQ, startPt_List?numericVectorQ, opts : OptionsPattern[]] /; Nor[
+    MissingQ[obj["LogLikelihoodFunction"]],
+    MissingQ[obj["LogPriorPDFFunction"]],
+    !MatchQ[obj["Parameters"], {paramSpecPattern..}]
+] := createMCMCChain[
+    posteriorDensity[
+        obj["LogPriorPDFFunction"],
+        obj["LogLikelihoodFunction"],
+        constraintsToFunction[obj["Parameters"]]
+    ],
+    startPt,
+    opts
+];
+
+createMCMCChain[unnormPostLogPDF : Except[_?inferenceObjectQ], startPt_List?numericVectorQ, opts : OptionsPattern[]] := With[{
+    dim = Length[startPt]
+},
+    Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
+        startPt,
+        unnormPostLogPDF,
+        {
+            Replace[
+                OptionValue["InitialCovariance"],
+                {
+                    n_?NumericQ :> DiagonalMatrix[ConstantArray[n, dim]],
+                    lst_List?numericVectorQ /; Length[lst] === dim :> DiagonalMatrix[lst],
+                    Except[mat_List?numericMatrixQ] :> DiagonalMatrix[ConstantArray[1, dim]]
+                }
+            ],
+            Replace[
+                OptionValue["CovarianceLearnDelay"],
+                {
+                    Except[n_Integer] :> 20
+                }
+            ]
+        },
+        Real,
+        Compiled -> Head[unnormPostLogPDF] === CompiledFunction
+    ]
+];
+
+Options[createMCMCChain] = {
+    "CovarianceLearnDelay" -> 20,
+    "InitialCovariance" -> 1
+};
+iterateMCMC = Statistics`MCMC`MarkovChainIterate;
+
+nsMCMC[
+    logDensity_,
+    initialPoint_List,
+    meanEst_List,
+    covEst_List,
+    {numberOfSteps_Integer, extraSteps_Integer, maxSteps_Integer},
+    minMaxAcceptanceRate : {_, _}
+] := With[{
+    startingIteration = 10
+},
+    Module[{
+        (* Initialise the chain at step 10 so that the estimated covariance does not go all over the place *)
+        chain = Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
+            "FullState",
+            {initialPoint, startingIteration, meanEst, covEst},
+            logDensity,
+            {covEst, startingIteration},
+            Real,
+            Compiled -> Head[logDensity] === CompiledFunction
+        ]
+    },
+        iterateMCMC[chain, {1, numberOfSteps}];
+        While[
+            Nor[
+                TrueQ @ Between[chain["AcceptanceRate"], minMaxAcceptanceRate],
+                TrueQ[chain["StateData"][[2]] >= maxSteps + startingIteration]
+            ],
+            iterateMCMC[chain, {1, extraSteps}]
+        ];
+        Append[
+            AssociationThread[
+                {"Point", "MeanEstimate", "CovarianceEstimate"},
+                chain["StateData"][[{1, 3, 4}]]
+            ],
+            "AcceptanceRate" -> chain["AcceptanceRate"]
+        ]
+    ]
 ];
 
 trapezoidWeigths = Compile[{
@@ -187,11 +716,11 @@ calculateXValues = Compile[{
 },
     Join[
         Exp[-Divide[#, nSamplePool]]& /@ Range[nDeleted],
-        Reverse @ Rest @ Most @ Subdivide[Exp[-Divide[nDeleted, nSamplePool]], nSamplePool + 1]
-    ],
-    {
-        {Subdivide[_, _], _Real, 1}
-    }
+        Reverse @ Table[
+            (i / (nSamplePool + 1)) * Exp[-Divide[nDeleted, nSamplePool]],
+            {i, 1, nSamplePool}
+        ]
+    ]
 ];
 
 calculateEntropy[samples_Association, evidence_] := Subtract[
@@ -215,277 +744,314 @@ calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
     keys = Keys[sorted];
     xValues = calculateXValues[nSamplePool, nDeleted];
     weights = trapezoidWeigths[xValues];
-    Merge[
-        {
-            sorted,
-            <|"X" -> #|> & /@ AssociationThread[keys, xValues],
-            <|"CrudePosteriorWeight" -> #|> & /@ AssociationThread[keys, weights * Exp[Values @ sorted[[All, "LogLikelihood"]]]]
-        },
-        Join @@ # &
+    Join[
+        sorted,
+        GeneralUtilities`AssociationTranspose @ <|
+            "X" -> AssociationThread[keys, xValues],
+            "CrudePosteriorWeight" -> AssociationThread[keys, weights * Exp[Values @ sorted[[All, "LogLikelihood"]]]],
+            "CrudeLogPosteriorWeight" -> AssociationThread[keys, Log[weights] + Values @ sorted[[All, "LogLikelihood"]]]
+        |>,
+        2
     ]
 ];
 
-nestedSampling[
-    logLikelihoodFunction_,
-    variablePrior_,
-    variables : {_Symbol, _?NumericQ, _?NumericQ},
-    opts : OptionsPattern[]
-] := nestedSampling[logLikelihoodFunction, variablePrior, {variables}, opts];
+Options[evidenceSampling] = {
+    "PostProcessSamplingRuns" -> 100,
+    "EmpiricalPosteriorDistributionType" -> "Simple"
+};
+Options[nestedSampling] = Join[
+    {
+        "SamplePoolSize" -> 25,
+        "StartingPoints" -> Automatic,
+        "MaxIterations" -> 1000,
+        "MinIterations" -> 100,
+        "MonteCarloMethod" -> Automatic,
+        "MonteCarloSteps" -> 200,
+        "TerminationFraction" -> 0.01,
+        "Monitor" -> True,
+        "LikelihoodMaximum" -> Automatic,
+        "MinMaxAcceptanceRate" -> {0, 1}
+    },
+    Options[evidenceSampling]
+];
+Options[nestedSamplingInternal] = DeleteCases[
+    Options[nestedSampling],
+    ("SamplePoolSize" | "StartingPoints") -> _
+];
 
-nestedSampling[
-    logLikelihoodFunction_,
-    variablePrior_List,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
-    opts : OptionsPattern[]
-] := nestedSampling[logLikelihoodFunction, ignorancePrior[variablePrior, variables], variables, opts];
+nestedSampling::MCSteps = "Cannot use value `1` for option MonteCarloSteps. Defaulting to `2` instead";
 
-nestedSampling[
+nestedSamplingInternal[
     logLikelihoodFunction_,
-    variablePrior : _?DistributionParameterQ | _Function,
-    variables : {{_Symbol, _?NumericQ, _?NumericQ}..},
+    logPriorDensityFunction_,
+    startingPoints_,
+    params : {paramSpecPattern..},
     opts : OptionsPattern[]
-] := With[{
-    dimensionCheck = Function[
-        And[
-            MatrixQ[#, NumericQ],
-            Dimensions[#] === {OptionValue["SamplePoolSize"], Length[variables]}
-        ]
-    ],
+] := Module[{
     maxiterations = Max[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
     miniterations = Min[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
-    mcMethod = Replace[OptionValue["MonteCarloMethod"], Automatic -> constrainedMarkovChainMonteCarlo],
-    mcSteps = OptionValue["MonteCarloSteps"],
+    mcSteps = Replace[
+        OptionValue["MonteCarloSteps"],
+        {
+            i_Integer :> {i, i, 5 * i},
+            other : Except[{_Integer, _Integer, _Integer}] :> (
+                Message[nestedSampling::MCSteps, Short[other], {200, 200, 1000}];
+                {200, 200, 5}
+            )
+        } 
+    ],
     termination = OptionValue["TerminationFraction"],
-    nSamples = OptionValue["SamplePoolSize"],
     minMaxAcceptanceRate = OptionValue["MinMaxAcceptanceRate"],
-    mcAdjustment = OptionValue["MonteCarloStepSizeAdjustment"],
-    mcStepDistribution = Function[
-        Evaluate[
-            ProductDistribution @@ Map[
-                Function[{scale}, OptionValue["MonteCarloStepDistribution"][0, scale]],
-                Slot /@ Range[Length[variables]]
+    variableSamplePoints = startingPoints,
+    nSamples,
+    parameterSpaceDimension,
+    likelihoodThreshold = 0,
+    iteration = 1,
+    bestPoints,
+    newPoint,
+    constrainedLogDensity,
+    meanEst,
+    covEst,
+    factor,
+    estimatedMissingEvidence,
+    evidence = 0,
+    entropy = 0,
+    interrupted = False,
+    statusCell,
+    output,
+    constraintFunction
+},
+    {nSamples, parameterSpaceDimension} = Dimensions[startingPoints];
+    constraintFunction = constraintsToFunction[params];
+    variableSamplePoints = SortBy[{#LogLikelihood, #Point}&] @ Association @ MapIndexed[
+        Function[
+            {point, index},
+            Rule[
+                First[index],
+                <|
+                    "Point" -> point,
+                    "LogLikelihood" -> logLikelihoodFunction[point],
+                    "AcceptanceRate" -> Missing["InitialSample"]
+                |>
+            ]
+        ],
+        variableSamplePoints
+    ];
+    If[ !numericVectorQ[
+            Values @ variableSamplePoints[[All, "LogLikelihood"]]
+        ],
+        Return["Bad likelihood function"]
+    ];
+    meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
+    covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
+    
+    estimatedMissingEvidence = With[{
+        lmax = OptionValue["LikelihoodMaximum"]
+    },
+        Switch[ lmax,
+        _?NumericQ,
+            Function[
+                lmax * Min[DeleteMissing @ #[[All, "X"]]]
+            ],
+        _,
+            Function[
+                Times[
+                    Min[DeleteMissing @ #[[All, "X"]]],
+                    Exp @ Max[#[[All, "LogLikelihood"]]]
+                ]
             ]
         ]
+    ];
+    
+    If[ TrueQ[OptionValue["Monitor"]],
+        statusCell = PrintTemporary[
+            Dynamic[
+                Grid[
+                    {
+                        {"Iteration: ", iteration},
+                        {"Samples: ", Length[variableSamplePoints]},
+                        {"Log evidence: ", NumberForm[Log[evidence], 5]},
+                        {"Entropy: ", NumberForm[entropy, 5]},
+                        {
+                            Button[
+                                "Finish",
+                                interrupted = True,
+                                ImageSize -> 70
+                            ],
+                            SpanFromLeft
+                        }
+                    },
+                    Alignment -> Left,
+                    BaseStyle -> "Text"
+                ],
+                TrackedSymbols :> {}, UpdateInterval -> 1
+            ]
+        ]
+    ];
+    (* Main loop starts here *)
+    While[
+        And[
+            !TrueQ[interrupted],
+            iteration <= maxiterations,
+            Or[
+                iteration === 1,
+                iteration <= miniterations,
+                !TrueQ[
+                    estimatedMissingEvidence[variableSamplePoints] <= evidence * termination
+                ]
+            ]
+        ]
+        ,
+        bestPoints = Take[variableSamplePoints, -nSamples];
+        likelihoodThreshold = Min[bestPoints[[All, "LogLikelihood"]]];
+        constrainedLogDensity = nsDensity[
+            logPriorDensityFunction,
+            logLikelihoodFunction,
+            likelihoodThreshold,
+            constraintFunction
+        ];
+        factor = 1;
+        covEst = Divide[covEst + Covariance[Values @ bestPoints[[All, "Point"]]], 2]; (* Retain a fraction of the previous covariance estimate *)
+        While[ True,
+            newPoint = nsMCMC[
+                constrainedLogDensity,
+                RandomChoice[Values @ bestPoints[[All, "Point"]]],
+                meanEst,
+                covEst,
+                Ceiling[factor * mcSteps],
+                minMaxAcceptanceRate
+            ];
+            {meanEst, covEst} = Values @ newPoint[[{"MeanEstimate", "CovarianceEstimate"}]];
+            If[ Between[newPoint["AcceptanceRate"], minMaxAcceptanceRate],
+                Break[],
+                factor *= 1.25
+            ]
+        ];
+        
+        variableSamplePoints = calculateWeightsCrude[
+            Append[
+                variableSamplePoints,
+                iteration + nSamples -> Append[
+                    newPoint[[{"Point", "AcceptanceRate", "MeanEstimate", "CovarianceEstimate"}]],
+                    "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]]
+                ]
+            ],
+            nSamples
+        ];
+        evidence = Total[variableSamplePoints[[All, "CrudePosteriorWeight"]]];
+        entropy = calculateEntropy[variableSamplePoints, evidence];
+        PreIncrement[iteration];
+    ];
+    
+    If[ ValueQ[statusCell], NotebookDelete[statusCell]];
+    output = evidenceSampling[
+        <|
+            "Samples" -> variableSamplePoints,
+            "SamplePoolSize" -> nSamples,
+            "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples,
+            "TotalSamples" -> Length[variableSamplePoints],
+            "ParameterRanges" -> CoordinateBounds[Values @ variableSamplePoints[[All, "Point"]]]
+        |>,
+        params[[All, 1]],
+        Sequence @@ passOptionsDown[nestedSampling, evidenceSampling, {opts}]
+    ];
+    Share[output];
+    output
+];
+
+Options[generateStartingPoints] = {
+    "BurnInPeriod" -> 1000,
+    "Thinning" -> 1000
+};
+generateStartingPoints[inferenceObject[assoc_?AssociationQ], n_Integer, opts : OptionsPattern[]] := With[{
+    pts = generateStartingPoints[assoc, n, opts]
+},
+    If[ numericMatrixQ[pts] && Dimensions[pts][[2]] === Length[assoc["Parameters"]],
+        inferenceObject[Append[assoc, "StartingPoints" -> pts]],
+        inferenceObject[$Failed]
+    ]
+]
+
+generateStartingPoints[
+    assoc : KeyValuePattern["PriorDistribution" -> dist_?DistributionParameterQ],
+    n_Integer,
+    OptionsPattern[]
+] := Replace[
+    RandomVariate[dist, n],
+    {
+        lst_List?numericVectorQ :> List /@ lst,
+        Except[_List?numericMatrixQ] :> generateStartingPoints[
+            KeyDrop[assoc, "PriorDistribution"], (* Try generating points from the LogPriorPDFFunction, if available *)
+            n
+        ]
+    }
+];
+
+generateStartingPoints[
+    assoc : KeyValuePattern[{"LogPriorPDFFunction" -> logPDF_, "Parameters" -> params : {paramSpecPattern..}}],
+    n_Integer,
+    opts : OptionsPattern[]
+] := Module[{
+    chain = With[{
+        crudeSamples = RandomVariate[BayesianUtilities`Private`randomDomainPointDistribution[params[[All, {2, 3}]]], 100]
+    },
+        Statistics`MCMC`BuildMarkovChain[{"AdaptiveMetropolis", "Log"}][
+            First @ crudeSamples,
+            logPDF,
+            {DiagonalMatrix[Variance[crudeSamples]], 20},
+            Real,
+            Compiled -> True
+        ]
+    ],
+    samples
+},
+    iterateMCMC[chain, {1, OptionValue["BurnInPeriod"]}];
+    samples = iterateMCMC[chain, {n, OptionValue["Thinning"]}];
+    Print @ StringForm[
+        "Generated `1` inital samples using MCMC. Acceptance rate: `2`",
+        n,
+        chain["AcceptanceRate"]
+    ];
+    samples
+];
+generateStartingPoints[__] := $Failed
+
+nestedSampling[
+    inferenceObject[assoc_?AssociationQ],
+    opts : OptionsPattern[]
+] /; !numericMatrixQ[assoc["StartingPoints"]] := With[{
+    startingPoints = Replace[
+        OptionValue["StartingPoints"],
+        {
+            Except[_?numericMatrixQ] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
+        }
     ]
 },
-    Module[{
-        variableSamplePoints,
-        priorPDF,
-        likelihoodThreshold = 0,
-        iteration = 1,
-        acceptReject,
-        bestPoints,
-        newPoint,
-        estimatedMissingEvidence,
-        evidence = 0,
-        entropy = 0,
-        mcStepSize = {OptionValue["InitialMonteCarloStepSize"]},
-        acceptanceRatios = {},
-        interrupted = False,
-        statusCell,
-        output
-    },
-        variableSamplePoints = Which[ dimensionCheck[OptionValue["StartingPoints"]],
-            OptionValue["StartingPoints"]
-            ,
-            DistributionParameterQ[variablePrior],
-                RandomVariate[
-                    variablePrior,
-                    OptionValue["SamplePoolSize"]
-                ],
-            True,
-                Return["Need starting points"]
-        ];
-        If[ !dimensionCheck[variableSamplePoints],
-            Return["Bad prior specification"]
-        ];
-        priorPDF = If[ DistributionParameterQ[variablePrior],
-            Evaluate[
-                PDF[
-                    variablePrior,
-                    Function[{i}, Slot[i]] /@ Range[Length[variables]]
-                ]
-            ]&,
-            variablePrior
-        ];
-        variableSamplePoints = SortBy[{#LogLikelihood, #Point}&] @ Association @ MapIndexed[
-            Function[
-                {point, index},
-                Rule[
-                    First[index],
-                    <|
-                        "Point" -> point,
-                        "Prior" -> priorPDF @@ point,
-                        "LogLikelihood" -> logLikelihoodFunction @@ point,
-                        "AcceptanceRejectionCounts" -> Missing["InitialSample"]
-                    |>
-                ]
-            ],
-            variableSamplePoints
-        ];
-        If[ !MatchQ[
-                Values @ variableSamplePoints[[All, "LogLikelihood"]],
-                {(_?NumericQ | DirectedInfinity[-1])..}
-            ],
-            Return["Bad likelihood function"]
-        ];
-        estimatedMissingEvidence = With[{
-            lmax = OptionValue["LikelihoodMaximum"]
-        },
-            Switch[ lmax,
-            _?NumericQ,
-                Function[
-                    lmax * Min[DeleteMissing @ #[[All, "X"]]]
-                ],
-            _,
-                Function[
-                    Times[
-                        Min[DeleteMissing @ #[[All, "X"]]],
-                        Exp @ Max[#[[All, "LogLikelihood"]]]
-                    ]
-                ]
-            ]
-        ];
+    nestedSampling[
+        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]],
+        opts
+    ] /; numericMatrixQ[startingPoints]
+];
 
-        If[ TrueQ[OptionValue["Monitor"]],
-            statusCell = PrintTemporary[
-                Dynamic[
-                    Grid[
-                        {
-                            {"Iteration: ", iteration},
-                            {"Samples: ", Length[variableSamplePoints]},
-                            {"Log evidence: ", NumberForm[Log[evidence], 5]},
-                            {"Entropy: ", NumberForm[entropy, 5]},
-                            {
-                                Button[
-                                    "Finish",
-                                    interrupted = True,
-                                    ImageSize -> 70
-                                ],
-                                SpanFromLeft
-                            }
-
-                        },
-                        Alignment -> Left,
-                        BaseStyle -> "Text"
-                    ],
-                    TrackedSymbols :> {}, UpdateInterval -> 1
-                ]
-            ]
-        ];
-        (* Main loop starts here *)
-        While[
-            And[
-                !TrueQ[interrupted],
-                iteration <= maxiterations,
-                Or[
-                    iteration === 1,
-                    iteration <= miniterations,
-                    !TrueQ[
-                        estimatedMissingEvidence[variableSamplePoints] <= evidence * termination
-                    ]
-                ]
-            ]
-            ,
-            bestPoints = Take[variableSamplePoints, -nSamples];
-            likelihoodThreshold = Min[bestPoints[[All, "LogLikelihood"]]];
-
-            {newPoint, acceptReject} = mcMethod[
-                priorPDF,
-                Values @ bestPoints,
-                mcStepDistribution @@ (
-                    Last[mcStepSize] * Map[
-                        Abs[Subtract @@ MinMax[#]]&,
-                        Transpose[Values @ bestPoints[[All , "Point"]]]
-                    ]
-                ),
-                mcSteps,
-                logLikelihoodFunction,
-                likelihoodThreshold
-            ];
-
-            If[ mcAdjustment =!= None,
-                AppendTo[acceptanceRatios, Divide[#1, (#1 + #2)] & @@ acceptReject];
-                With[{
-                    order = Lookup[mcAdjustment, "Order", 3],
-                    historyLength = Clip[
-                        Lookup[mcAdjustment, "HistoryLength", 0],
-                        {Lookup[mcAdjustment, "Order", 3] + 1, Infinity}
-                    ]
-                },
-                    AppendTo[
-                        mcStepSize,
-                        If[ Length[mcStepSize] > order,
-                            Clip[
-                                quietCheck[
-                                    LinearModelFit[
-                                        Take[
-                                            Reverse @ Transpose[{acceptanceRatios - 0.5, mcStepSize}],
-                                            UpTo[historyLength]
-                                        ],
-                                        Array[\[FormalX]^(# - 1) &, order + 1],
-                                        \[FormalX],
-                                        Weights -> Divide[1, Take[Range[Length[acceptanceRatios]], UpTo[historyLength]]]
-                                    ][0],
-                                    First[mcStepSize]
-                                ],
-                                Lookup[mcAdjustment, "MinMax", {0.001, 0.5}]
-                            ],
-                            Last[mcStepSize] * 1.2
-                        ]
-                    ]
-                ]
-            ];
-
-            If[ TrueQ @ Between[Divide[#1, #1 + #2]& @@ acceptReject, minMaxAcceptanceRate]
-                ,
-                variableSamplePoints = calculateWeightsCrude[
-                    Append[
-                        variableSamplePoints,
-                        iteration + nSamples -> AssociationThread[
-                            {
-                                "Point",
-                                "Prior",
-                                "LogLikelihood",
-                                "AcceptanceRejectionCounts"
-                            },
-                            Append[newPoint, acceptReject]
-                        ]
-                    ],
-                    nSamples
-                ];
-                evidence = Total[variableSamplePoints[[All, "CrudePosteriorWeight"]]];
-                entropy = calculateEntropy[variableSamplePoints, evidence];
-            ];
-            PreIncrement[iteration];
-        ];
-
-        If[ ValueQ[statusCell], NotebookDelete[statusCell]];
-        output = evidenceSampling[
-            <|
-                "Samples" -> variableSamplePoints,
-                "Parameters" -> variables[[All, 1]],
-                "ParameterRanges" -> variables[[All, {2, 3}]],
-                "PriorFunction" -> priorPDF,
-                "LogLikelihoodFunction" -> logLikelihoodFunction,
-                "SamplePoolSize" -> nSamples,
-                "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples,
-                "GeneratingDistribution" -> Quiet @ Replace[
-                    logLikelihoodFunction,
-                    {
-                        Function[
-                            first : Repeated[_, {0, 1}],
-                            LogLikelihood[dist_, ___],
-                            rest : Repeated[_, {0, 1}]
-                        ] :> Function[first, dist, rest],
-                        _ :> Missing["NoData"]
-                    }
-                ]
-            |>,
-            Sequence @@ passOptionsDown[nestedSampling, evidenceSampling, {opts}]
-        ];
-        Share[output];
-        output
+nestedSampling[
+    inferenceObject[assoc_?AssociationQ],
+    opts : OptionsPattern[]
+] /; And[
+    numericMatrixQ[assoc["StartingPoints"]],
+    MatchQ[assoc["Parameters"], {paramSpecPattern..}],
+    Dimensions[assoc["StartingPoints"]][[2]] === Length[assoc["Parameters"]]
+] := Module[{
+    result = nestedSamplingInternal[
+        assoc["LogLikelihoodFunction"],
+        assoc["LogPriorPDFFunction"],
+        assoc["StartingPoints"],
+        assoc["Parameters"],
+        Sequence @@ FilterRules[{opts}, Options[nestedSamplingInternal]]
+    ]
+},
+    If[ TrueQ @ AssociationQ[result],
+        inferenceObject[Join[assoc, result]],
+        result
     ]
 ];
 
@@ -509,8 +1075,11 @@ meanAndError[data_List /; Length[Dimensions[data]] === 2] := Map[
     data
 ];
 
+evidenceSampling[obj_?inferenceObjectQ, opts : OptionsPattern[]] := inferenceObject[
+    evidenceSampling[Normal[obj], obj["ParameterSymbols"], opts]
+];
 
-evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
+evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPattern[]] := Module[{
     result = MapAt[
         calculateWeightsCrude[#, assoc["SamplePoolSize"]]&,
         assoc,
@@ -518,7 +1087,7 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     ],
     nRuns = OptionValue["PostProcessSamplingRuns"],
     keys,
-    evidenceWeigths,
+    logEvidenceWeigths,
     posteriorWeights,
     sampledX,
     parameterSamples,
@@ -538,24 +1107,7 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
                 Min[DeleteMissing @ result[["Samples", All, "X"]]],
                 Exp @ Max[result[["Samples", All, "LogLikelihood"]]]
             ],
-            "CrudeRelativeEntropy" -> crudeEntropy,
-            "PosteriorPDF" -> With[{
-                prior = result["PriorFunction"],
-                loglike = result["LogLikelihoodFunction"],
-                ev = crudeEvidence
-            },
-                Function[
-                    Null,
-                    Divide[
-                        Times[
-                            prior[##],
-                            Exp[loglike[##]]
-                        ],
-                        ev
-                    ],
-                    {Listable}
-                ]
-            ]
+            "CrudeRelativeEntropy" -> crudeEntropy
         |>
     ];
     If[ !TrueQ[IntegerQ[nRuns] && nRuns > 0],
@@ -563,66 +1115,67 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     ];
 
     keys = Keys[result["Samples"]];
-    evidenceWeigths = Times[
-        Exp[Values @ result[["Samples", All, "LogLikelihood"]]],
-        Transpose[
-            trapezoidWeigths[
-                sampledX = Map[
-                    Join[
-                        #,
-                        Reverse @ Sort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
-                    ]&,
-                    With[{
-                        randomNumbers = RandomVariate[
-                            BetaDistribution[result["SamplePoolSize"], 1],
-                            {result["GeneratedNestedSamples"], nRuns}
-                        ]
-                    },
-                        Transpose[
-                            FoldList[Times, randomNumbers]
-                        ]
+    logEvidenceWeigths = Plus[
+        ConstantArray[
+            Values @ result[["Samples", All, "LogLikelihood"]],
+            nRuns
+        ],
+        Log @ trapezoidWeigths[
+            sampledX = Map[
+                Join[
+                    #,
+                    ReverseSort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
+                ]&,
+                With[{
+                    randomNumbers = RandomVariate[
+                        BetaDistribution[result["SamplePoolSize"], 1],
+                        {result["GeneratedNestedSamples"], nRuns}
+                    ]
+                },
+                    Transpose[
+                        FoldList[Times, randomNumbers]
                     ]
                 ]
             ]
         ]
     ];
-    zSamples = Log @ Total[evidenceWeigths];
+    zSamples = logSumExp /@ logEvidenceWeigths;
+    posteriorWeights = Exp[logEvidenceWeigths - zSamples];
     parameterSamples = Transpose[
         Dot[
-            posteriorWeights = Replace[
-                Normalize[#, Total]& /@ Transpose[evidenceWeigths],
-                0. -> 0, (* Make zero values exact so that their Log flushes to -Inf *)
-                {2}
-            ],
+            posteriorWeights,
             Values[result[["Samples", All, "Point"]]]
         ]
     ];
     Join[
         output,
         <|
-            "Samples" -> SortBy[-#CrudePosteriorWeight &] @ Merge[
-                {
-                    MapAt[
-                        Divide[#, crudeEvidence]&,
-                        result["Samples"],
-                        {All, "CrudePosteriorWeight"}
-                    ],
-                    <|"SampledX" -> #|> & /@ AssociationThread[
+            "Samples" -> SortBy[-#CrudePosteriorWeight &] @ Join[
+                MapAt[
+                    Divide[#, crudeEvidence]&,
+                    result["Samples"],
+                    {All, "CrudePosteriorWeight"}
+                ],
+                GeneralUtilities`AssociationTranspose @ <|
+                    "SampledX" -> AssociationThread[keys, meanAndError[Transpose[sampledX]]],
+                    "LogPosteriorWeight" -> AssociationThread[
                         keys,
-                        meanAndError[Transpose[sampledX]]
-                    ],
-                    <|"LogPosteriorWeight" -> #|> & /@ AssociationThread[
-                        keys,
-                        meanAndError @ Subtract[
-                            Transpose[Log[posteriorWeights]],
-                            logSumExp[Mean[Log @ posteriorWeights]] (* Adjust LogWeights by constant factor so that Total[Exp[meanLogweights]] == 1. *)
+                        meanAndError /@ Transpose[
+                            Subtract[logEvidenceWeigths, zSamples]
                         ]
                     ]
-                },
-                Join @@ # &
+                |>,
+                2
             ],
             "LogEvidence" -> meanAndError[zSamples],
-            "ParameterExpectedValues" -> meanAndError[parameterSamples],
+            "ParameterExpectedValues" -> With[{
+                paramMeanErr = meanAndError[parameterSamples]
+            },
+                If[ Length[paramNames] === Length[paramMeanErr],
+                    AssociationThread[paramNames, paramMeanErr],
+                    paramMeanErr
+                ]
+            ],
             "RelativeEntropy" -> meanAndError[
                 Subtract[
                     posteriorWeights . Replace[Values[result[["Samples", All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}],
@@ -653,57 +1206,51 @@ evidenceSampling[assoc_?AssociationQ, opts : OptionsPattern[]] := Module[{
     ]
 ];
 
-Options[evidenceSampling] = {
-    "PostProcessSamplingRuns" -> 100,
-    "EmpiricalPosteriorDistributionType" -> "Simple"
-};
-
-Options[nestedSampling] = Join[
-    {
-        "SamplePoolSize" -> 25,
-        "StartingPoints" -> Automatic,
-        "MaxIterations" -> 1000,
-        "MinIterations" -> 100,
-        "MonteCarloMethod" -> Automatic,
-        "MonteCarloSteps" -> 200,
-        "InitialMonteCarloStepSize" -> 0.05,
-        "MonteCarloStepSizeAdjustment" -> <|"Order" -> 3, "HistoryLength" -> 10, "MinMax" -> {0.001, 0.5}|>,
-        "MonteCarloStepDistribution" -> NormalDistribution,
-        "LocalOptimumHandling" -> <|
-            "RangeExtension" -> 1.5,
-            "BackTracking" -> 2
-        |>,
-        "TerminationFraction" -> 0.01,
-        "Monitor" -> True,
-        "LikelihoodMaximum" -> Automatic,
-        "MinMaxAcceptanceRate" -> {0.05, 0.95}
-    },
-    Options[evidenceSampling]
-];
-
-combineRuns[results__?AssociationQ, opts : OptionsPattern[]] /; UnsameQ[results] := With[{
+combineRuns[results : inferenceObject[_?AssociationQ].., opts : OptionsPattern[]] /; UnsameQ[results] := With[{
     mergedResults = SortBy[{#LogLikelihood, #Point}&] @ DeleteDuplicatesBy[
-        Join @@ Values /@ {results}[[All, "Samples"]],
+        Join @@ Values /@ {results}[[All, 1, "Samples"]],
         #Point&
     ]
 },
     evidenceSampling[
         <|
-            {results}[[1]],
+            {results}[[All, 1]],
             "Samples" -> AssociationThread[
                 Range[Length @ mergedResults],
                 mergedResults
             ],
-            "LogLikelihoodMaximum" -> Max[{results}[[All, "LogLikelihoodMaximum"]]],
-            "SamplePoolSize" -> Total[{results}[[All, "SamplePoolSize"]]],
-            "GeneratedNestedSamples" -> Length[mergedResults] - Total[{results}[[All, "SamplePoolSize"]]]
+            "LogLikelihoodMaximum" -> Max[{results}[[All, 1, "LogLikelihoodMaximum"]]],
+            "SamplePoolSize" -> Total[{results}[[All, 1, "SamplePoolSize"]]],
+            "GeneratedNestedSamples" -> Length[mergedResults] - Total[{results}[[All, 1, "SamplePoolSize"]]],
+            "TotalSamples" -> Length[mergedResults]
         |>,
+        {results}[[1, 1, "Parameters", All, 1]],
         opts
     ]
 ];
 Options[combineRuns] = Options[evidenceSampling];
 
-parallelNestedSampling[logLikelihood_, prior_, variables_, opts : OptionsPattern[]] := Module[{
+parallelNestedSampling[
+    inferenceObject[assoc_?AssociationQ],
+    opts : OptionsPattern[]
+] /; !numericMatrixQ[assoc["StartingPoints"]] := With[{
+    startingPoints = Replace[
+        OptionValue["StartingPoints"],
+        {
+            Except[_?numericMatrixQ] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
+        }
+    ]
+},
+    parallelNestedSampling[
+        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]],
+        opts
+    ] /; numericMatrixQ[startingPoints]
+];
+
+parallelNestedSampling[
+    inferenceObject[assoc_?AssociationQ],
+    opts : OptionsPattern[]
+] /; numericMatrixQ[assoc["StartingPoints"]] := Module[{
     resultTable,
     parallelRuns = OptionValue["ParallelRuns"],
     nestedSamplingOptions = Join[
@@ -714,21 +1261,22 @@ parallelNestedSampling[logLikelihood_, prior_, variables_, opts : OptionsPattern
         passOptionsDown[parallelNestedSampling, nestedSampling, {opts}]
     ]
 },
-
+    Quiet[LaunchKernels[], {LaunchKernels::nodef}];
     resultTable = ParallelTable[
+        Needs["GeneralUtilities`"];
         nestedSampling[
-            logLikelihood,
-            prior,
-            variables,
+            inferenceObject[assoc],
             Sequence @@ nestedSamplingOptions
         ],
         {parallelRuns},
         Evaluate[Sequence @@ passOptionsDown[parallelNestedSampling, ParallelTable, {opts}]]
     ];
-    combineRuns[
-        ##,
-        Sequence @@ passOptionsDown[parallelNestedSampling, combineRuns, {opts}]
-    ]& @@ resultTable
+    inferenceObject[
+        combineRuns[
+            ##,
+            Sequence @@ passOptionsDown[parallelNestedSampling, combineRuns, {opts}]
+        ]& @@ resultTable
+    ]
 ];
 
 Options[parallelNestedSampling] = Join[
@@ -738,97 +1286,198 @@ Options[parallelNestedSampling] = Join[
 ];
 SetOptions[parallelNestedSampling, DistributedContexts :> $BayesianContexts];
 
+predictiveDistribution::MissGenDist = "No generating distribution specified";
+predictiveDistribution::unsampled = "Posterior has not been sampled yet";
 predictiveDistribution[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&),
-    posteriorFraction : _?NumericQ : 1
-] /; !MissingQ[result["GeneratingDistribution"]] :=
-    predictiveDistribution[
-        result,
-        result["GeneratingDistribution"],
-        posteriorFraction
-    ];
+    inferenceObject[result_?(AssociationQ[#] && MissingQ[#["Samples"]]&)]
+] := (
+    Message[predictiveDistribution::unsampled];
+    $Failed
+);
+predictiveDistribution[
+    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]] && MissingQ[#["GeneratingDistribution"]]&)]
+] := (
+    Message[predictiveDistribution::MissGenDist];
+    $Failed
+);
 
 predictiveDistribution[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&),
-    posteriorFraction : _?NumericQ : 1
-] /; MissingQ[result["GeneratingDistribution"]] := "No distribution specified";
-
-predictiveDistribution[
-    result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&),
-    dist : Except[_?NumericQ],
-    posteriorFraction : _?NumericQ : 1
-] /; Between[posteriorFraction, {0, 1}] := Module[{
-    truncatedResult = takePosteriorFraction[result, posteriorFraction]
+    inferenceObject[result_?(AssociationQ[#] && ListQ[#["Data"]] && !MissingQ[#["Samples"]] && !MissingQ[#["GeneratingDistribution"]]&)]
+] := With[{
+    dist = Block[{
+        paramVector
+    },
+        expressionToFunction[
+            result["GeneratingDistribution"],
+            {result["ParameterSymbols"] -> paramVector}
+        ]
+    ]
 },
     MixtureDistribution[
-        Values @ truncatedResult[["Samples", All, "CrudePosteriorWeight"]],
-        dist @@ #& /@ Values @ truncatedResult[["Samples", All, "Point"]]
+        Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+        dist /@ Values[result[["Samples", All, "Point"]]]
     ]
 ];
 
-calculationReport[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)] := TabView[{
+predictiveDistribution[
+    fst_,
+    inputs : Except[_List?numericMatrixQ]
+] := predictiveDistribution[fst, dataNormalForm[inputs]]
 
-    DynamicModule[{
-        min = Max[result[["Samples", All, "LogLikelihood"]]] - 100
+predictiveDistribution[
+    inferenceObject[result_?(
+        And[
+            AssociationQ[#],
+            Head[#["Data"]] === Rule, ListQ[#["IndependentVariables"]],
+            !MissingQ[#["Samples"]], !MissingQ[#["GeneratingDistribution"]]
+        ]&
+    )],
+    inputs_List?numericMatrixQ
+] := With[{
+    dist = Block[{
+        paramVector, inputData
     },
-        Column[{
-           Dynamic[
-               ListLogLinearPlot[
-                    Transpose[
-                        {
-                            Values @ result[["Samples", All, "SampledX", "Mean"]],
-                            Values @ result[["Samples", All, "LogLikelihood"]]
-                        }
-                    ],
-                    PlotRange -> {min, All},
-                    PlotLabel -> "Enclosed prior mass vs log likelihood",
-                    ImageSize -> Large
-                ],
-                TrackedSymbols :> {min}
-            ],
-            Manipulator[
-                Dynamic[min],
-                Max[result[["Samples", All, "LogLikelihood"]]] + {-100, -1}
-            ]
-        }, Alignment -> Left]
-    ],
-
-    ListLogLogPlot[
-        Transpose[
+        expressionToFunction[
+            result["GeneratingDistribution"],
             {
-                Values @ result[["Samples", All, "SampledX", "Mean"]],
-                Reverse @ Accumulate @ Reverse[
-                    Values @ result[["Samples", All, "CrudePosteriorWeight"]]
-                ]
+                result["ParameterSymbols"] -> paramVector,
+                result["IndependentVariables"] -> inputData
             }
-        ],
-        PlotRange -> All,
-        PlotLabel -> "Enclosed posterior mass vs enclosed prior mass",
-        ImageSize -> Large
-    ],
-
-    ListPlot[
-        Log /@ Accumulate @ Values @ result[["Samples", All, "CrudePosteriorWeight"]],
-        PlotLabel -> "Log evidence",
-        PlotRange -> All,
-        ImageSize -> Large
-    ],
-
-    ListPlot[
-        result[["Samples", All, "LogLikelihood"]],
-        PlotLabel -> "Log likelihood",
-        PlotRange -> All,
-        ImageSize -> Large
-    ],
-
-    ListPlot[
-        Divide[#[[1]], #[[1]] + #[[2]]]& /@ DeleteMissing @ result[["Samples", All, "AcceptanceRejectionCounts"]],
-        PlotLabel -> "Acceptance Ratio",
-        PlotRange -> {0, 1},
-        ImageSize -> Large,
-        Epilog -> InfiniteLine[{{0, 0.5}, {1, 0.5}}]
+        ]
     ]
-}];
+},
+    AssociationMap[
+        Function[{input},
+            MixtureDistribution[
+                Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+                dist[#, input]& /@ Values[result[["Samples", All, "Point"]]]
+            ]
+        ],
+        inputs
+    ]
+];
+
+calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&)]] := With[{
+    style = Function[
+        {
+            Frame -> True,
+            ImageSize -> Large,
+            FrameLabel -> {{#2, None}, {#1, None}}
+        }
+    ],
+    manipulateStyle = {ControlPlacement -> Bottom, Paneled -> False}
+},
+    TabView @ AssociationThread[{
+            "Skilling's plot",
+            "Posterior concentration",
+            "Evidence",
+            "LogLikelihood",
+            "Acceptance rate"
+        } -> {
+        With[{
+            dat = Transpose @ {
+                Values @ result[["Samples", All, "SampledX", "Mean"]],
+                Values @ result[["Samples", All, "LogLikelihood"]]
+            }
+        },
+            Manipulate[
+                Show[
+                    ListLogLinearPlot[
+                        dat,
+                        PlotRange -> MinMax[dat[[All, 2]]],
+                        PlotRangePadding -> {{0, 0}, {0, Scaled[0.01]}},
+                        PlotLabel -> "Skilling's plot",
+                        Sequence @@ style["X; enclosed prior mass", "LogLikelihood"]
+                    ],
+                    PlotRange -> {{All, Log[1]}, {Dynamic[min], All}}
+                ],
+                {
+                    {min, Max[result[["Samples", All, "LogLikelihood"]]] - 100, "Y-axis range"},
+                    Sequence @@ (Max[result[["Samples", All, "LogLikelihood"]]] + {-100, -1})
+                },
+                Evaluate[Sequence @@ manipulateStyle]
+            ]
+        ],
+        
+        With[{
+            points = With[{
+                sorted = SortBy[
+                    result[["Samples", All, {"X", "CrudePosteriorWeight", "LogLikelihood"}]],
+                    #LogLikelihood&
+                ]
+            },
+                Transpose[
+                    {
+                        Values @ sorted[[All, "X"]],
+                        Reverse @ Accumulate @ Reverse[
+                            Values @ sorted[[All, "CrudePosteriorWeight"]]
+                        ]
+                    }
+                ]
+            ]
+        },
+            DynamicModule[{
+                splitPts, range,
+                fit
+            },
+                Manipulate[
+                    splitPts = TakeDrop[points, Sort[Length[points] + 1 - range]];
+                    If[ Length[splitPts[[1]]] > 1,
+                        fit = Exp[
+                            Fit[Log @ splitPts[[1]], {1, \[FormalX]}, \[FormalX]] /. \[FormalX] -> Log[\[FormalX]]
+                        ],
+                        fit = 0
+                    ];
+                    Show[
+                        ListLogLogPlot[
+                            DeleteCases[{}] @ splitPts,
+                            PlotRange -> {{All, 1}, {All, 1}},
+                            PlotLabel -> "Localisation of posterior distribution",
+                            Sequence @@ style["X; enclosed prior mass", "Enclosed posterior mass"]
+                        ],
+                        LogLogPlot[
+                            fit, {\[FormalX], Min[points[[All, 1]]], 1},
+                            PlotRange -> {{All, 1}, {All, 1}}
+                        ],
+                        Graphics[
+                            Inset[
+                                Style[fit, 20],
+                                Scaled[{0.8, 0.2}]
+                            ]
+                        ]
+                    ],
+                    {
+                        {range, {1, Ceiling[Length[points] / 3]}, "Range"},
+                        1, Length[points], 1, ControlType -> IntervalSlider
+                    },
+                    Evaluate[Sequence @@ manipulateStyle]
+                ]
+            ]
+        ],
+        
+        ListPlot[
+            Log /@ Accumulate @ Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+            PlotLabel -> "Evidence progression",
+            PlotRange -> All,
+            Sequence @@ style["Iteration", "Evidence found"]
+        ],
+        
+        ListPlot[
+            result[["Samples", All, "LogLikelihood"]],
+            PlotLabel -> "LogLikelihood progression",
+            PlotRange -> All,
+            Sequence @@ style["Iteration", "LogLikelihood"]
+        ],
+        
+        ListPlot[
+            DeleteMissing @ result[["Samples", All, "AcceptanceRate"]],
+            PlotLabel -> "Acceptance rate",
+            PlotRange -> {0, 1},
+            ImageSize -> Large,
+            Epilog -> InfiniteLine[{{0, 0.5}, {1, 0.5}}]
+        ]
+    }]
+];
 
 End[(*Private*)]
 
