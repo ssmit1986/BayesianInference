@@ -928,23 +928,86 @@ Cell[TextData[{
 the chain:"
 }], "Text",ExpressionUUID->"0db6235f-8c03-4840-a8a5-17e66708441c"],
 
-Cell[BoxData[
+Cell[BoxData[{
  RowBox[{
-  RowBox[{"iterateMCMC", "[", 
-   RowBox[{"chain", ",", "10000"}], "]"}], ";", " ", 
+  RowBox[{
+   RowBox[{"iterateMCMC", "[", 
+    RowBox[{"chain", ",", "10000"}], "]"}], ";"}], " ", 
   RowBox[{"(*", " ", 
-   RowBox[{"Burn", " ", "it", " ", "in", " ", "first"}], " ", "*)"}], 
-  "\[IndentingNewLine]", 
+   RowBox[{"Burn", " ", "it", " ", "in", " ", "first"}], " ", 
+   "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
   RowBox[{"samples", "=", 
    RowBox[{"iterateMCMC", "[", 
-    RowBox[{"chain", ",", "1000"}], "]"}]}], ";"}]], "Input",
+    RowBox[{"chain", ",", "1000"}], "]"}]}], ";"}]}], "Input",
  CellLabel->"In[86]:=",ExpressionUUID->"1786c3e3-853e-469c-9b62-b3fc5eb40963"],
 
 Cell[BoxData[{
  RowBox[{"Mean", "[", "samples", "]"}], "\[IndentingNewLine]", 
  RowBox[{"Covariance", "[", "samples", "]"}], "\[IndentingNewLine]", 
  RowBox[{"SmoothDensityHistogram", "[", "samples", "]"}]}], "Input",
- CellLabel->"In[87]:=",ExpressionUUID->"00ce2e35-e314-41b4-8752-909a7ab05a94"]
+ CellLabel->"In[87]:=",ExpressionUUID->"00ce2e35-e314-41b4-8752-909a7ab05a94"],
+
+Cell["\<\
+The MCMC methods are implemented in the Statistics`MCMC` context, which \
+should be available in Mathematica 11.3. \
+\>", "Text",ExpressionUUID->"6d55541d-5b34-40b7-abae-bbda629dbfe0"],
+
+Cell[TextData[{
+ "View the methods available for ",
+ StyleBox["Statistics`MCMC`BuildMarkovChain",
+  FontWeight->"Bold"],
+ ":"
+}], "Text",ExpressionUUID->"9314c488-ac0c-4d85-aa01-826f3d49210b"],
+
+Cell[BoxData[
+ RowBox[{"Statistics`MCMC`MCMCData", "[", "]"}]], "Input",
+ CellLabel->"In[3]:=",ExpressionUUID->"963b3c26-6257-4333-bcd6-729d8890b084"],
+
+Cell[TextData[{
+ "This package uses the ",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"{", 
+    RowBox[{"\"\<AdaptiveMetropolis\>\"", ",", "\"\<Log\>\""}], "}"}], 
+   TraditionalForm]],ExpressionUUID->"a0555bb2-8794-47a8-800d-c6733c5f0501"],
+ " method. Here\[CloseCurlyQuote]s how you view more detailed information \
+about this method:"
+}], "Text",ExpressionUUID->"7820ab27-db86-488c-9328-45ca405c0c04"],
+
+Cell[BoxData[{
+ RowBox[{"Statistics`MCMC`MCMCData", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"\"\<AdaptiveMetropolis\>\"", ",", "\"\<Log\>\""}], "}"}], ",", 
+   "\"\<Usage\>\""}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"Statistics`MCMC`MCMCData", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"\"\<AdaptiveMetropolis\>\"", ",", "\"\<Log\>\""}], "}"}], ",", 
+   "\"\<Example\>\""}], "]"}]}], "Input",
+ CellLabel->"In[6]:=",ExpressionUUID->"3e742700-3633-46fe-9495-205d6d728fe8"],
+
+Cell[TextData[{
+ "Iteration of the Markov chain is done with ",
+ StyleBox["Statistics`MCMC`MarkovChainIterate",
+  FontWeight->"Bold"],
+ ". It uses the following syntax:"
+}], "Text",ExpressionUUID->"0fcf1a18-3c0c-4c5f-9060-4275e705bae3"],
+
+Cell[BoxData[{
+ RowBox[{"Statistics`MCMC`MarkovChainIterate", "[", 
+  RowBox[{"MCobj", ",", 
+   RowBox[{"num", " ", "of", " ", "samples"}]}], "]"}], "\n", 
+ RowBox[{"Statistics`MCMC`MarkovChainIterate", "[", 
+  RowBox[{"MCobj", ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"num", " ", "of", " ", "samples"}], ",", " ", 
+     RowBox[{
+     "number", " ", "of", " ", "iterations", " ", "between", " ", "each", " ",
+       "sample"}]}], "}"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"d8edc38a-393e-45f4-bb18-c9d7bf5709e9"]
 }, Closed]],
 
 Cell[CellGroupData[{
