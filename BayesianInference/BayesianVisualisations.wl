@@ -310,7 +310,8 @@ regressionPlot1D[
                 rule_Rule :> Transpose[List @@ (Flatten /@ rule)]
             ],
             PlotStyle -> Red
-        ]
+        ],
+        PlotRange -> OptionValue[PlotRange]
     ];
 
 regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] := Quiet[
