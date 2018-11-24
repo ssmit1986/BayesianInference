@@ -316,7 +316,13 @@ constraintsToFunction[parameters : {paramSpecPattern..}, otherConstraints : _ : 
 },
     expressionToFunction[
         And @@ Cases[
-            BooleanConvert[parametersToConstraints[parameters, otherConstraints], "CNF"],
+            BooleanConvert[
+                FullSimplify[
+                    parametersToConstraints[parameters, otherConstraints],
+                    Assumptions -> Element[parameters[[All, 1]], Reals]
+                ],
+                "CNF"
+            ],
             _Less | _Greater | _GreaterEqual | _LessEqual,
             {0, 1}
         ],
