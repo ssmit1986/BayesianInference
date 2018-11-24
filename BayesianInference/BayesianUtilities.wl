@@ -26,6 +26,7 @@ empiricalDistributionToWeightedData::usage = "empiricalDistributionToWeightedDat
 matrixBlockInverse::usage = "matrixBlockInverse[mat, columns] gives Inverse[mat][[columns, colums]]";
 inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] gives Inverse[Inverse[mat][[columns, colums]]]. This function is faster than inverting the result of matrixBlockInverse[mat, columns]";
 $BayesianContexts;
+directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -420,6 +421,19 @@ inverseMatrixBlockInverse[
     Subtract[
         splitMatrix[[2, 2]],
         splitMatrix[[2, 1]] . LinearSolve[splitMatrix[[1, 1]], splitMatrix[[1, 2]]]
+    ]
+];
+
+SetAttributes[directLogLikelihoodFunction, HoldFirst];
+directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
+    expressionToFunction[
+        Hold[
+            Replace[
+                Quiet @ LogLikelihood[dist, data],
+                Except[_?NumericQ] -> $MachineLogZero
+            ]
+        ],
+        vars
     ]
 ];
 
