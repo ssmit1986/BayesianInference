@@ -26,9 +26,9 @@ ignorancePrior[
     priorSpecification : {(_?DistributionParameterQ | "LocationParameter" | "ScaleParameter")..},
     variables : {paramSpecPattern..}
 ] /; Length[priorSpecification] === Length[variables] := Module[{
-    positionsLoc = Position[priorSpecification, "LocationParameter"],
-    positionsScale = Position[priorSpecification, "ScaleParameter"],
-    positionsDist = Position[priorSpecification, _?DistributionParameterQ]
+    positionsLoc = Position[priorSpecification, "LocationParameter", {1}],
+    positionsScale = Position[priorSpecification, "ScaleParameter", {1}],
+    positionsDist = Position[priorSpecification, _?DistributionParameterQ, {1}]
 },
         ProductDistribution @@ ReplacePart[
             priorSpecification,
