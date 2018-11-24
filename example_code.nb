@@ -1938,42 +1938,52 @@ Cell[TextData[{
  ":"
 }], "Text",ExpressionUUID->"0710e344-8102-4209-83df-4ba39210f3b4"],
 
-Cell[BoxData[{
- RowBox[{"process", " ", "=", " ", 
-  RowBox[{"GeometricBrownianMotionProcess", "[", 
-   RowBox[{"mu", ",", " ", "sigma", ",", " ", "start"}], 
-   "]"}]}], "\[IndentingNewLine]", 
- RowBox[{"obj", "=", 
-  RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
-   RowBox[{
-    RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "ts"}], ",", 
-    "\[IndentingNewLine]", 
-    RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
-     RowBox[{"process", "[", "t", "]"}]}], ",", "\[IndentingNewLine]", 
-    RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
-     RowBox[{"{", 
-      RowBox[{
-       RowBox[{"{", 
-        RowBox[{"mu", ",", 
-         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
-       RowBox[{"{", 
-        RowBox[{"sigma", ",", "0.001", ",", "\[Infinity]"}], "}"}]}], "}"}]}],
-     ",", "\[IndentingNewLine]", 
-    RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", 
-     RowBox[{"{", "t", "}"}]}], ",", " ", "\[IndentingNewLine]", 
-    RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
-     RowBox[{"{", 
-      RowBox[{
-       RowBox[{"CauchyDistribution", "[", 
-        RowBox[{"0", ",", "10"}], "]"}], ",", 
-       RowBox[{"ExponentialDistribution", "[", "0.1", "]"}]}], "}"}]}]}], 
-   "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->"In[70]:=",ExpressionUUID->"ebe34a11-9469-4498-adf5-59279e84fbae"],
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"process", " ", "=", " ", 
+   RowBox[{"GeometricBrownianMotionProcess", "[", 
+    RowBox[{"mu", ",", " ", 
+     RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], "]"}]}], ";",
+   " ", 
+  RowBox[{"(*", " ", 
+   RowBox[{"using", " ", 
+    RowBox[{"Exp", "[", "logsigma", "]"}], " ", "makes", " ", "it", " ", 
+    "easier", " ", "to", " ", "search", " ", "for", " ", "sigma", " ", 
+    "values", " ", "over", " ", "a", " ", "large", " ", "range", " ", "of", 
+    " ", "values"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"obj", "=", 
+   RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "ts"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
+      RowBox[{"process", "[", "t", "]"}]}], ",", "\[IndentingNewLine]", 
+     RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"mu", ",", 
+          RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"logsigma", ",", 
+          RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}]}], 
+       "}"}]}], ",", "\[IndentingNewLine]", 
+     RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", 
+      RowBox[{"{", "t", "}"}]}], ",", " ", "\[IndentingNewLine]", 
+     RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"NormalDistribution", "[", 
+         RowBox[{"0", ",", "10"}], "]"}], ",", 
+        RowBox[{"NormalDistribution", "[", 
+         RowBox[{"0", ",", "10"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
+    "]"}]}]}]], "Input",
+ CellLabel->"In[80]:=",ExpressionUUID->"ebe34a11-9469-4498-adf5-59279e84fbae"],
 
 Cell["Run the sampler:", \
 "Text",ExpressionUUID->"fe1859aa-e3b7-42f3-b0d9-b5f991cafad4"],
 
-Cell[BoxData[
+Cell[BoxData[{
  RowBox[{"result", " ", "=", 
   RowBox[{"parallelNestedSampling", "[", "\[IndentingNewLine]", 
    RowBox[{"obj", ",", "\[IndentingNewLine]", 
@@ -1981,10 +1991,26 @@ Cell[BoxData[
     "\[IndentingNewLine]", 
     RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
     "\[IndentingNewLine]", 
-    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], ",",
-     "\[IndentingNewLine]", 
+    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.001"}], 
+    ",", "\[IndentingNewLine]", 
     RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], "\[IndentingNewLine]",
-    "]"}]}]], "Input",ExpressionUUID->"e9b8d4e8-ffe0-4ff4-a473-6b1f6f62fe58"],
+    "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{
+   RowBox[{"takePosteriorFraction", "[", 
+    RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"mu", ",", "logsigma"}], "}"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"e9b8d4e8-ffe0-4ff4-a473-6b1f6f62fe58"],
+
+Cell[BoxData[
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{
+   RowBox[{"takePosteriorFraction", "[", 
+    RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"mu", ",", "logsigma"}], "}"}]}], 
+  "]"}]], "Input",ExpressionUUID->"c5d1ed63-aa94-40d0-a05e-74642bdf6515"],
 
 Cell["\<\
 Plot the error bands of the process when you run it from the starting date:\
@@ -2001,7 +2027,18 @@ Cell[BoxData[{
  RowBox[{"plot", "=", 
   RowBox[{"regressionPlot1D", "[", 
    RowBox[{"result", ",", "predictions"}], "]"}]}]}], "Input",
- CellLabel->"In[61]:=",ExpressionUUID->"782c4152-0131-4f06-8d27-f55a27d47c5e"],
+ CellLabel->
+  "In[110]:=",ExpressionUUID->"782c4152-0131-4f06-8d27-f55a27d47c5e"],
+
+Cell[BoxData[
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{
+   RowBox[{"takePosteriorFraction", "[", 
+    RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"mu", ",", "logsigma"}], "}"}]}], "]"}]], "Input",
+ CellLabel->
+  "In[114]:=",ExpressionUUID->"1cdf66ec-b81a-454c-87e4-e8f4b3b315ee"],
 
 Cell["Extrapolate from the last know data point:", \
 "Text",ExpressionUUID->"eef90003-a712-42d3-bbad-645466f46ad4"],
@@ -2025,7 +2062,8 @@ Cell[BoxData[{
          RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", 
           RowBox[{
            RowBox[{"GeometricBrownianMotionProcess", "[", 
-            RowBox[{"mu", ",", " ", "sigma", ",", " ", 
+            RowBox[{"mu", ",", " ", 
+             RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", 
              RowBox[{"lastPoint", "[", 
               RowBox[{"[", "2", "]"}], "]"}]}], "]"}], "[", 
            RowBox[{"t", " ", "-", " ", 
@@ -2040,29 +2078,33 @@ Cell[BoxData[{
          RowBox[{
           RowBox[{"lastPoint", "[", 
            RowBox[{"[", "1", "]"}], "]"}], "+", "20"}]}], "]"}]}], 
-      "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], " ", 
+      "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], 
   ";"}], "\n", 
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"result", ",", "extrapolations", ",", 
-   RowBox[{"PlotRange", "\[Rule]", "All"}]}], 
-  "]"}]}], "Input",ExpressionUUID->"5ee3e7e8-696f-499c-a254-6396784b205b"],
+   RowBox[{"PlotRange", "\[Rule]", "All"}]}], "]"}]}], "Input",
+ CellLabel->"In[96]:=",ExpressionUUID->"5ee3e7e8-696f-499c-a254-6396784b205b"],
 
-Cell[TextData[{
- "It\[CloseCurlyQuote]s instructive to compare these predictions with the \
-point-estimate from ",
- StyleBox["EstimatedProcess",
-  FontWeight->"Bold"],
- ". The error bands in the point estimate are more optimistic since they don\
-\[CloseCurlyQuote]t include incertainty in the estimated parameters:"
-}], "Text",ExpressionUUID->"d4906e52-6504-4da6-a000-fd0281460c5d"],
+Cell["\<\
+It\[CloseCurlyQuote]s instructive to compare these predictions with the \
+point-estimate from the best sample found. This gives you a good idea wether \
+or not you can approximate the posterior with a point-estimate:\
+\>", "Text",ExpressionUUID->"d4906e52-6504-4da6-a000-fd0281460c5d"],
 
-Cell[BoxData[
+Cell[BoxData[{
  RowBox[{"proc", "=", 
-  RowBox[{"EstimatedProcess", "[", 
-   RowBox[{"ts", ",", "process"}], "]"}]}]], "Input",
- CellLabel->"In[46]:=",ExpressionUUID->"7b61917c-483f-49c3-90b3-1bdcf0a3d9b3"],
-
-Cell[BoxData[
+  RowBox[{
+   RowBox[{
+    RowBox[{"GeometricBrownianMotionProcess", "[", 
+     RowBox[{"#1", ",", " ", 
+      RowBox[{"Exp", "[", "#2", "]"}], ",", " ", "start"}], "]"}], "&"}], "@@", 
+   RowBox[{
+    RowBox[{"First", "[", 
+     RowBox[{"TakeLargestBy", "[", 
+      RowBox[{
+       RowBox[{"result", "[", "\"\<Samples\>\"", "]"}], ",", 
+       RowBox[{"#LogLikelihood", "&"}], ",", "1"}], "]"}], "]"}], "[", 
+    "\"\<Point\>\"", "]"}]}]}], "\n", 
  RowBox[{"Show", "[", "\[IndentingNewLine]", 
   RowBox[{"plot", ",", "\[IndentingNewLine]", 
    RowBox[{"regressionPlot1D", "[", 
@@ -2071,8 +2113,8 @@ Cell[BoxData[
       RowBox[{"proc", ",", 
        RowBox[{"ts", "[", "\"\<Times\>\"", "]"}]}], "]"}], ",", 
      RowBox[{"PlotStyle", "\[Rule]", "Dashed"}]}], "]"}]}], 
-  "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->"In[63]:=",ExpressionUUID->"c99661e9-4e71-470c-b850-4e34258f93e5"]
+  "\[IndentingNewLine]", "]"}]}], "Input",
+ CellLabel->"In[115]:=",ExpressionUUID->"7b61917c-483f-49c3-90b3-1bdcf0a3d9b3"]
 }, Closed]],
 
 Cell[CellGroupData[{
