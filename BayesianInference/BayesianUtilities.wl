@@ -273,7 +273,7 @@ normalizedDataQ = With[{
 takePosteriorFraction[inferenceObject[assoc_?AssociationQ], rest___] := inferenceObject @ takePosteriorFraction[assoc, rest];
 
 takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), 1] := MapAt[
-    SortBy[-#CrudePosteriorWeight &],
+    SortBy[-#CrudeLogPosteriorWeight &],
     result,
     {"Samples"}
 ];
@@ -284,7 +284,7 @@ takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), fr
     MapAt[
         Function[ samples,
             TakeWhile[
-                SortBy[samples, -#CrudePosteriorWeight &],
+                SortBy[samples, -#CrudeLogPosteriorWeight &],
                 Function[
                     With[{
                         boole = count <= frac
@@ -315,7 +315,8 @@ logSumExp = Composition[
             ] 
         ]
     ],
-    Select[NumericQ] (* Get rid of -Infinity *)
+    Select[NumericQ] (* Get rid of -Infinity *),
+    Replace[assoc_?AssociationQ :> Values[assoc]]
 ];
 
 checkCompiledFunction::mainEval = "CompiledFunction `1` has calls to MainEvaluate and may not perform optimally";
@@ -424,7 +425,6 @@ inverseMatrixBlockInverse[
     ]
 ];
 
-SetAttributes[directLogLikelihoodFunction, HoldFirst];
 directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
     expressionToFunction[
         Hold[

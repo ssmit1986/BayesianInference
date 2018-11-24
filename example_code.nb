@@ -489,7 +489,7 @@ Cell[BoxData[{
     "This", " ", "is", " ", "an", " ", "optional", " ", "property", " ", 
      "that", " ", "we", " ", "attach", " ", "for", " ", "convenience"}], " ", 
     "*)"}], "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->"In[3]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
+ CellLabel->"In[30]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
 
 Cell["\<\
 Note that the data has been transformed from a vector to a matrix as part of \
@@ -500,30 +500,37 @@ Cell[BoxData[{"testdata", "\[IndentingNewLine]",
  RowBox[{"obj", "[", "\"\<Data\>\"", "]"}]}], "Input",
  CellLabel->"In[16]:=",ExpressionUUID->"224b884a-511e-4a16-bf38-b70655db05e8"],
 
-Cell["Run the algorithm.", \
+Cell["Run the algorithm with various options:", \
 "Text",ExpressionUUID->"9c4464e2-9891-4e02-9d77-058970dec72a"],
 
 Cell[CellGroupData[{
 
 Cell["\<\
- The \[OpenCurlyDoubleQuote]MonteCarloSteps\[CloseCurlyDoubleQuote] option \
-determines how many MCMC steps to take to generate each new sample.\
+\[OpenCurlyDoubleQuote]MonteCarloSteps\[CloseCurlyDoubleQuote] determines how \
+many MCMC steps to take to generate each new sample.\
 \>", "Item",ExpressionUUID->"f6f25b18-9a75-484c-a926-863c57922e19"],
 
 Cell["\<\
-The \"MinMaxAcceptanceRate\" option determines the limits of the MCMC \
-acceptance rate before the algorithm accepts a new sample.\
+\"MinMaxAcceptanceRate\" determines the limits of the MCMC acceptance rate \
+before the algorithm accepts a new sample.\
 \>", "Item",ExpressionUUID->"c8bc7da0-97aa-45a8-94d7-e409c07599c5"],
 
 Cell["\<\
-The \"TerminationFraction\" option determines how long the algorithm iterates \
-before convergence is reached.\
+\"TerminationFraction\" determines how long the algorithm iterates before \
+convergence is reached.\
 \>", "Item",ExpressionUUID->"fc329690-1965-4b30-b23d-0dfe742e0b84"],
 
 Cell["\<\
-The \[OpenCurlyDoubleQuote]MaxIterations\[CloseCurlyDoubleQuote] determines \
-the maximum number of samples that will be generated\
-\>", "Item",ExpressionUUID->"6d70996d-94ab-4800-9bfa-2c408817d8a9"]
+\[OpenCurlyDoubleQuote]MaxIterations\[CloseCurlyDoubleQuote] determines the \
+maximum number of samples that will be generated\
+\>", "Item",ExpressionUUID->"6d70996d-94ab-4800-9bfa-2c408817d8a9"],
+
+Cell["\<\
+\[OpenCurlyDoubleQuote]LogLikelihoodMaximum\[CloseCurlyDoubleQuote] allows \
+the user to specify the maximum of the loglikelihood function if this is \
+already known. Specifying this value will help the algorithm to determine \
+when it should terminate.\
+\>", "Item",ExpressionUUID->"ac030149-d506-4f53-b031-054ab7fcf768"]
 }, Open  ]],
 
 Cell[BoxData[{
@@ -542,11 +549,10 @@ Cell[BoxData[{
    "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<LogEvidence\>\"", "]"}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<Properties\>\"", "]"}]}], "Input",
- CellLabel->
-  "In[225]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
+ CellLabel->"In[33]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
 
 Cell[TextData[{
- "The standard error on the logevidence is obtained by Monte Carlo sampling \
+ "The standard error on the log evidence is obtained by Monte Carlo sampling \
 of the ",
  Cell[BoxData[
   FormBox["X", TraditionalForm]],ExpressionUUID->
@@ -583,8 +589,7 @@ Cell[BoxData[{
       RowBox[{"0.1", ",", "0.9"}], "}"}]}]}], "\[IndentingNewLine]", 
    "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<LogEvidence\>\"", "]"}]}], "Input",
- CellLabel->
-  "In[239]:=",ExpressionUUID->"a47f8460-0e47-4cea-98c6-be14ffa00e40"],
+ CellLabel->"In[62]:=",ExpressionUUID->"a47f8460-0e47-4cea-98c6-be14ffa00e40"],
 
 Cell[TextData[{
  "Use the ",
@@ -1247,7 +1252,7 @@ Cell[BoxData[{
     RowBox[{"List", "@@@", "testdata"}], "]"}]}], "\[IndentingNewLine]", 
   "]"}], "\[IndentingNewLine]", "testdata"}], "Input",
  CellLabel->
-  "In[189]:=",ExpressionUUID->"eda63068-e7af-4003-bbc7-9d06cd13dced"],
+  "In[291]:=",ExpressionUUID->"eda63068-e7af-4003-bbc7-9d06cd13dced"],
 
 Cell[TextData[{
  "Note that the data is specified as a list of rules or as a rule of lists (",
@@ -1308,7 +1313,7 @@ Cell[BoxData[{
    "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"obj", "[", "\"\<Data\>\"", "]"}]}], "Input",
  CellLabel->
-  "In[191]:=",ExpressionUUID->"0bece909-f8bd-4067-914d-743675c6bff2"],
+  "In[343]:=",ExpressionUUID->"0bece909-f8bd-4067-914d-743675c6bff2"],
 
 Cell[TextData[{
  "The functions ",
@@ -1336,7 +1341,7 @@ Cell[BoxData[{
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"result", ",", "predictions"}], "]"}]}], "Input",
  CellLabel->
-  "In[198]:=",ExpressionUUID->"d7c9dbb4-5f69-48f3-8a47-1d1c6af3ff80"],
+  "In[345]:=",ExpressionUUID->"d7c9dbb4-5f69-48f3-8a47-1d1c6af3ff80"],
 
 Cell["Compare 3 polynomial models of increasing order:", \
 "Text",ExpressionUUID->"0bee3961-019b-413b-a42c-5880deccbcd7"],
@@ -1446,7 +1451,17 @@ Cell[BoxData[
      RowBox[{"takePosteriorFraction", "[", 
       RowBox[{"#", ",", "0.99"}], "]"}], "&"}], ",", "\[IndentingNewLine]", 
     "result"}], "\[IndentingNewLine]", "]"}]}]], "Input",
- CellLabel->"In[178]:=",ExpressionUUID->"094fb4a8-d123-4687-a48b-7234c6a1c4ce"]
+ CellLabel->
+  "In[178]:=",ExpressionUUID->"094fb4a8-d123-4687-a48b-7234c6a1c4ce"],
+
+Cell[BoxData[
+ RowBox[{"result", "[", "\"\<CrudeLogEvidence\>\"", "]"}]], "Input",
+ CellLabel->
+  "In[303]:=",ExpressionUUID->"93db15bf-618e-4de0-b650-9d06e2e3eab0"],
+
+Cell[BoxData[
+ RowBox[{"calculationReport", "[", "result", "]"}]], "Input",
+ CellLabel->"In[302]:=",ExpressionUUID->"184d938f-cbc6-4c62-997a-d135429b61db"]
 }, Closed]],
 
 Cell[CellGroupData[{
@@ -1508,7 +1523,8 @@ Cell[BoxData[{
     RowBox[{"List", "@@@", 
      RowBox[{"Thread", "[", "testdata", "]"}]}], ",", 
     RowBox[{"PlotStyle", "\[Rule]", "Red"}]}], "]"}]}]}], "Input",
- CellLabel->"In[9]:=",ExpressionUUID->"80d48443-5e1c-4a65-a617-ae2b51124942"],
+ CellLabel->
+  "In[350]:=",ExpressionUUID->"80d48443-5e1c-4a65-a617-ae2b51124942"],
 
 Cell[TextData[{
  "To illustrate how a Gaussian process works, consider the Manipulate below. \
@@ -1698,7 +1714,8 @@ Cell[BoxData[
      RowBox[{"{", 
       RowBox[{"m", ",", "3", ",", "\"\<Mean\>\""}], "}"}], ",", "0", ",", 
      "5"}], "}"}]}], "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->"In[56]:=",ExpressionUUID->"8aca103c-4e6e-4eee-a936-66dbbb668224"],
+ CellLabel->
+  "In[352]:=",ExpressionUUID->"8aca103c-4e6e-4eee-a936-66dbbb668224"],
 
 Cell[TextData[{
  "To perform GP regression, it\[CloseCurlyQuote]s usually a good idea to \
@@ -1717,7 +1734,8 @@ Cell[BoxData[{
  RowBox[{"norm", "[", 
   RowBox[{"[", 
    RowBox[{"All", ",", "\"\<NormalizedData\>\""}], "]"}], "]"}]}], "Input",
- CellLabel->"In[62]:=",ExpressionUUID->"dbd56840-4c5a-4f76-b312-8e0928231023"],
+ CellLabel->
+  "In[353]:=",ExpressionUUID->"dbd56840-4c5a-4f76-b312-8e0928231023"],
 
 Cell["Reconstruct the original inputs:", \
 "Text",ExpressionUUID->"95462184-e3c6-4a1c-8959-c7f8ded55dd3"],
@@ -1728,7 +1746,8 @@ Cell[BoxData[
    RowBox[{"\"\<Input\>\"", ",", "\"\<InverseFunction\>\""}], "]"}], "@", 
   RowBox[{"norm", "[", 
    RowBox[{"\"\<Input\>\"", ",", "\"\<NormalizedData\>\""}], "]"}]}]], "Input",
- CellLabel->"In[17]:=",ExpressionUUID->"14c3470f-5cb7-4576-bc02-2d6c52f6b5b2"],
+ CellLabel->
+  "In[355]:=",ExpressionUUID->"14c3470f-5cb7-4576-bc02-2d6c52f6b5b2"],
 
 Cell["Define a GP and perform nested sampling on it:", \
 "Text",ExpressionUUID->"a2d8e085-6e62-4d7f-8966-7a5b6f263b7d"],
@@ -1756,16 +1775,17 @@ Cell[BoxData[
        RowBox[{
         SuperscriptBox["s1", "2"], " ", "*", 
         RowBox[{"Boole", "[", 
-         RowBox[{"dsq", "<", "6"}], "]"}], " ", 
+         RowBox[{"dsq", "<", 
+          SuperscriptBox["6", "2"]}], "]"}], " ", 
         RowBox[{"Exp", "[", 
          RowBox[{"-", "dsq"}], "]"}]}]}], " ", 
       RowBox[{"(*", " ", 
        RowBox[{
        "Use", " ", "a", " ", "truncated", " ", "kernel", " ", "to", " ", 
         "make", " ", "the", " ", "covariance", " ", "matrix", " ", "sparser", 
-        " ", "for", " ", "small", " ", "lenght", " ", "scales"}], " ", "*)"}],
-       "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", "]"}], ",", 
-    "\[IndentingNewLine]", 
+        " ", "for", " ", "small", " ", "values", " ", "of", " ", "l"}], " ", 
+       "*)"}], "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", "]"}], 
+    ",", "\[IndentingNewLine]", 
     RowBox[{"Function", "[", 
      SuperscriptBox["s0", "2"], "]"}], ",", " ", 
     RowBox[{"(*", " ", 
@@ -1807,8 +1827,8 @@ Cell[BoxData[
      RowBox[{"in", " ", "functionality", " ", "of", " ", 
       RowBox[{"LogLikelihood", ".", " ", "You"}], " ", "can", " ", "also", 
       " ", "specify", " ", "a", " ", "function", " ", "explicitely"}]}], " ", 
-    "*)"}], "\[IndentingNewLine]", "]"}]}]], "Input",
- CellLabel->"In[90]:=",ExpressionUUID->"1aa21abf-8a3e-4e4e-9f6a-1625bab22d65"],
+    "*)"}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input",ExpressionUUID->"1aa21abf-8a3e-4e4e-9f6a-1625bab22d65"],
 
 Cell[BoxData[
  RowBox[{"result", "=", 
@@ -1821,8 +1841,9 @@ Cell[BoxData[
     RowBox[{"\"\<MaxIterations\>\"", "\[Rule]", "10000"}], ",", 
     "\[IndentingNewLine]", 
     RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}]}], 
-   "\[IndentingNewLine]", 
-   "]"}]}]], "Input",ExpressionUUID->"3232c939-b35d-4150-930a-3d100c4211b3"],
+   "\[IndentingNewLine]", "]"}]}]], "Input",
+ CellLabel->
+  "In[366]:=",ExpressionUUID->"3232c939-b35d-4150-930a-3d100c4211b3"],
 
 Cell[BoxData[{
  RowBox[{"covarianceMatrixPlot", "[", "result", "]"}], "\n", 
@@ -1831,8 +1852,9 @@ Cell[BoxData[{
    RowBox[{"takePosteriorFraction", "[", 
     RowBox[{"result", ",", "0.99"}], "]"}], ",", 
    RowBox[{"{", 
-    RowBox[{"s0", ",", "s1", ",", "l"}], "}"}]}], 
-  "]"}]}], "Input",ExpressionUUID->"93091536-6b82-464c-9ddd-e795673cb45c"],
+    RowBox[{"s0", ",", "s1", ",", "l"}], "}"}]}], "]"}]}], "Input",
+ CellLabel->
+  "In[367]:=",ExpressionUUID->"93091536-6b82-464c-9ddd-e795673cb45c"],
 
 Cell["Visualise the predictions:", \
 "Text",ExpressionUUID->"ea5dd347-5301-4b01-a412-c61318e6a009"],
@@ -1850,11 +1872,193 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"result", ",", " ", "predictions"}], "]"}]}], "Input",
- CellLabel->"In[88]:=",ExpressionUUID->"18f7fd72-b160-4bdb-9712-01cd3a87a018"],
+ CellLabel->
+  "In[369]:=",ExpressionUUID->"18f7fd72-b160-4bdb-9712-01cd3a87a018"],
 
 Cell[BoxData[
- RowBox[{"calculationReport", "[", "result", 
-  "]"}]], "Input",ExpressionUUID->"1ad9895f-d50c-4eb6-ab16-e35bc4035b66"]
+ RowBox[{"calculationReport", "[", "result", "]"}]], "Input",
+ CellLabel->"In[371]:=",ExpressionUUID->"1ad9895f-d50c-4eb6-ab16-e35bc4035b66"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Fitting with time series processes", \
+"Subsubsection",ExpressionUUID->"1f19b7ef-ec1f-4b0a-b4b2-38c638506426"],
+
+Cell["Get some timeseries data:", \
+"Text",ExpressionUUID->"8b95a3a6-9fba-44ab-a347-2f86ca9bf8d4"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"data", " ", "=", " ", 
+   RowBox[{"FinancialData", "[", 
+    RowBox[{"\"\<AS:ASML\>\"", ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"Today", "-", 
+        TemplateBox[{"3","\"mo\"","months","\"Months\""},
+         "Quantity"]}], ",", "Today"}], "}"}]}], "]"}]}], ";"}]], "Input",
+ CellLabel->"In[3]:=",ExpressionUUID->"98599f55-defc-452c-803a-46d006653df6"],
+
+Cell["\<\
+Transform the time axis and separate the starting point from the rest:\
+\>", "Text",ExpressionUUID->"0a9177e6-89f4-4363-81ef-b2e9610208f6"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"data", " ", "=", " ", 
+   RowBox[{"TimeSeriesRescale", "[", 
+    RowBox[{"data", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", 
+       RowBox[{
+        RowBox[{"Length", "[", "data", "]"}], "-", "1"}]}], "}"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"start", ",", "ts"}], "}"}], " ", "=", " ", 
+   RowBox[{"TakeDrop", "[", 
+    RowBox[{"data", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"start", " ", "=", 
+  RowBox[{"start", "[", 
+   RowBox[{"[", 
+    RowBox[{"1", ",", "2"}], "]"}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"ts", " ", "=", 
+  RowBox[{"TimeSeries", "[", "ts", "]"}]}]}], "Input",
+ CellLabel->"In[4]:=",ExpressionUUID->"04cb4d59-e2ca-461f-b8cd-032e5c08c094"],
+
+Cell[TextData[{
+ "Define a loglikelihood function using the built-in function ",
+ StyleBox["LogLikelihood",
+  FontWeight->"Bold"],
+ ":"
+}], "Text",ExpressionUUID->"8476bb84-250c-4784-809b-d935cc18c7f7"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"process", " ", "=", " ", 
+   RowBox[{"GeometricBrownianMotionProcess", "[", 
+    RowBox[{"mu", ",", " ", "sigma", ",", " ", "start"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"logLikeGBMProcess", " ", "=", 
+  RowBox[{"ReleaseHold", "[", "\[IndentingNewLine]", 
+   RowBox[{"expressionToFunction", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"Hold", "[", "\[IndentingNewLine]", 
+      RowBox[{"Replace", "[", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"Quiet", "@", 
+         RowBox[{"LogLikelihood", "[", 
+          RowBox[{
+           RowBox[{"GeometricBrownianMotionProcess", "[", 
+            RowBox[{"mu", ",", " ", "sigma", ",", " ", "start"}], "]"}], ",", 
+           "ts"}], "]"}]}], ",", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"Except", "[", 
+          RowBox[{"_", "?", "NumericQ"}], "]"}], " ", "\[Rule]", " ", 
+         "$MachineLogZero"}]}], "\[IndentingNewLine]", "]"}], 
+      "\[IndentingNewLine]", "]"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{"mu", ",", "sigma"}], "}"}]}], "\[IndentingNewLine]", "]"}], 
+   "\[IndentingNewLine]", "]"}]}]}], "Input",
+ CellLabel->"In[8]:=",ExpressionUUID->"108f94c2-3fd8-4b9d-a527-b0ad5dc1e533"],
+
+Cell[TextData[{
+ "Note the use of ",
+ StyleBox["Hold",
+  FontWeight->"Bold"],
+ " and ",
+ StyleBox["ReleaseHold",
+  FontWeight->"Bold"],
+ " to prevent the loglikelihood from evaluating symbolically as well as the \
+use of Replace to make sure the returned result is always numeric even for \
+input values where the loglikelihood may not be well-defined. The function ",
+ StyleBox["directLogLikelihoodFunction",
+  FontWeight->"Bold"],
+ " automates this step for you:"
+}], "Text",ExpressionUUID->"c224742b-e9d7-41ab-aac8-cad8e55e6838"],
+
+Cell[BoxData[
+ RowBox[{"logLikeGBMProcess", "=", 
+  RowBox[{"directLogLikelihoodFunction", "[", 
+   RowBox[{"process", ",", "ts", ",", 
+    RowBox[{"{", 
+     RowBox[{"mu", ",", "sigma"}], "}"}]}], "]"}]}]], "Input",
+ CellLabel->"In[10]:=",ExpressionUUID->"786b87df-9aa1-4e52-8106-bf44391d62d6"],
+
+Cell["\<\
+Define the inference problem with the pre-defined loglikelihood function:\
+\>", "Text",ExpressionUUID->"0710e344-8102-4209-83df-4ba39210f3b4"],
+
+Cell[BoxData[
+ RowBox[{"obj", "=", 
+  RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+    "\"\<LogLikelihoodFunction\>\"", "\[Rule]", " ", "logLikeGBMProcess"}], 
+    ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "ts"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
+     RowBox[{"GeometricBrownianMotionProcess", "[", 
+      RowBox[{"mu", ",", " ", "sigma", ",", " ", "start"}], "]"}]}], ",", " ", 
+    RowBox[{"(*", " ", 
+     RowBox[{
+      RowBox[{"Strictly", " ", "speaking"}], ",", " ", 
+      RowBox[{
+      "the", " ", "GeneratingDistribution", " ", "and", " ", "Data", " ", 
+       "can", " ", "be", " ", "omitted", " ", "because", " ", "we", " ", 
+       "already", " ", "have", " ", "defined", " ", "a", " ", "loglikelihood",
+        " ", 
+       RowBox[{"function", ".", " ", 
+        RowBox[{"It", "'"}]}], "s", " ", "stil", " ", "a", " ", "good", " ", 
+       "idea", " ", "to", " ", "specify", " ", "it"}], ",", " ", 
+      RowBox[{"though", "."}]}], " ", "*)"}], "\[IndentingNewLine]", 
+    RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"mu", ",", 
+         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"sigma", ",", "0.001", ",", "\[Infinity]"}], "}"}]}], "}"}]}],
+     ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", 
+     RowBox[{"{", "t", "}"}]}], ",", " ", 
+    RowBox[{"(*", " ", 
+     RowBox[{
+      RowBox[{
+      "Regression", " ", "probems", " ", "should", " ", "always", " ", "have",
+        " ", "in", " ", "independent", " ", "variable", " ", "defined"}], ",",
+       " ", 
+      RowBox[{"even", " ", "if", " ", "it", " ", 
+       RowBox[{"doesn", "'"}], "t", " ", "appear", " ", "in", " ", "the", " ",
+        "model", " ", "directly"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+    RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"CauchyDistribution", "[", 
+        RowBox[{"0", ",", "10"}], "]"}], ",", 
+       RowBox[{"ExponentialDistribution", "[", "0.1", "]"}]}], "}"}]}]}], 
+   "\[IndentingNewLine]", "]"}]}]], "Input",
+ CellLabel->"In[28]:=",ExpressionUUID->"ebe34a11-9469-4498-adf5-59279e84fbae"],
+
+Cell["Run the sampler (this will take a while):", \
+"Text",ExpressionUUID->"fe1859aa-e3b7-42f3-b0d9-b5f991cafad4"],
+
+Cell[BoxData[
+ RowBox[{"result", " ", "=", 
+  RowBox[{"parallelNestedSampling", "[", "\[IndentingNewLine]", 
+   RowBox[{"obj", ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<SamplePoolSize\>\"", "\[Rule]", "20"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], ",",
+     "\[IndentingNewLine]", 
+    RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], "\[IndentingNewLine]",
+    "]"}]}]], "Input",ExpressionUUID->"e9b8d4e8-ffe0-4ff4-a473-6b1f6f62fe58"]
 }, Closed]]
 }, Open  ]]
 }, Open  ]]
@@ -1862,6 +2066,7 @@ Cell[BoxData[
 },
 WindowSize->{1904, 997},
 WindowMargins->{{-8, Automatic}, {Automatic, 0}},
+WindowStatusArea->None,
 PrivateNotebookOptions->{"FileOutlineCache"->False},
 ShowGroupOpener->True,
 TrackCellChangeTimes->False,
