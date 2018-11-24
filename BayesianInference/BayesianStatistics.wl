@@ -154,7 +154,8 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
         assoc = input,
         keys,
         tempKeys,
-        randomTestPoints
+        randomTestPoints,
+        regressionQ
     },
         keys = Keys[DeleteMissing @ assoc];
         If[ MemberQ[keys, "Data"],
@@ -177,6 +178,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 )
             ]
         ];
+        
         Which[ 
             MatchQ[assoc["Parameters"], {paramSpecPattern..}],
                 Null,
@@ -186,8 +188,10 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
                 Throw[$Failed, "problemDef"]
         ];
+        
+        regressionQ = regressionDataQ[assoc["Data"]];
         If[ MemberQ[keys, "IndependentVariables"],
-            If[ Head[assoc["Data"]] =!= Rule,
+            If[ !regressionQ,
                 Message[defineInferenceProblem::dataFormat];
                 Throw[$Failed, "problemDef"]
             ];
@@ -220,7 +224,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 AppendTo[assoc, "LogLikelihoodFunction" -> logLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
             And[
                 SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "IndependentVariables", "Parameters"}],
-                Head[assoc["Data"]] === Rule
+                regressionQ
             ],
                 AppendTo[assoc, "LogLikelihoodFunction" -> regressionLogLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
             True,
@@ -473,6 +477,12 @@ logLikelihoodFunction[dist_, ___] := (
     Message[defineInferenceProblem::logLike, dist];
     Throw[$Failed, "problemDef"]
 );
+
+regressionLogLikelihoodFunction[dist_, ts_TemporalData, rest__] := regressionLogLikelihoodFunction[
+    dist,
+    dataNormalForm[ts["Times"]] -> dataNormalForm[ts["Values"]],
+    rest
+];
 
 regressionLogLikelihoodFunction[
     regressionDistribution_?DistributionParameterQ,
@@ -1328,7 +1338,8 @@ predictiveDistribution[
     inferenceObject[result_?(
         And[
             AssociationQ[#],
-            Head[#["Data"]] === Rule, ListQ[#["IndependentVariables"]],
+            regressionDataQ[#["Data"]],
+            ListQ[#["IndependentVariables"]],
             !MissingQ[#["Samples"]], !MissingQ[#["GeneratingDistribution"]]
         ]&
     )],
