@@ -304,14 +304,14 @@ regressionPlot1D[
                 )
             ], "Text"]
         ],
-        Graphics[
-            {
-                Red,
-                Point[
-                    Transpose[List @@ (Flatten /@ result["Data"])]
-                ]
-            }
-        ]
+        ListPlot[
+            Replace[
+                result["Data"],
+                rule_Rule :> Transpose[List @@ (Flatten /@ rule)]
+            ],
+            PlotStyle -> Red
+        ],
+        PlotRange -> OptionValue[PlotRange]
     ];
 
 regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] := Quiet[

@@ -8,6 +8,7 @@ normalizeData::usage = "normalizeData[data] will center and scale the data and r
 normalizedDataQ::usage = "normalizedDataQ[data] tests if dat is an association produced by normalizedData";
 dataNormalForm::usage = "dataNormalForm[data] brings the data to the standard form that is used throughout this package";
 dataNormalFormQ::usage = "dataNormalFormQ[data] tests if the data are in the standard format produced by dataNormalForm";
+regressionDataQ::usage = "regressionDataQ[data] test if the data are in a format suitable for regression problems";
 takePosteriorFraction::usage = "takePosteriorFraction[obj, frac] drops the samples with the smallest weights from the posterior distribution, leaving fraction frac of the posterior mass";
 logSumExp::usage = "logSumExp[list] calculates Log[Total[Exp[list]]], but in a numerically stable fashion. Does not thread automatically";
 $MachineLogZero::usage = "A number that is used to represent the the log of zero probabilities in machine numbers";
@@ -25,6 +26,7 @@ empiricalDistributionToWeightedData::usage = "empiricalDistributionToWeightedDat
 matrixBlockInverse::usage = "matrixBlockInverse[mat, columns] gives Inverse[mat][[columns, colums]]";
 inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] gives Inverse[Inverse[mat][[columns, colums]]]. This function is faster than inverting the result of matrixBlockInverse[mat, columns]";
 $BayesianContexts;
+directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -181,6 +183,7 @@ xLogy := Compile[{
 ];
 
 dataNormalForm[miss_Missing] := miss;
+dataNormalForm[ts_TemporalData] := ts;
 dataNormalForm[data_List?numericMatrixQ] := data;
 dataNormalForm[data_List?numericVectorQ] := List /@ data;
 dataNormalForm[data : {__Rule}] := dataNormalForm[Thread[data, Rule]];
@@ -194,9 +197,22 @@ dataNormalForm[___] := $Failed;
 dataNormalFormQ = Function[
     Or[
         numericMatrixQ[#],
+        Head[#] === TemporalData,
         Head[#] === Rule && AllTrue[#, numericMatrixQ]
     ]
-]
+];
+regressionDataQ = Function[
+    And[
+        dataNormalFormQ[#],
+        Or[
+            Head[#] === TemporalData,
+            And[
+                Head[#] === Rule,
+                MatchQ[Dimensions[#[[1]]], {_, 1}]
+            ]
+        ]
+    ]
+];
 
 normalizeData[data : {__Rule}] := normalizeData[
     Developer`ToPackedArray[data[[All, 1]]],
@@ -257,7 +273,7 @@ normalizedDataQ = With[{
 takePosteriorFraction[inferenceObject[assoc_?AssociationQ], rest___] := inferenceObject @ takePosteriorFraction[assoc, rest];
 
 takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), 1] := MapAt[
-    SortBy[-#CrudePosteriorWeight &],
+    SortBy[-#CrudeLogPosteriorWeight &],
     result,
     {"Samples"}
 ];
@@ -268,7 +284,7 @@ takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), fr
     MapAt[
         Function[ samples,
             TakeWhile[
-                SortBy[samples, -#CrudePosteriorWeight &],
+                SortBy[samples, -#CrudeLogPosteriorWeight &],
                 Function[
                     With[{
                         boole = count <= frac
@@ -299,7 +315,8 @@ logSumExp = Composition[
             ] 
         ]
     ],
-    Select[NumericQ] (* Get rid of -Infinity *)
+    Select[NumericQ] (* Get rid of -Infinity *),
+    Replace[assoc_?AssociationQ :> Values[assoc]]
 ];
 
 checkCompiledFunction::mainEval = "CompiledFunction `1` has calls to MainEvaluate and may not perform optimally";
@@ -352,6 +369,10 @@ varsToParamVector[expr_, (vars : {__Symbol}) -> (paramVectorSymbol : (_Symbol | 
 );
 
 expressionToFunction[expr_, rule_Rule, attributes___] := expressionToFunction[expr, {rule}, attributes];
+expressionToFunction[expr_, var_Symbol, attributes___] := expressionToFunction[expr, {{var}}, attributes]
+expressionToFunction[expr_, vars : {__Symbol}, attributes___] := expressionToFunction[expr, {vars}, attributes];
+expressionToFunction[expr_, vars : {{__Symbol}..}, attributes___] := 
+    expressionToFunction[expr, Thread[vars -> Array[Slot, Length[vars]]], attributes];
 
 expressionToFunction[expr_, rules : {({__Symbol} -> _Symbol)..}, attributes___] := Function[
     Evaluate @ rules[[All, 2]],
@@ -401,6 +422,18 @@ inverseMatrixBlockInverse[
     Subtract[
         splitMatrix[[2, 2]],
         splitMatrix[[2, 1]] . LinearSolve[splitMatrix[[1, 1]], splitMatrix[[1, 2]]]
+    ]
+];
+
+directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
+    expressionToFunction[
+        Hold[
+            Replace[
+                Quiet @ LogLikelihood[dist, data],
+                Except[_?NumericQ] -> $MachineLogZero
+            ]
+        ],
+        vars
     ]
 ];
 

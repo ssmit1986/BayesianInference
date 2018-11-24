@@ -26,9 +26,9 @@ ignorancePrior[
     priorSpecification : {(_?DistributionParameterQ | "LocationParameter" | "ScaleParameter")..},
     variables : {paramSpecPattern..}
 ] /; Length[priorSpecification] === Length[variables] := Module[{
-    positionsLoc = Position[priorSpecification, "LocationParameter"],
-    positionsScale = Position[priorSpecification, "ScaleParameter"],
-    positionsDist = Position[priorSpecification, _?DistributionParameterQ]
+    positionsLoc = Position[priorSpecification, "LocationParameter", {1}],
+    positionsScale = Position[priorSpecification, "ScaleParameter", {1}],
+    positionsDist = Position[priorSpecification, _?DistributionParameterQ, {1}]
 },
         ProductDistribution @@ ReplacePart[
             priorSpecification,
@@ -154,7 +154,8 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
         assoc = input,
         keys,
         tempKeys,
-        randomTestPoints
+        randomTestPoints,
+        regressionQ
     },
         keys = Keys[DeleteMissing @ assoc];
         If[ MemberQ[keys, "Data"],
@@ -177,6 +178,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 )
             ]
         ];
+        
         Which[ 
             MatchQ[assoc["Parameters"], {paramSpecPattern..}],
                 Null,
@@ -186,8 +188,10 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
                 Throw[$Failed, "problemDef"]
         ];
+        
+        regressionQ = regressionDataQ[assoc["Data"]];
         If[ MemberQ[keys, "IndependentVariables"],
-            If[ Head[assoc["Data"]] =!= Rule,
+            If[ !regressionQ,
                 Message[defineInferenceProblem::dataFormat];
                 Throw[$Failed, "problemDef"]
             ];
@@ -220,7 +224,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                 AppendTo[assoc, "LogLikelihoodFunction" -> logLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
             And[
                 SubsetQ[keys, tempKeys = {"GeneratingDistribution", "Data", "IndependentVariables", "Parameters"}],
-                Head[assoc["Data"]] === Rule
+                regressionQ
             ],
                 AppendTo[assoc, "LogLikelihoodFunction" -> regressionLogLikelihoodFunction @@ Values[assoc[[tempKeys]]]],
             True,
@@ -474,6 +478,12 @@ logLikelihoodFunction[dist_, ___] := (
     Throw[$Failed, "problemDef"]
 );
 
+regressionLogLikelihoodFunction[dist_, ts_TemporalData, rest__] := regressionLogLikelihoodFunction[
+    dist,
+    dataNormalForm[ts["Times"]] -> dataNormalForm[ts["Values"]],
+    rest
+];
+
 regressionLogLikelihoodFunction[
     regressionDistribution_?DistributionParameterQ,
     (inputData_List?numericMatrixQ) -> (outputData_List?numericMatrixQ),
@@ -723,15 +733,15 @@ calculateXValues = Compile[{
     ]
 ];
 
-calculateEntropy[samples_Association, evidence_] := Subtract[
+calculateEntropy[samples_Association, logEvidence_] := Subtract[
     Dot[
-        Divide[
-            Values[samples[[All, "CrudePosteriorWeight"]]],
-            evidence
+        Exp @ Subtract[
+            Values[samples[[All, "CrudeLogPosteriorWeight"]]],
+            logEvidence
         ],
         Replace[Values[samples[[All, "LogLikelihood"]]], _DirectedInfinity -> 0, {1}]
     ],
-    Log[evidence]
+    logEvidence
 ];
 
 calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
@@ -748,7 +758,6 @@ calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
         sorted,
         GeneralUtilities`AssociationTranspose @ <|
             "X" -> AssociationThread[keys, xValues],
-            "CrudePosteriorWeight" -> AssociationThread[keys, weights * Exp[Values @ sorted[[All, "LogLikelihood"]]]],
             "CrudeLogPosteriorWeight" -> AssociationThread[keys, Log[weights] + Values @ sorted[[All, "LogLikelihood"]]]
         |>,
         2
@@ -769,7 +778,7 @@ Options[nestedSampling] = Join[
         "MonteCarloSteps" -> 200,
         "TerminationFraction" -> 0.01,
         "Monitor" -> True,
-        "LikelihoodMaximum" -> Automatic,
+        "LogLikelihoodMaximum" -> Automatic,
         "MinMaxAcceptanceRate" -> {0, 1}
     },
     Options[evidenceSampling]
@@ -814,7 +823,7 @@ nestedSamplingInternal[
     covEst,
     factor,
     estimatedMissingEvidence,
-    evidence = 0,
+    logEvidence = $MachineLogZero,
     entropy = 0,
     interrupted = False,
     statusCell,
@@ -845,13 +854,12 @@ nestedSamplingInternal[
     meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
     covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
     
-    estimatedMissingEvidence = With[{
-        lmax = OptionValue["LikelihoodMaximum"]
-    },
-        Switch[ lmax,
+    estimatedMissingEvidence = Switch[ OptionValue["LogLikelihoodMaximum"],
         _?NumericQ,
-            Function[
-                lmax * Min[DeleteMissing @ #[[All, "X"]]]
+            With[{lmax = Exp[OptionValue["LogLikelihoodMaximum"]]},
+                Function[
+                    lmax * Min[DeleteMissing @ #[[All, "X"]]]
+                ]
             ],
         _,
             Function[
@@ -860,7 +868,6 @@ nestedSamplingInternal[
                     Exp @ Max[#[[All, "LogLikelihood"]]]
                 ]
             ]
-        ]
     ];
     
     If[ TrueQ[OptionValue["Monitor"]],
@@ -870,7 +877,7 @@ nestedSamplingInternal[
                     {
                         {"Iteration: ", iteration},
                         {"Samples: ", Length[variableSamplePoints]},
-                        {"Log evidence: ", NumberForm[Log[evidence], 5]},
+                        {"Log evidence: ", NumberForm[logEvidence, 5]},
                         {"Entropy: ", NumberForm[entropy, 5]},
                         {
                             Button[
@@ -897,7 +904,7 @@ nestedSamplingInternal[
                 iteration === 1,
                 iteration <= miniterations,
                 !TrueQ[
-                    estimatedMissingEvidence[variableSamplePoints] <= evidence * termination
+                    estimatedMissingEvidence[variableSamplePoints] <= Exp[logEvidence] * termination
                 ]
             ]
         ]
@@ -938,8 +945,8 @@ nestedSamplingInternal[
             ],
             nSamples
         ];
-        evidence = Total[variableSamplePoints[[All, "CrudePosteriorWeight"]]];
-        entropy = calculateEntropy[variableSamplePoints, evidence];
+        logEvidence = logSumExp[variableSamplePoints[[All, "CrudeLogPosteriorWeight"]]];
+        entropy = calculateEntropy[variableSamplePoints, logEvidence];
         PreIncrement[iteration];
     ];
     
@@ -1094,10 +1101,12 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
     zSamples,
     output,
     crudeEvidence,
+    crudeLogEvidence,
     crudeEntropy
 },
-    crudeEvidence = Total[result[["Samples", All, "CrudePosteriorWeight"]]];
-    crudeEntropy = calculateEntropy[result["Samples"], crudeEvidence];
+    crudeLogEvidence = logSumExp[result[["Samples", All, "CrudeLogPosteriorWeight"]]];
+    crudeEvidence = Exp[crudeLogEvidence];
+    crudeEntropy = calculateEntropy[result["Samples"], crudeLogEvidence];
     output = Join[
         result,
         <|
@@ -1147,15 +1156,13 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
             Values[result[["Samples", All, "Point"]]]
         ]
     ];
+    result[["Samples", All, "CrudeLogPosteriorWeight"]] = Values[result[["Samples", All, "CrudeLogPosteriorWeight"]]] - crudeLogEvidence;
+    result[["Samples", All, "CrudePosteriorWeight"]] = Exp[Values @ result[["Samples", All, "CrudeLogPosteriorWeight"]]];
     Join[
         output,
         <|
-            "Samples" -> SortBy[-#CrudePosteriorWeight &] @ Join[
-                MapAt[
-                    Divide[#, crudeEvidence]&,
-                    result["Samples"],
-                    {All, "CrudePosteriorWeight"}
-                ],
+            "Samples" -> SortBy[-#CrudeLogPosteriorWeight &] @ Join[
+                result["Samples"],
                 GeneralUtilities`AssociationTranspose @ <|
                     "SampledX" -> AssociationThread[keys, meanAndError[Transpose[sampledX]]],
                     "LogPosteriorWeight" -> AssociationThread[
@@ -1328,7 +1335,8 @@ predictiveDistribution[
     inferenceObject[result_?(
         And[
             AssociationQ[#],
-            Head[#["Data"]] === Rule, ListQ[#["IndependentVariables"]],
+            regressionDataQ[#["Data"]],
+            ListQ[#["IndependentVariables"]],
             !MissingQ[#["Samples"]], !MissingQ[#["GeneratingDistribution"]]
         ]&
     )],
@@ -1456,8 +1464,8 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
         ],
         
         ListPlot[
-            Log /@ Accumulate @ Values @ result[["Samples", All, "CrudePosteriorWeight"]],
-            PlotLabel -> "Evidence progression",
+            Log /@ Accumulate @ Values @ Exp[result[["Samples", All, "CrudeLogPosteriorWeight"]] + result["CrudeLogEvidence"]],
+            PlotLabel -> "LogEvidence progression",
             PlotRange -> All,
             Sequence @@ style["Iteration", "Evidence found"]
         ],
