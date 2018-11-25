@@ -31,4 +31,4 @@ The package has been overhauled significantly and now relies largely on the MCMC
 
 *25 Novermber 2018
 
-    * Expand the section on time series process regression. Now contains explanation of how to compile the loglikelihood function of a geometric Brownian motion process.
+	* Expand the section on time series process regression. Now contains explanation of how to compile the loglikelihood function of a geometric Brownian motion process.
