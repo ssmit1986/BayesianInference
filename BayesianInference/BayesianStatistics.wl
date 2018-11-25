@@ -1334,7 +1334,7 @@ predictiveDistribution[
 
 predictiveDistribution[
     fst_,
-    inputs : Except[_List?numericMatrixQ]
+    inputs : Except[_List?numericMatrixQ | _?FailureQ]
 ] := predictiveDistribution[fst, dataNormalForm[inputs]]
 
 predictiveDistribution[

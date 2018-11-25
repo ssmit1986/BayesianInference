@@ -84,6 +84,7 @@ summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[d
     ]
 ];
 summaryForm[atom : (_?NumericQ | _String)] := ToString[Short[atom]];
+summaryForm[ts_TemporalData] := ToString @ StringForm["TimeSeries (`1` data points)", ts["PathLength"]]
 summaryForm[other_] := ToString[StringForm["``[...]", Head[other]]];
 
 
@@ -114,7 +115,7 @@ inferenceObject /: FailureQ[inferenceObject[$Failed]] := True;
 inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
 inferenceObject[first_, rest__] := inferenceObject[first];
 inferenceObject[assoc_?AssociationQ]["Properties"] := Sort @ Append[Keys[assoc], "Properties"];
-inferenceObject[assoc_?AssociationQ][prop : (_String | {__String} | All)..] := assoc[[prop]];
+inferenceObject[assoc_?AssociationQ][prop__] := assoc[[prop]];
 
 inferenceObjectQ[inferenceObject[assoc_?AssociationQ]] := True;
 inferenceObjectQ[___] := False;
@@ -206,10 +207,7 @@ regressionDataQ = Function[
         dataNormalFormQ[#],
         Or[
             Head[#] === TemporalData,
-            And[
-                Head[#] === Rule,
-                MatchQ[Dimensions[#[[1]]], {_, 1}]
-            ]
+            Head[#] === Rule
         ]
     ]
 ];

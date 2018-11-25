@@ -28,3 +28,7 @@ The package has been overhauled significantly and now relies largely on the MCMC
 
 	* Add an example section that shows how to use nested sampling for timeseries regression with a `GeometricBrownianMotionProcess`
 	* Improve the numerical stability of the evidence computation
+
+*25 Novermber 2018
+
+    * Expand the section on time series process regression. Now contains explanation of how to compile the loglikelihood function of a geometric Brownian motion process.
