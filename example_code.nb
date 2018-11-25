@@ -1938,47 +1938,74 @@ Cell[TextData[{
  ":"
 }], "Text",ExpressionUUID->"0710e344-8102-4209-83df-4ba39210f3b4"],
 
-Cell[BoxData[
+Cell[BoxData[{
  RowBox[{
-  RowBox[{"process", " ", "=", " ", 
-   RowBox[{"GeometricBrownianMotionProcess", "[", 
-    RowBox[{"mu", ",", " ", 
-     RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], "]"}]}], ";",
-   " ", 
+  RowBox[{
+   RowBox[{"process", " ", "=", " ", 
+    RowBox[{"GeometricBrownianMotionProcess", "[", 
+     RowBox[{"mu", ",", " ", 
+      RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], "]"}]}], 
+   ";"}], " ", 
   RowBox[{"(*", " ", 
    RowBox[{"using", " ", 
     RowBox[{"Exp", "[", "logsigma", "]"}], " ", "makes", " ", "it", " ", 
     "easier", " ", "to", " ", "search", " ", "for", " ", "sigma", " ", 
     "values", " ", "over", " ", "a", " ", "large", " ", "range", " ", "of", 
-    " ", "values"}], " ", "*)"}], "\[IndentingNewLine]", 
-  RowBox[{"obj", "=", 
-   RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
-    RowBox[{
-     RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "ts"}], ",", 
-     "\[IndentingNewLine]", 
-     RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
-      RowBox[{"process", "[", "t", "]"}]}], ",", "\[IndentingNewLine]", 
-     RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
-      RowBox[{"{", 
-       RowBox[{
-        RowBox[{"{", 
-         RowBox[{"mu", ",", 
-          RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
-        RowBox[{"{", 
-         RowBox[{"logsigma", ",", 
-          RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}]}], 
-       "}"}]}], ",", "\[IndentingNewLine]", 
-     RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", 
-      RowBox[{"{", "t", "}"}]}], ",", " ", "\[IndentingNewLine]", 
-     RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
-      RowBox[{"{", 
-       RowBox[{
-        RowBox[{"NormalDistribution", "[", 
-         RowBox[{"0", ",", "10"}], "]"}], ",", 
-        RowBox[{"NormalDistribution", "[", 
-         RowBox[{"0", ",", "10"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
-    "]"}]}]}]], "Input",
- CellLabel->"In[80]:=",ExpressionUUID->"ebe34a11-9469-4498-adf5-59279e84fbae"],
+    " ", "values"}], " ", "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{"obj", "=", 
+  RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "ts"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
+     RowBox[{"process", "[", "t", "]"}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"mu", ",", 
+         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"logsigma", ",", 
+         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}]}], "}"}]}],
+     ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", 
+     RowBox[{"{", "t", "}"}]}], ",", " ", "\[IndentingNewLine]", 
+    RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"NormalDistribution", "[", 
+        RowBox[{"0", ",", "10"}], "]"}], ",", 
+       RowBox[{"NormalDistribution", "[", 
+        RowBox[{"0", ",", "10"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]}], "Input",
+ CellLabel->"In[9]:=",ExpressionUUID->"ebe34a11-9469-4498-adf5-59279e84fbae"],
+
+Cell["\<\
+This is a simple way to do it, but the data are now modeled independently of \
+each other (they are all modeled as realisations of a lognormal \
+distribution). Compare the following:\
+\>", "Text",ExpressionUUID->"30708932-1b66-4c86-b1fb-0676f1627921"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"obj", "[", "\"\<LogLikelihoodFunction\>\"", "]"}], "[", 
+  RowBox[{"{", 
+   RowBox[{"0", ",", 
+    RowBox[{"-", "3"}]}], "}"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"LogLikelihood", "[", 
+  RowBox[{
+   RowBox[{"GeometricBrownianMotionProcess", "[", 
+    RowBox[{"0", ",", " ", 
+     RowBox[{"Exp", "[", 
+      RowBox[{"-", "3"}], "]"}], ",", " ", "start"}], "]"}], ",", "ts"}], 
+  "]"}]}], "Input",
+ CellLabel->"In[27]:=",ExpressionUUID->"a5242e2d-8945-4de1-94e0-6d0f5ce6a88b"],
+
+Cell["\<\
+In the next section it will be shown how to use the process loglikelihood \
+instead.\
+\>", "Text",ExpressionUUID->"afe11739-1269-4240-ab2f-e1aee2b4e0f8"],
 
 Cell["Run the sampler:", \
 "Text",ExpressionUUID->"fe1859aa-e3b7-42f3-b0d9-b5f991cafad4"],
@@ -2128,8 +2155,8 @@ Cell[TextData[{
 that you want to use the built-in ",
  StyleBox["LogLikelihood",
   FontWeight->"Bold"],
- " function directly and forego specifying the GeneratingDistribution. This \
-can be achieved with the following code, where we use ",
+ " function directly. This can be achieved with the following code, where we \
+use ",
  StyleBox["expressionToFunction",
   FontWeight->"Bold"],
  " to create a function of the right form (one that accepts its arguments as \
@@ -2140,7 +2167,8 @@ Cell[BoxData[{
  RowBox[{
   RowBox[{"process", " ", "=", " ", 
    RowBox[{"GeometricBrownianMotionProcess", "[", 
-    RowBox[{"mu", ",", " ", "sigma", ",", " ", "start"}], "]"}]}], 
+    RowBox[{"mu", ",", 
+     RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"logLikeGBMProcess", " ", "=", 
   RowBox[{"ReleaseHold", "[", "\[IndentingNewLine]", 
@@ -2153,17 +2181,18 @@ Cell[BoxData[{
          RowBox[{"LogLikelihood", "[", 
           RowBox[{
            RowBox[{"GeometricBrownianMotionProcess", "[", 
-            RowBox[{"mu", ",", " ", "sigma", ",", " ", "start"}], "]"}], ",", 
-           "ts"}], "]"}]}], ",", "\[IndentingNewLine]", 
+            RowBox[{"mu", ",", " ", 
+             RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], 
+            "]"}], ",", "ts"}], "]"}]}], ",", "\[IndentingNewLine]", 
         RowBox[{
          RowBox[{"Except", "[", 
           RowBox[{"_", "?", "NumericQ"}], "]"}], " ", "\[Rule]", " ", 
          "$MachineLogZero"}]}], "\[IndentingNewLine]", "]"}], 
       "\[IndentingNewLine]", "]"}], ",", "\[IndentingNewLine]", 
      RowBox[{"{", 
-      RowBox[{"mu", ",", "sigma"}], "}"}]}], "\[IndentingNewLine]", "]"}], 
+      RowBox[{"mu", ",", "logsigma"}], "}"}]}], "\[IndentingNewLine]", "]"}], 
    "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->"In[72]:=",ExpressionUUID->"b64e336b-3258-4367-9558-72ea9d31dacc"],
+ CellLabel->"In[29]:=",ExpressionUUID->"b64e336b-3258-4367-9558-72ea9d31dacc"],
 
 Cell[TextData[{
  "Note the use of ",
@@ -2188,8 +2217,8 @@ Cell[BoxData[
   RowBox[{"directLogLikelihoodFunction", "[", 
    RowBox[{"process", ",", "ts", ",", 
     RowBox[{"{", 
-     RowBox[{"mu", ",", "sigma"}], "}"}]}], "]"}]}]], "Input",
- CellLabel->"In[44]:=",ExpressionUUID->"d182471f-38cc-4147-8ed7-c3d3f9271226"],
+     RowBox[{"mu", ",", "logsigma"}], "}"}]}], "]"}]}]], "Input",
+ CellLabel->"In[31]:=",ExpressionUUID->"d182471f-38cc-4147-8ed7-c3d3f9271226"],
 
 Cell["\<\
 Define the inference problem with the pre-defined loglikelihood function:\
@@ -2211,7 +2240,8 @@ Cell[BoxData[
         RowBox[{"mu", ",", 
          RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
        RowBox[{"{", 
-        RowBox[{"sigma", ",", "0.001", ",", "\[Infinity]"}], "}"}]}], "}"}]}],
+        RowBox[{"logsigma", ",", 
+         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}]}], "}"}]}],
      ",", "\[IndentingNewLine]", 
     RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", 
      RowBox[{"{", "t", "}"}]}], ",", " ", 
@@ -2229,14 +2259,15 @@ Cell[BoxData[
     RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
      RowBox[{"{", 
       RowBox[{
-       RowBox[{"CauchyDistribution", "[", 
+       RowBox[{"NormalDistribution", "[", 
         RowBox[{"0", ",", "10"}], "]"}], ",", 
-       RowBox[{"ExponentialDistribution", "[", "0.1", "]"}]}], "}"}]}]}], 
-   "\[IndentingNewLine]", "]"}]}]], "Input",
- CellLabel->"In[74]:=",ExpressionUUID->"03fd6b5f-c647-4c58-96fb-b20d5b5ceeea"],
+       RowBox[{"NormalDistribution", "[", 
+        RowBox[{"0", ",", "10"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input",ExpressionUUID->"03fd6b5f-c647-4c58-96fb-b20d5b5ceeea"],
 
 Cell["\<\
-Run the sampler (this will take a while because the code runs uncompiled):\
+Run the sampler (this will take a while because the code runs without \
+compilation):\
 \>", "Text",ExpressionUUID->"1efab765-a352-402c-946d-78e60450bc12"],
 
 Cell[BoxData[
