@@ -1243,27 +1243,27 @@ combineRuns[results : inferenceObject[_?AssociationQ].., opts : OptionsPattern[]
 ];
 Options[combineRuns] = Options[evidenceSampling];
 
+parallelNestedSampling::startingPts = "Cannot use pre-specified starting points for parallel sampling because each parallel process should generate starting points independently.
+Continuing with option \"SamplePoolSize\" -> `1`";
+
 parallelNestedSampling[
     inferenceObject[assoc_?AssociationQ],
     opts : OptionsPattern[]
-] /; !numericMatrixQ[assoc["StartingPoints"]] := With[{
-    startingPoints = Replace[
-        OptionValue["StartingPoints"],
-        {
-            Except[_?numericMatrixQ] :> generateStartingPoints[assoc, OptionValue["SamplePoolSize"]]
-        }
-    ]
+] /; numericMatrixQ[assoc["StartingPoints"]] := With[{
+    n = Length[assoc["StartingPoints"]]
 },
+    Message[parallelNestedSampling::startingPts, n];
     parallelNestedSampling[
-        inferenceObject[Append[assoc, "StartingPoints" -> startingPoints]],
+        inferenceObject[KeyDrop[assoc, "StartingPoints"]],
+        "SamplePoolSize" -> Length[assoc["StartingPoints"]],
         opts
-    ] /; numericMatrixQ[startingPoints]
+    ]
 ];
 
 parallelNestedSampling[
     inferenceObject[assoc_?AssociationQ],
     opts : OptionsPattern[]
-] /; numericMatrixQ[assoc["StartingPoints"]] := Module[{
+] /; !numericMatrixQ[assoc["StartingPoints"]] := Module[{
     resultTable,
     parallelRuns = OptionValue["ParallelRuns"],
     nestedSamplingOptions = Join[
