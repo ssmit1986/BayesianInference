@@ -1293,7 +1293,7 @@ parallelNestedSampling[
 ];
 
 Options[parallelNestedSampling] = Join[
-    Options[nestedSampling],
+    DeleteCases[Options[nestedSampling], "StartingPoints" -> _],
     Options[ParallelTable],
     {"ParallelRuns" :> 4}
 ];
