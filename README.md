@@ -1,16 +1,21 @@
 # BayesianInference
 Wolfram Language application for Bayesian inference and Gaussian process regression.
 
-This is a package that implements the nested sampling algorithm in pretty much the same way as described by John Skilling in his 2006 paper "Nested Sampling for General Bayesian Computation" (Bayesian Analysis, 1, number 4, pp. 833 - 860; available at http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.117.5542&rep=rep1&type=pdf). It also provides some functionality for Markov Chain Monte Carlo sampling (MCMC) based on built-in (but undocumented) functions in the Statistics\`MCMC\` context.
+This is a package that implements the nested sampling algorithm in pretty much the same way as described by John Skilling in his 2006 paper "Nested Sampling for General Bayesian Computation" (Bayesian Analysis, 1, number 4, pp. 833 - 860; available at: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.117.5542&rep=rep1&type=pdf).
+
+It also provides some functionality for Markov Chain Monte Carlo sampling (MCMC) based on built-in (but undocumented) functions in the Statistics\`MCMC\` context.
 
 ## Installation:
 - Open your user base directory (e.g., evaluate `SystemOpen[$UserBaseDirectory]` in a notebook)
 - Go into the Applications directory
-- Drop the whole BayesianInference directory in the Applications directory (i.e., the folder structure should be $UserBaseDirectory/Applications/BayesianInference)
+- Drop the whole BayesianInference directory in the Applications directory (i.e., the folder structure should be `$UserBaseDirectory`/Applications/BayesianInference)
 - Restart Mathematica
 
 You can now load the package by evaluating
-`<< BayesianInference\``
+
+    << BayesianInference`
+
+Alternatively, you can just set the working directory of your notebook to the same directory as `example_code.nb` and load the package using the line above (see the initialisation cell in the notebook for an example).
 
 
 ## Using the package:
