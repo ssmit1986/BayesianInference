@@ -732,9 +732,9 @@ calculateXValues = Compile[{
 },
     Join[
         Exp[-Divide[#, nSamplePool]]& /@ Range[nDeleted],
-        Reverse @ Table[
+        Table[
             (i / (nSamplePool + 1)) * Exp[-Divide[nDeleted, nSamplePool]],
-            {i, 1, nSamplePool}
+            {i, nSamplePool, 1, -1}
         ]
     ]
 ];
