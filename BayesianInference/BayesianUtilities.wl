@@ -27,6 +27,8 @@ matrixBlockInverse::usage = "matrixBlockInverse[mat, columns] gives Inverse[mat]
 inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] gives Inverse[Inverse[mat][[columns, colums]]]. This function is faster than inverting the result of matrixBlockInverse[mat, columns]";
 $BayesianContexts;
 directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood";
+logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y - x]. Threads over lists";
+logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists"
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -316,6 +318,27 @@ logSumExp = Composition[
     Select[NumericQ] (* Get rid of -Infinity *),
     Replace[assoc_?AssociationQ :> Values[assoc]]
 ];
+
+logSubtract = Compile[{
+    {logy, _Real},
+    {logx, _Real}
+},
+    logy + Log @ Subtract[1, Exp[Subtract[logx, logy]]],
+    RuntimeAttributes -> {Listable}
+];
+
+logAdd = Compile[{
+    {logy, _Real},
+    {logx, _Real}
+},
+    With[{
+        max = Max[logx, logy],
+        min = Min[logx, logy]
+    },
+    max + Log @ Plus[1, Exp[Subtract[min, max]]]
+    ],
+    RuntimeAttributes -> {Listable}
+]
 
 checkCompiledFunction::mainEval = "CompiledFunction `1` has calls to MainEvaluate and may not perform optimally";
 checkCompiledFunction[cf_CompiledFunction, name : _ : Automatic] /; StringContainsQ[CompilePrint[cf], "MainEvaluate"] := (

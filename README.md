@@ -11,7 +11,7 @@ It also provides some functionality for Markov Chain Monte Carlo sampling (MCMC)
 - Drop the whole BayesianInference directory in the Applications directory (i.e., the folder structure should be `$UserBaseDirectory`/Applications/BayesianInference)
 - Restart Mathematica
 
-You can now load the package by evaluating
+You can now load the package by evaluating:
 
     << BayesianInference`
 

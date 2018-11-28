@@ -207,6 +207,8 @@ defineGaussianProcess[$Failed, ___] := (
     inferenceObject[$Failed]
 );
 
+defineGaussianProcess::outputDim = "Output data has has dimensions `1`. Only 1D output data is supported for GP regression at this time.";
+
 defineGaussianProcess[data : Except[_?(dataNormalFormQ[#] || normalizedDataQ[#] || FailureQ[#]&)], rest___] :=
     defineGaussianProcess[dataNormalForm[data], rest];
 
@@ -218,11 +220,19 @@ defineGaussianProcess[data_?normalizedDataQ, rest___] := defineGaussianProcess[
 
 defineGaussianProcess[
     dataIn_List?numericMatrixQ -> dataOut_List?numericMatrixQ,
+    ___
+] /; Dimensions[dataOut][[2]] =!= 1 := (
+    Message[defineGaussianProcess::outputDim, Dimensions[dataOut][[2]]];
+    inferenceObject[$Failed]
+);
+
+defineGaussianProcess[
+    dataIn_List?numericMatrixQ -> dataOut_List?numericMatrixQ,
     kerf_, nugf_, meanf_,
     variables : {paramSpecPattern..},
     variablePrior_,
     rest___Rule
-] := Catch[
+] /; Dimensions[dataOut][[2]] === 1 := Catch[
     With[{
         vars = variables[[All, 1]],
         inputData = Developer`ToPackedArray[dataIn],
