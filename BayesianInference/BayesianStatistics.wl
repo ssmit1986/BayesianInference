@@ -1140,6 +1140,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
     logEvidenceWeigths,
     posteriorWeights,
     sampledX,
+    sampledLogX,
     parameterSamples,
     zSamples,
     output,
@@ -1172,25 +1173,30 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
             Values @ result[["Samples", All, "LogLikelihood"]],
             nRuns
         ],
-        Log @ trapezoidWeigths["Linear"][
-            sampledX = Map[
+        trapezoidWeigths["Log"][
+            sampledLogX = Map[
                 Join[
                     #,
-                    ReverseSort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
+                    - Sort @ RandomVariate[
+                        TruncatedDistribution[ (* == TransformedDistribution[-Log[x], x \[Distributed] UniformDistribution[{0, max}]] *)
+                            {- Min[#], DirectedInfinity[1]},
+                            ExponentialDistribution[1]
+                        ],
+                        result["SamplePoolSize"]
+                    ]
                 ]&,
                 With[{
-                    randomNumbers = RandomVariate[
-                        BetaDistribution[result["SamplePoolSize"], 1],
+                    randomNumbers = - RandomVariate[
+                        ExponentialDistribution[result["SamplePoolSize"]], (* ExponentialDistribution[n] == TransformedDistribution[-Log[x], x \[Distributed] BetaDistribution[n,1]] *)
                         {result["GeneratedNestedSamples"], nRuns}
                     ]
                 },
-                    Transpose[
-                        FoldList[Times, randomNumbers]
-                    ]
+                    Transpose @ Accumulate[randomNumbers]
                 ]
             ]
         ]
     ];
+    sampledX = Exp[sampledLogX];
     zSamples = logSumExp /@ logEvidenceWeigths;
     posteriorWeights = Exp[logEvidenceWeigths - zSamples];
     parameterSamples = Transpose[
