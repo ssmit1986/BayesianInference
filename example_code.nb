@@ -35,8 +35,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->
-  "In[218]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[43]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -162,8 +161,7 @@ Cell[TextData[{
       RowBox[{
        RowBox[{"NormalDistribution", "[", 
         RowBox[{"\[Mu]", ",", "\[Sigma]"}], "]"}], ",", " ", "data"}], "]"}]}],
-    FontWeight->"Bold"], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+    FontWeight->"Bold"], TraditionalForm]],ExpressionUUID->
   "8fd5acbe-adfa-414e-b4f5-a185b3755f50"],
  ", which is an unnormalised function of \[Mu] and \[Sigma]. In this package, \
 the likelihood is generally expressed as loglikelihood, because \
@@ -209,7 +207,6 @@ Cell[TextData[{
    RowBox[{"\[ProbabilityPr]", 
     RowBox[{"[", 
      RowBox[{"\[Mu]", ",", "\[Sigma]"}], "]"}]}], TraditionalForm]],
-  FormatType->"TraditionalForm",
   FontWeight->"Bold",ExpressionUUID->"696c5081-5f67-445c-8a6f-a5247c439e08"],
  ". In this package, the prior will always be converted to a log-PDF function \
 that (just like the loglikelihood) accepts the parameters as a list."
@@ -220,8 +217,7 @@ Cell[TextData[{
  Cell[BoxData[
   FormBox[
    StyleBox["Z",
-    FontWeight->"Bold"], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+    FontWeight->"Bold"], TraditionalForm]],ExpressionUUID->
   "e846725b-85fd-4100-a274-f3f326d2c4d9"],
  ", called the evidence (though in practise the quantity computed will be the \
 log of the evidence). It is given by the multi-dimensional integral:"
@@ -269,24 +265,21 @@ probabilities values, which are real values ",
   FormBox[
    RowBox[{"\[Element]", 
     RowBox[{"[", 
-     RowBox[{"0", ",", " ", "1"}], "]"}]}], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+     RowBox[{"0", ",", " ", "1"}], "]"}]}], TraditionalForm]],ExpressionUUID->
   "7a92d59d-f3ec-4818-ab53-1142bc50d799"],
  ". For example, the simplest nominal distribution is the ",
  Cell[BoxData[
   FormBox[
    StyleBox[
     RowBox[{"BernoulliDistribution", "[", "p", "]"}],
-    FontWeight->"Bold"], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+    FontWeight->"Bold"], TraditionalForm]],ExpressionUUID->
   "45fe06c7-d9f6-4147-9451-874f96e925ce"],
  " , which is ",
  StyleBox["parameterised",
   IgnoreSpellCheck->True],
  " by the continuous variable ",
  Cell[BoxData[
-  FormBox["p", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["p", TraditionalForm]],ExpressionUUID->
   "945386a0-4fc2-4142-bd62-f1b02a6385ce"],
  ". Still, it is good to take note of the fact that the code in this package ",
  StyleBox["cannot",
@@ -403,8 +396,7 @@ of logevidence or a factor of ",
    RowBox[{
     RowBox[{"Exp", "[", "5", "]"}], "\[Equal]", 
     FormBox["148.4131591025766`",
-     TraditionalForm]}], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+     TraditionalForm]}], TraditionalForm]],ExpressionUUID->
   "d474e952-2d91-4ef6-88df-bf471da1eb33"],
  "."
 }], "Text",ExpressionUUID->"d07c7de5-6f28-42b8-a104-648b0d3014fe"]
@@ -413,7 +405,7 @@ of logevidence or a factor of ",
 Cell[CellGroupData[{
 
 Cell["\<\
-Brief explanation of the algorithm with Interactive animation\
+Brief explanation of the algorithm with interactive animation\
 \>", "Subsubsection",ExpressionUUID->"3d147c61-b591-4dea-89b4-471c8bfd6168"],
 
 Cell["\<\
@@ -2036,6 +2028,152 @@ Cell[BoxData[
 
 Cell[CellGroupData[{
 
+Cell["Classification using logistic regression", \
+"Subsubsection",ExpressionUUID->"ac22ddcf-98bb-4da9-82e5-29d2481ef699"],
+
+Cell[TextData[{
+ "The following example data comes from the ",
+ Cell[BoxData[
+  TemplateBox[{
+   StyleBox["\"Wikipedia article on logistic regression\"", "Text", 
+     StripOnInput -> False],
+    "https://en.wikipedia.org/wiki/Logistic_regression#Probability_of_passing_\
+an_exam_versus_hours_of_study"},
+   "HyperlinkURL"]],ExpressionUUID->"3c3b88c2-45e8-4acf-8453-0908df4ef923"],
+ ":"
+}], "Text",ExpressionUUID->"8c606cf4-c3c2-425d-9915-bbeffe6d4990"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"classificationData", " ", "=", " ", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+     "0.5", ",", " ", "0.75", ",", " ", "1", ",", " ", "1.25", ",", " ", 
+      "1.5", ",", " ", "1.75", ",", " ", "1.75", ",", " ", "2", ",", " ", 
+      "2.25", ",", " ", "2.5", ",", " ", "2.75", ",", " ", "3", ",", " ", 
+      "3.25", ",", " ", "3.5", ",", " ", "4", ",", " ", "4.25", ",", " ", 
+      "4.5", ",", " ", "4.75", ",", " ", "5", ",", " ", "5.5"}], "}"}], " ", 
+    "\[Rule]", " ", 
+    RowBox[{"{", 
+     RowBox[{
+     "0", ",", " ", "0", ",", " ", "0", ",", " ", "0", ",", " ", "0", ",", 
+      " ", "0", ",", " ", "1", ",", " ", "0", ",", " ", "1", ",", " ", "0", 
+      ",", " ", "1", ",", " ", "0", ",", " ", "1", ",", " ", "0", ",", " ", 
+      "1", ",", " ", "1", ",", " ", "1", ",", " ", "1", ",", " ", "1", ",", 
+      " ", "1"}], "}"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Show", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"ListPlot", "[", 
+    RowBox[{
+     RowBox[{"Transpose", "[", 
+      RowBox[{"List", "@@", "classificationData"}], "]"}], ",", 
+     RowBox[{"PlotLabel", "\[Rule]", "\"\<Data + fit from Wikipedia\>\""}]}], 
+    "]"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"Plot", "[", 
+    RowBox[{
+     FractionBox["1", 
+      RowBox[{"1", "+", 
+       RowBox[{"Exp", "[", 
+        RowBox[{"-", 
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"1.5046", " ", "t"}], "-", "4.0777"}], ")"}]}], "]"}]}]], 
+     ",", 
+     RowBox[{"{", 
+      RowBox[{"t", ",", "0", ",", "6"}], "}"}]}], "]"}]}], 
+  "\[IndentingNewLine]", "]"}]}], "Input",
+ CellLabel->"In[14]:=",ExpressionUUID->"c80e7c48-2a33-4ca8-8579-b93a4b22b8b9"],
+
+Cell["\<\
+The model can be defined by putting a logistic sigmoid inside of a  \
+BernoulliDistribution:\
+\>", "Text",ExpressionUUID->"bc37140c-e72e-4f34-83e9-220b9f605ea8"],
+
+Cell[BoxData[
+ RowBox[{"obj", "=", 
+  RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "classificationData"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
+     RowBox[{"BernoulliDistribution", "[", 
+      RowBox[{"LogisticSigmoid", "[", 
+       RowBox[{
+        RowBox[{"a", " ", "t"}], " ", "+", " ", "b"}], "]"}], "]"}]}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"a", ",", 
+         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"b", ",", 
+         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}]}], "}"}]}],
+     ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", 
+     RowBox[{"{", "t", "}"}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"NormalDistribution", "[", 
+        RowBox[{"0", ",", "50"}], "]"}], ",", 
+       RowBox[{"NormalDistribution", "[", 
+        RowBox[{"0", ",", "50"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input",
+ CellLabel->"In[59]:=",ExpressionUUID->"6459ff03-11f9-4fb3-944d-805df792bd71"],
+
+Cell[TextData[{
+ "Note the strong negative correlation between ",
+ Cell[BoxData[
+  FormBox["a", TraditionalForm]],
+  FormatType->"TraditionalForm",ExpressionUUID->
+  "c02c783f-11f5-4979-921e-5871ec47cb19"],
+ " and ",
+ Cell[BoxData[
+  FormBox["b", TraditionalForm]],
+  FormatType->"TraditionalForm",ExpressionUUID->
+  "a864b4eb-1e88-48ac-9e37-c7b8ea0fe574"],
+ " in the posterior distribution:"
+}], "Text",ExpressionUUID->"f027b807-daf4-4760-b58f-17698adf1f34"],
+
+Cell[BoxData[{
+ RowBox[{"result", " ", "=", " ", 
+  RowBox[{"nestedSampling", "[", 
+   RowBox[{"obj", ",", 
+    RowBox[{"\"\<MinMaxAcceptanceRate\>\"", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{"0.05", ",", "0.95"}], "}"}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"covarianceMatrixPlot", "[", "result", "]"}], "\[IndentingNewLine]", 
+ RowBox[{"posteriorBubbleChart", "[", 
+  RowBox[{
+   RowBox[{"takePosteriorFraction", "[", 
+    RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"a", ",", "b"}], "}"}]}], "]"}]}], "Input",
+ CellLabel->"In[67]:=",ExpressionUUID->"e6908fe6-a985-4b86-bb2d-665582340f10"],
+
+Cell["The predictions are very conservative:", \
+"Text",ExpressionUUID->"e9954343-51e2-46ce-98c1-2e4126d1c94d"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"predictions", "=", 
+   RowBox[{"predictiveDistribution", "[", 
+    RowBox[{
+     RowBox[{"takePosteriorFraction", "[", 
+      RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+     RowBox[{"Range", "[", 
+      RowBox[{"0", ",", "6", ",", "0.25"}], "]"}]}], "]"}]}], ";"}], "\n", 
+ RowBox[{"regressionPlot1D", "[", 
+  RowBox[{"result", ",", "predictions"}], "]"}]}], "Input",
+ CellLabel->"In[63]:=",ExpressionUUID->"bc0e54bd-2323-434a-b0b5-232386fef056"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
 Cell["Gaussian process regression", \
 "Subsubsection",ExpressionUUID->"264c8155-84ba-40b0-93fa-8bb915e32da9"],
 
@@ -2786,7 +2924,7 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"ts", " ", "=", 
     RowBox[{"TimeSeries", "[", "ts", "]"}]}], ";"}], 
-  "\n"}], "\[IndentingNewLine]", 
+  "\[IndentingNewLine]"}], "\n", 
  RowBox[{
   RowBox[{"process", " ", "=", " ", 
    RowBox[{"GeometricBrownianMotionProcess", "[", 
