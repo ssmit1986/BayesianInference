@@ -35,7 +35,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[2]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -66,6 +66,252 @@ Cell[TextData[{
 
 Cell["Use visualisation functions to interpret the result", \
 "Item",ExpressionUUID->"d8765d25-4067-4336-ab15-3df55ef272f3"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["About the nested sampling algorithm", \
+"Subsection",ExpressionUUID->"3e4cc027-46e9-4b2e-9a46-b456658641b5"],
+
+Cell[CellGroupData[{
+
+Cell["Interactive animation", \
+"Subsubsection",ExpressionUUID->"3d147c61-b591-4dea-89b4-471c8bfd6168"],
+
+Cell["\<\
+The code below creates an animation visualising the process of generating \
+samples from the posterior with the nested sampling algorithm:\
+\>", "Text",ExpressionUUID->"084e5d42-fd8b-4900-9ef2-d11b793ee308"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dist", "=", 
+   RowBox[{"CauchyDistribution", "[", 
+    RowBox[{"0", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"testdata", "=", 
+   RowBox[{"RandomVariate", "[", 
+    RowBox[{"dist", ",", "25"}], "]"}]}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{"obj", " ", "=", 
+   RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "testdata"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<GeneratingDistribution\>\"", " ", "\[Rule]", " ", 
+      RowBox[{"CauchyDistribution", "[", 
+       RowBox[{"a", ",", " ", 
+        RowBox[{"Exp", "[", "logb", "]"}]}], "]"}]}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<Parameters\>\"", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"a", ",", 
+          RowBox[{"-", "10"}], ",", "10"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"logb", ",", 
+          RowBox[{"-", "10"}], ",", "10"}], "}"}]}], "}"}]}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
+      RowBox[{"{", 
+       RowBox[{
+       "\"\<LocationParameter\>\"", ",", " ", "\"\<LocationParameter\>\""}], 
+       "}"}]}]}], "\[IndentingNewLine]", "]"}]}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{"result", " ", "=", 
+   RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
+    RowBox[{"obj", ",", "\[IndentingNewLine]", 
+     RowBox[{"\"\<SamplePoolSize\>\"", "\[Rule]", "100"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], 
+     ",", "\[IndentingNewLine]", 
+     RowBox[{"\"\<MinMaxAcceptanceRate\>\"", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"0.1", ",", "0.9"}], "}"}]}]}], "\[IndentingNewLine]", "]"}]}],
+   ";"}]}], "Input",ExpressionUUID->"0e261c2d-c370-45cb-922f-a24f8673dc4d"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"ClearAll", "[", "nestedSamplingAnimation", "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"nestedSamplingAnimation", "[", 
+    RowBox[{"result_", ",", " ", 
+     RowBox[{"numberOfSlides", " ", ":", "_Integer", " ", ":", " ", "100"}], 
+     ",", " ", "opts___"}], "]"}], ":=", 
+   RowBox[{"Module", "[", 
+    RowBox[{
+     RowBox[{"{", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"samples", "=", 
+        RowBox[{"Values", "/@", 
+         RowBox[{"Values", "@", 
+          RowBox[{"Part", "[", "\[IndentingNewLine]", 
+           RowBox[{
+            RowBox[{"KeySort", "@", 
+             RowBox[{"result", "[", "\"\<Samples\>\"", "]"}]}], ",", 
+            "\[IndentingNewLine]", "All", ",", 
+            RowBox[{"{", 
+             RowBox[{"\"\<Point\>\"", ",", "\"\<LogLikelihood\>\""}], "}"}]}],
+            "]"}]}]}]}], ",", "\[IndentingNewLine]", "subset", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"nLiveSamples", "=", 
+        RowBox[{"result", "[", "\"\<SamplePoolSize\>\"", "]"}]}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"logLikelihood", " ", "=", " ", 
+        RowBox[{"result", "[", "\"\<LogLikelihoodFunction\>\"", "]"}]}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"params", " ", "=", " ", 
+        RowBox[{
+         RowBox[{"result", "[", "\"\<Parameters\>\"", "]"}], "/.", 
+         RowBox[{
+          RowBox[{"DirectedInfinity", "[", "sign_", "]"}], "\[RuleDelayed]", 
+          RowBox[{"sign", " ", "*", " ", "10"}]}]}]}]}], 
+      "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"Table", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"subset", "=", 
+         RowBox[{"TakeDrop", "[", 
+          RowBox[{
+           RowBox[{
+            RowBox[{"SortBy", "[", "Last", "]"}], "@", 
+            RowBox[{"Take", "[", 
+             RowBox[{"samples", ",", 
+              RowBox[{"UpTo", "[", "n", "]"}]}], "]"}]}], ",", 
+           RowBox[{"-", "nLiveSamples"}]}], "]"}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"ContourPlot", "[", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"logLikelihood", "[", 
+           RowBox[{"result", "[", "\"\<ParameterSymbols\>\"", "]"}], "]"}], 
+          ",", "\[IndentingNewLine]", 
+          RowBox[{"Evaluate", "[", 
+           RowBox[{"Sequence", "@@", 
+            RowBox[{"result", "[", "\"\<Parameters\>\"", "]"}]}], "]"}], ",", 
+          "\[IndentingNewLine]", "opts", ",", "\[IndentingNewLine]", 
+          RowBox[{"FrameLabel", "\[Rule]", 
+           RowBox[{
+            RowBox[{"(", 
+             RowBox[{
+              RowBox[{"Style", "[", 
+               RowBox[{"#", ",", "\"\<Text\>\"", ",", "16"}], "]"}], "&"}], 
+             ")"}], "/@", 
+            RowBox[{"result", "[", "\"\<ParameterSymbols\>\"", "]"}]}]}], ",", 
+          RowBox[{"ImageSize", "\[Rule]", "Large"}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Epilog", "\[Rule]", "\[IndentingNewLine]", 
+           RowBox[{"{", "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"{", 
+              RowBox[{"Red", ",", 
+               RowBox[{"PointSize", "[", "0.01", "]"}], ",", " ", 
+               RowBox[{"Point", "[", 
+                RowBox[{"Rest", "@", 
+                 RowBox[{"subset", "[", 
+                  RowBox[{"[", 
+                   RowBox[{"1", ",", "All", ",", "1"}], "]"}], "]"}]}], "]"}],
+                ",", 
+               RowBox[{"PointSize", "[", "0.025", "]"}], ",", 
+               RowBox[{"Point", "[", 
+                RowBox[{"samples", "[", 
+                 RowBox[{"[", 
+                  RowBox[{
+                   RowBox[{"n", "+", "1"}], ",", "1"}], "]"}], "]"}], "]"}]}],
+               "}"}], ",", "\[IndentingNewLine]", 
+             RowBox[{"If", "[", 
+              RowBox[{
+               RowBox[{"n", ">", "nLiveSamples"}], ",", "\[IndentingNewLine]", 
+               RowBox[{"{", 
+                RowBox[{"Black", ",", 
+                 RowBox[{"PointSize", "[", "0.01", "]"}], ",", 
+                 RowBox[{"Point", "[", 
+                  RowBox[{"Most", "@", 
+                   RowBox[{"subset", "[", 
+                    RowBox[{"[", 
+                    RowBox[{"2", ",", "All", ",", "1"}], "]"}], "]"}]}], 
+                  "]"}], ",", 
+                 RowBox[{"PointSize", "[", "0.025", "]"}], ",", 
+                 RowBox[{"Point", "[", 
+                  RowBox[{"Last", "@", 
+                   RowBox[{"subset", "[", 
+                    RowBox[{"[", 
+                    RowBox[{"2", ",", "All", ",", "1"}], "]"}], "]"}]}], 
+                  "]"}]}], "}"}], ",", "\[IndentingNewLine]", "Nothing"}], 
+              "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "}"}]}], 
+          ",", "\[IndentingNewLine]", 
+          RowBox[{"Contours", "\[Rule]", 
+           RowBox[{"subset", "[", 
+            RowBox[{"[", 
+             RowBox[{"2", ",", "All", ",", "2"}], "]"}], "]"}]}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{"PlotLegends", "\[Rule]", 
+           RowBox[{"Grid", "[", 
+            RowBox[{
+             RowBox[{"{", 
+              RowBox[{
+               RowBox[{"{", 
+                RowBox[{
+                 RowBox[{"Graphics", "[", 
+                  RowBox[{
+                   RowBox[{"{", 
+                    RowBox[{"Red", ",", 
+                    RowBox[{"Disk", "[", "]"}]}], "}"}], ",", 
+                   RowBox[{"ImageSize", "\[Rule]", "10"}]}], "]"}], ",", 
+                 "\"\<Alive\>\""}], "}"}], ",", 
+               RowBox[{"{", 
+                RowBox[{
+                 RowBox[{"Graphics", "[", 
+                  RowBox[{
+                   RowBox[{"{", 
+                    RowBox[{"Black", ",", 
+                    RowBox[{"Disk", "[", "]"}]}], "}"}], ",", 
+                   RowBox[{"ImageSize", "\[Rule]", "10"}]}], "]"}], ",", 
+                 "\"\<Dead\>\""}], "}"}]}], "}"}], ",", 
+             RowBox[{"BaseStyle", "\[Rule]", "\"\<Text\>\""}], ",", 
+             RowBox[{"Alignment", "\[Rule]", "Left"}]}], "]"}]}]}], 
+         "\[IndentingNewLine]", "]"}]}], ",", "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{"n", ",", "nLiveSamples", ",", 
+         RowBox[{"Min", "[", 
+          RowBox[{
+           RowBox[{"nLiveSamples", "+", "numberOfSlides"}], ",", 
+           RowBox[{
+            RowBox[{"Length", "[", 
+             RowBox[{"result", "[", "\"\<Samples\>\"", "]"}], "]"}], "-", 
+            "1"}]}], "]"}]}], "}"}]}], "\[IndentingNewLine]", "]"}]}], 
+    "\[IndentingNewLine]", "]"}]}], ";"}]}], "Input",
+ CellLabel->"In[85]:=",ExpressionUUID->"36a9657d-bf90-4014-a040-93baef7e2b0d"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"slides", " ", "=", " ", 
+   RowBox[{"nestedSamplingAnimation", "[", 
+    RowBox[{"result", ",", "50"}], "]"}]}], ";"}], "\n", 
+ RowBox[{"ListAnimate", "[", "\[IndentingNewLine]", 
+  RowBox[{"slides", ",", "\[IndentingNewLine]", 
+   RowBox[{"AnimationRate", "\[Rule]", "1"}]}], "\[IndentingNewLine]", 
+  "]"}]}], "Input",ExpressionUUID->"1093ff36-2c0a-44d2-8bb7-df0b62828884"],
+
+Cell["\<\
+What you see here is a contour plot of the loglikelihood function. Only the \
+contours corresponding to dead samples are drawn, so the bright area in the \
+center is the area where the likelihood is high enough to allow new samples \
+to be drawn. 
+
+In this animation you can clearly see the shells corresponding to \
+(approximately) constant loglikelihood values. The evidence is estimated by \
+estimating the volume of the prior contained in each of these shells. To put \
+it into cooking terms: instead of integrating the posterior by dicing the \
+domain into squares (like most integration methods do) and multiplying the \
+volume of each square with the function value, the nested sampling algorithm \
+works by peeling off the loglikelihood function like an onion.\
+\>", "Text",ExpressionUUID->"e153981e-9883-45b4-b647-ed0a85cf0a03"]
+}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -451,6 +697,8 @@ As a simple example, here is how you inference the parameters of a Cauchy \
 distribution from some data. \
 \>", "Text",ExpressionUUID->"525d5a1b-6599-4f60-a750-615a05128698"],
 
+Cell[CellGroupData[{
+
 Cell[BoxData[{
  RowBox[{
   RowBox[{"dist", "=", 
@@ -489,7 +737,42 @@ Cell[BoxData[{
     "This", " ", "is", " ", "an", " ", "optional", " ", "property", " ", 
      "that", " ", "we", " ", "attach", " ", "for", " ", "convenience"}], " ", 
     "*)"}], "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->"In[30]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
+ CellLabel->"In[3]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
+
+Cell[BoxData[
+ RowBox[{"inferenceObject", "[", 
+  TagBox[
+   TooltipBox[
+    FrameBox[
+     InterpretationBox["\<\"<< \\!\\(\\*RowBox[{\\\"8\\\"}]\\) defined \
+properties >>\"\>",
+      StringForm["<< `1` defined properties >>", 8],
+      Editable->False],
+     StripOnInput->False],
+    TagBox[
+     GridBox[{{"\"Data\"", "\"List (25 \[Times] 1)\""}, {
+       "\"GeneratingDistribution\"", "\"Distribution (1D, Real)\""}, {
+       "\"Parameters\"", "\"List (2 \[Times] 3)\""}, {
+       "\"PriorDistribution\"", "\"Distribution (2D, Vector)\""}, {
+       "\"OriginalDistribution\"", "\"Distribution (1D, Real)\""}, {
+       "\"ParameterSymbols\"", "\"List (2)\""}, {
+       "\"LogLikelihoodFunction\"", "\"CompiledFunction[...]\""}, {
+       "\"LogPriorPDFFunction\"", "\"CompiledFunction[...]\""}}, 
+      GridBoxAlignment -> {"Columns" -> {{Left}}}, AutoDelete -> False, 
+      GridBoxItemSize -> {
+       "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}], "Grid"]],
+   Annotation[#, 
+    Grid[{{"Data", "List (25 \[Times] 1)"}, {
+      "GeneratingDistribution", "Distribution (1D, Real)"}, {
+      "Parameters", "List (2 \[Times] 3)"}, {
+      "PriorDistribution", "Distribution (2D, Vector)"}, {
+      "OriginalDistribution", "Distribution (1D, Real)"}, {
+      "ParameterSymbols", "List (2)"}, {
+      "LogLikelihoodFunction", "CompiledFunction[...]"}, {
+      "LogPriorPDFFunction", "CompiledFunction[...]"}}, Alignment -> Left], 
+    "Tooltip"]& ], "]"}]], "Output",
+ CellLabel->"Out[5]=",ExpressionUUID->"8188d4ef-4baa-42fb-af7b-ce7f8dd095db"]
+}, Open  ]],
 
 Cell["\<\
 Note that the data has been transformed from a vector to a matrix as part of \
@@ -533,6 +816,8 @@ when it should terminate.\
 \>", "Item",ExpressionUUID->"ac030149-d506-4f53-b031-054ab7fcf768"]
 }, Open  ]],
 
+Cell[CellGroupData[{
+
 Cell[BoxData[{
  RowBox[{"result", " ", "=", 
   RowBox[{"nestedSampling", "[", "\[IndentingNewLine]", 
@@ -549,7 +834,94 @@ Cell[BoxData[{
    "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<LogEvidence\>\"", "]"}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<Properties\>\"", "]"}]}], "Input",
- CellLabel->"In[33]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
+ CellLabel->"In[6]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
+
+Cell[BoxData[
+ RowBox[{"inferenceObject", "[", 
+  TagBox[
+   TooltipBox[
+    FrameBox[
+     InterpretationBox["\<\"<< \\!\\(\\*RowBox[{\\\"22\\\"}]\\) defined \
+properties >>\"\>",
+      StringForm["<< `1` defined properties >>", 22],
+      Editable->False],
+     StripOnInput->False],
+    TagBox[
+     GridBox[{{"\"Data\"", "\"List (25 \[Times] 1)\""}, {
+       "\"GeneratingDistribution\"", "\"Distribution (1D, Real)\""}, {
+       "\"Parameters\"", "\"List (2 \[Times] 3)\""}, {
+       "\"PriorDistribution\"", "\"Distribution (2D, Vector)\""}, {
+       "\"OriginalDistribution\"", "\"Distribution (1D, Real)\""}, {
+       "\"ParameterSymbols\"", "\"List (2)\""}, {
+       "\"LogLikelihoodFunction\"", "\"CompiledFunction[...]\""}, {
+       "\"LogPriorPDFFunction\"", "\"CompiledFunction[...]\""}, {
+       "\"StartingPoints\"", "\"List (100 \[Times] 2)\""}, {
+       "\"Samples\"", "\"Association (907 keys)\""}, {
+       "\"SamplePoolSize\"", "\"100\""}, {
+       "\"GeneratedNestedSamples\"", "\"807\""}, {
+       "\"TotalSamples\"", "\"907\""}, {
+       "\"ParameterRanges\"", "\"List (2 \[Times] 2)\""}, {
+       "\"CrudeLogEvidence\"", "\"-75.0692\""}, {
+       "\"LogLikelihoodMaximum\"", "\"-67.0014\""}, {
+       "\"LogEstimatedMissingEvidence\"", "\"-79.6865\""}, {
+       "\"CrudeRelativeEntropy\"", "\"7.04425\""}, {
+       "\"LogEvidence\"", "\"-75.0655 \[PlusMinus] 0.252706\""}, {
+       "\"ParameterExpectedValues\"", "\"Association (2 keys)\""}, {
+       "\"RelativeEntropy\"", "\"7.03649 \[PlusMinus] 0.240272\""}, {
+       "\"EmpiricalPosteriorDistribution\"", 
+        "\"Distribution (2D, Vector)\""}}, 
+      GridBoxAlignment -> {"Columns" -> {{Left}}}, AutoDelete -> False, 
+      GridBoxItemSize -> {
+       "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}], "Grid"]],
+   Annotation[#, 
+    Grid[{{"Data", "List (25 \[Times] 1)"}, {
+      "GeneratingDistribution", "Distribution (1D, Real)"}, {
+      "Parameters", "List (2 \[Times] 3)"}, {
+      "PriorDistribution", "Distribution (2D, Vector)"}, {
+      "OriginalDistribution", "Distribution (1D, Real)"}, {
+      "ParameterSymbols", "List (2)"}, {
+      "LogLikelihoodFunction", "CompiledFunction[...]"}, {
+      "LogPriorPDFFunction", "CompiledFunction[...]"}, {
+      "StartingPoints", "List (100 \[Times] 2)"}, {
+      "Samples", "Association (907 keys)"}, {"SamplePoolSize", "100"}, {
+      "GeneratedNestedSamples", "807"}, {"TotalSamples", "907"}, {
+      "ParameterRanges", "List (2 \[Times] 2)"}, {
+      "CrudeLogEvidence", "-75.0692"}, {"LogLikelihoodMaximum", "-67.0014"}, {
+      "LogEstimatedMissingEvidence", "-79.6865"}, {
+      "CrudeRelativeEntropy", "7.04425"}, {
+      "LogEvidence", "-75.0655 \[PlusMinus] 0.252706"}, {
+      "ParameterExpectedValues", "Association (2 keys)"}, {
+      "RelativeEntropy", "7.03649 \[PlusMinus] 0.240272"}, {
+      "EmpiricalPosteriorDistribution", "Distribution (2D, Vector)"}}, 
+     Alignment -> Left], "Tooltip"]& ], "]"}]], "Output",
+ CellLabel->"Out[6]=",ExpressionUUID->"d19a53f4-55c3-4d8f-8edf-e3ba7a8a2b97"],
+
+Cell[BoxData[
+ RowBox[{"\[LeftAssociation]", 
+  RowBox[{
+   RowBox[{"\<\"Mean\"\>", "\[Rule]", 
+    RowBox[{"-", "75.06545219451584`"}]}], ",", 
+   RowBox[{"\<\"StandardError\"\>", "\[Rule]", "0.2527060379994226`"}]}], 
+  "\[RightAssociation]"}]], "Output",
+ CellLabel->"Out[7]=",ExpressionUUID->"fc7e422b-2743-4bf9-96d5-1b9061ca5892"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"\<\"CrudeLogEvidence\"\>", ",", "\<\"CrudeRelativeEntropy\"\>", 
+   ",", "\<\"Data\"\>", ",", "\<\"EmpiricalPosteriorDistribution\"\>", 
+   ",", "\<\"GeneratedNestedSamples\"\>", 
+   ",", "\<\"GeneratingDistribution\"\>", 
+   ",", "\<\"LogEstimatedMissingEvidence\"\>", ",", "\<\"LogEvidence\"\>", 
+   ",", "\<\"LogLikelihoodFunction\"\>", ",", "\<\"LogLikelihoodMaximum\"\>", 
+   ",", "\<\"LogPriorPDFFunction\"\>", ",", "\<\"OriginalDistribution\"\>", 
+   ",", "\<\"ParameterExpectedValues\"\>", ",", "\<\"ParameterRanges\"\>", 
+   ",", "\<\"Parameters\"\>", ",", "\<\"ParameterSymbols\"\>", 
+   ",", "\<\"PriorDistribution\"\>", ",", "\<\"Properties\"\>", 
+   ",", "\<\"RelativeEntropy\"\>", ",", "\<\"SamplePoolSize\"\>", 
+   ",", "\<\"Samples\"\>", ",", "\<\"StartingPoints\"\>", 
+   ",", "\<\"TotalSamples\"\>"}], "}"}]], "Output",
+ CellLabel->"Out[8]=",ExpressionUUID->"e176ea5a-8154-4d31-b06f-43524ac245f5"]
+}, Open  ]],
 
 Cell[TextData[{
  "The standard error on the log evidence is obtained by Monte Carlo sampling \
@@ -2213,7 +2585,7 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"ts", " ", "=", 
     RowBox[{"TimeSeries", "[", "ts", "]"}]}], ";"}], 
-  "\n"}], "\[IndentingNewLine]", 
+  "\[IndentingNewLine]"}], "\n", 
  RowBox[{
   RowBox[{"process", " ", "=", " ", 
    RowBox[{"GeometricBrownianMotionProcess", "[", 
@@ -2772,8 +3144,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.4731986666666667], FrameTicks -> None, PlotRangePadding -> 
                     None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.368417`", ",", "0.506779`", ",", "0.709798`"}],
@@ -2821,8 +3194,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.587148, 0.40736066666666665`, 0.09470066666666668], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.880722`", ",", "0.611041`", ",", "0.142051`"}],
@@ -2870,8 +3244,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.37345400000000006`, 0.461046, 0.12992333333333334`], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.560181`", ",", "0.691569`", ",", "0.194885`"}],
@@ -3344,8 +3719,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.4731986666666667], FrameTicks -> None, PlotRangePadding -> 
                     None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.368417`", ",", "0.506779`", ",", "0.709798`"}],
@@ -3393,8 +3769,8 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.587148, 0.40736066666666665`, 0.09470066666666668], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 1.35 (CurrentValue["FontCapHeight"]/
+                    AbsoluteCurrentValue[Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.880722`", ",", "0.611041`", ",", "0.142051`"}],
@@ -3442,8 +3818,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.37345400000000006`, 0.461046, 0.12992333333333334`], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.560181`", ",", "0.691569`", ",", "0.194885`"}],
@@ -3617,8 +3994,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.4731986666666667], FrameTicks -> None, PlotRangePadding -> 
                     None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.368417`", ",", "0.506779`", ",", "0.709798`"}],
@@ -3669,8 +4047,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.587148, 0.40736066666666665`, 0.09470066666666668], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.880722`", ",", "0.611041`", ",", "0.142051`"}],
@@ -3721,8 +4100,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.37345400000000006`, 0.461046, 0.12992333333333334`], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.560181`", ",", "0.691569`", ",", "0.194885`"}],
@@ -4053,8 +4433,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.4731986666666667], FrameTicks -> None, PlotRangePadding -> 
                     None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.368417`", ",", "0.506779`", ",", "0.709798`"}],
@@ -4102,8 +4483,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.587148, 0.40736066666666665`, 0.09470066666666668], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.880722`", ",", "0.611041`", ",", "0.142051`"}],
@@ -4151,8 +4533,9 @@ TraditionalForm]\\) \[PlusMinus] \
                     0.37345400000000006`, 0.461046, 0.12992333333333334`], 
                     FrameTicks -> None, PlotRangePadding -> None, ImageSize -> 
                     Dynamic[{
-                    Automatic, 1.35 CurrentValue["FontCapHeight"]/
-                    AbsoluteCurrentValue[Magnification]}]], 
+                    Automatic, 
+                    1.35 (CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+                    Magnification])}]], 
                     StyleBox[
                     RowBox[{"RGBColor", "[", 
                     RowBox[{"0.560181`", ",", "0.691569`", ",", "0.194885`"}],
