@@ -41,3 +41,7 @@ The package has been overhauled significantly and now relies largely on the MCMC
 * 26 November 2018
 
 	* Make sure that parellel runs in `parallelNestedSampling` always generate their own starting points.
+
+* 28 Novermber 2018
+
+	* Add a new section to the example notebook that explains the goals of the package in broader terms. Also features an animated visualisation of the nested sampling algorithm. Check it out!
