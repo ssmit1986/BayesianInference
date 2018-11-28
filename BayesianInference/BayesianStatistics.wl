@@ -258,14 +258,18 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
             BayesianUtilities`Private`randomDomainPointDistribution[assoc["Parameters"][[All, {2, 3}]]],
             100
         ];
-        If[ !TrueQ @ numericVectorQ[assoc["LogPriorPDFFunction"] /@ randomTestPoints]
+        If[ With[{test = assoc["LogPriorPDFFunction"] /@ randomTestPoints},
+                !TrueQ @ numericVectorQ[test] || !FreeQ[test, _Complex]
+            ]
             ,
             (
                 Message[defineInferenceProblem::failed, "LogPriorPDFFunction"];
                 Throw[$Failed, "problemDef"]
             )
             ,
-            If[ !TrueQ @ numericVectorQ[assoc["LogLikelihoodFunction"] /@ randomTestPoints],
+            If[ With[{test = assoc["LogLikelihoodFunction"] /@ randomTestPoints},
+                    !TrueQ @ numericVectorQ[test] || !FreeQ[test, _Complex]
+                ],
                 (
                     Message[defineInferenceProblem::failed, "LogLikelihoodFunction"];
                     Throw[$Failed, "problemDef"]
@@ -524,7 +528,8 @@ regressionLogLikelihoodFunction[
                         ],
                         And[
                             constraints,
-                            distributionDomainToConstraints[domain, varsOut]
+                            distributionDomainToConstraints[domain, varsOut],
+                            Element[independentVariables, Reals]
                         ] 
                     ]
                 ],
