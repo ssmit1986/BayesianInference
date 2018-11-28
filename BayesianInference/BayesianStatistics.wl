@@ -1139,7 +1139,6 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
     keys,
     logEvidenceWeigths,
     posteriorWeights,
-    sampledX,
     sampledLogX,
     parameterSamples,
     zSamples,
@@ -1196,7 +1195,6 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
             ]
         ]
     ];
-    sampledX = Exp[sampledLogX];
     zSamples = logSumExp /@ logEvidenceWeigths;
     posteriorWeights = Exp[logEvidenceWeigths - zSamples];
     parameterSamples = Transpose[
@@ -1213,7 +1211,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
             "Samples" -> SortBy[-#CrudeLogPosteriorWeight &] @ Join[
                 result["Samples"],
                 GeneralUtilities`AssociationTranspose @ <|
-                    "SampledX" -> AssociationThread[keys, meanAndError[Transpose[sampledX]]],
+                    "SampledLogX" -> AssociationThread[keys, meanAndError[Transpose[sampledLogX]]],
                     "LogPosteriorWeight" -> AssociationThread[
                         keys,
                         meanAndError /@ Transpose[
@@ -1434,18 +1432,18 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
             } -> {
             With[{
                 dat = Transpose @ {
-                    Values @ result[["Samples", All, "SampledX", "Mean"]],
+                    Values @ result[["Samples", All, "SampledLogX", "Mean"]],
                     Values @ result[["Samples", All, "LogLikelihood"]]
                 }
             },
                 Manipulate[
                     Show[
-                        ListLogLinearPlot[
+                        ListPlot[
                             dat,
-                            PlotRange -> MinMax[dat[[All, 2]]],
+                            PlotRange -> {All, MinMax[dat[[All, 2]]]},
                             PlotRangePadding -> {{0, 0}, {0, Scaled[0.01]}},
                             PlotLabel -> "Skilling's plot",
-                            Sequence @@ style["X; enclosed prior mass", "LogLikelihood"]
+                            Sequence @@ style["Log[X]; enclosed prior mass", "LogLikelihood"]
                         ],
                         PlotRange -> {{All, Log[1]}, {Dynamic[min], All}}
                     ],
