@@ -411,7 +411,7 @@ simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting 
     FullSimplify[
         logPDF,
         assum
-    ],
+    ] /. DirectedInfinity[-1] -> $MachineLogZero,
     Assumptions -> assum
 ];
 
