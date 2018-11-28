@@ -721,7 +721,7 @@ nsMCMC[
     ]
 ];
 
-trapezoidWeigths = Compile[{
+trapezoidWeigths["Linear"] = Compile[{
     {list, _Real, 1}
 },
     0.5 * Subtract[
@@ -730,8 +730,24 @@ trapezoidWeigths = Compile[{
     ],
     RuntimeAttributes -> {Listable}
 ];
+trapezoidWeigths["Log"] = Compile[{
+    {logList, _Real, 1}
+},
+    Log[0.5] + Append[
+        MapThread[
+            logSubtract,
+            {
+                Prepend[logList[[;; -3]], logSubtract[Log[2.], First[logList]]],
+                Rest[logList]
+            }
+        ],
+        logAdd[logList[[-2]], logList[[-1]]]
+    ],
+    RuntimeAttributes -> {Listable},
+    CompilationOptions -> {"InlineExternalDefinitions" -> True, "InlineCompiledFunctions" -> True}
+];
 
-calculateXValues = Compile[{
+calculateXValues["Linear"] = Compile[{
     {nSamplePool, _Real},
     {nDeleted, _Real}
 },
@@ -739,6 +755,21 @@ calculateXValues = Compile[{
         Exp[-Divide[#, nSamplePool]]& /@ Range[nDeleted],
         Table[
             (i / (nSamplePool + 1)) * Exp[-Divide[nDeleted, nSamplePool]],
+            {i, nSamplePool, 1, -1}
+        ]
+    ]
+];
+calculateXValues["Log"] = Compile[{
+    {nSamplePool, _Real},
+    {nDeleted, _Real}
+},
+    Join[
+        -Divide[#, nSamplePool]& /@ Range[nDeleted],
+        Table[
+            Subtract[
+                Subtract[Log[i], Log[nSamplePool + 1]],
+                Divide[nDeleted, nSamplePool]
+            ],
             {i, nSamplePool, 1, -1}
         ]
     ]
@@ -758,18 +789,19 @@ calculateEntropy[samples_Association, logEvidence_] := Subtract[
 calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
     nDeleted = Length[samplePoints] - nSamplePool,
     sorted = SortBy[{#LogLikelihood, #Point}&] @ samplePoints, (* Sorting by #Point is used to break ties. *)
-    xValues,
-    weights,
+    logXValues,
+    logWeights,
     keys
 },
     keys = Keys[sorted];
-    xValues = calculateXValues[nSamplePool, nDeleted];
-    weights = trapezoidWeigths[xValues];
+    logXValues = calculateXValues["Log"][nSamplePool, nDeleted];
+    logWeights = trapezoidWeigths["Log"][logXValues];
     Join[
         sorted,
         GeneralUtilities`AssociationTranspose @ <|
-            "X" -> AssociationThread[keys, xValues],
-            "CrudeLogPosteriorWeight" -> AssociationThread[keys, Log[weights] + Values @ sorted[[All, "LogLikelihood"]]]
+            "X" -> AssociationThread[keys, Exp[logXValues]],
+            "LogX" -> AssociationThread[keys, logXValues],
+            "CrudeLogPosteriorWeight" -> AssociationThread[keys, logWeights + Values @ sorted[[All, "LogLikelihood"]]]
         |>,
         2
     ]
@@ -951,7 +983,10 @@ nestedSamplingInternal[
                 variableSamplePoints,
                 iteration + nSamples -> Append[
                     newPoint[[{"Point", "AcceptanceRate", "MeanEstimate", "CovarianceEstimate"}]],
-                    "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]]
+                    <|
+                        "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]],
+                        "LogPriorPDF" -> logPriorDensityFunction[newPoint[["Point"]]]
+                    |>
                 ]
             ],
             nSamples
@@ -1107,7 +1142,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
     keys,
     logEvidenceWeigths,
     posteriorWeights,
-    sampledX,
+    sampledLogX,
     parameterSamples,
     zSamples,
     output,
@@ -1140,21 +1175,25 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
             Values @ result[["Samples", All, "LogLikelihood"]],
             nRuns
         ],
-        Log @ trapezoidWeigths[
-            sampledX = Map[
+        trapezoidWeigths["Log"][
+            sampledLogX = Map[
                 Join[
                     #,
-                    ReverseSort @ RandomVariate[UniformDistribution[{0, Min[#]}], result["SamplePoolSize"]]
+                    - Sort @ RandomVariate[
+                        TruncatedDistribution[ (* == TransformedDistribution[-Log[x], x \[Distributed] UniformDistribution[{0, max}]] *)
+                            {- Min[#], DirectedInfinity[1]},
+                            ExponentialDistribution[1]
+                        ],
+                        result["SamplePoolSize"]
+                    ]
                 ]&,
                 With[{
-                    randomNumbers = RandomVariate[
-                        BetaDistribution[result["SamplePoolSize"], 1],
+                    randomNumbers = - RandomVariate[
+                        ExponentialDistribution[result["SamplePoolSize"]], (* ExponentialDistribution[n] == TransformedDistribution[-Log[x], x \[Distributed] BetaDistribution[n,1]] *)
                         {result["GeneratedNestedSamples"], nRuns}
                     ]
                 },
-                    Transpose[
-                        FoldList[Times, randomNumbers]
-                    ]
+                    Transpose @ Accumulate[randomNumbers]
                 ]
             ]
         ]
@@ -1175,7 +1214,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
             "Samples" -> SortBy[-#CrudeLogPosteriorWeight &] @ Join[
                 result["Samples"],
                 GeneralUtilities`AssociationTranspose @ <|
-                    "SampledX" -> AssociationThread[keys, meanAndError[Transpose[sampledX]]],
+                    "SampledLogX" -> AssociationThread[keys, meanAndError[Transpose[sampledLogX]]],
                     "LogPosteriorWeight" -> AssociationThread[
                         keys,
                         meanAndError /@ Transpose[
@@ -1320,6 +1359,36 @@ predictiveDistribution[
 );
 
 predictiveDistribution[
+    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]]&)],
+    rest___,
+    "MaximumLikelihood"
+] := predictiveDistribution[
+    inferenceObject[
+        Query[
+            {
+                "Samples" -> TakeLargestBy[#LogLikelihood&, 1]
+            }
+        ] @ result
+    ],
+    rest
+];
+
+predictiveDistribution[
+    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]]&)],
+    rest___,
+    "MAP"
+] := predictiveDistribution[
+    inferenceObject[
+        Query[
+            {
+                "Samples" -> TakeLargestBy[#LogLikelihood + #LogPriorPDF &, 1]
+            }
+        ] @ result
+    ],
+    rest
+];
+
+predictiveDistribution[
     inferenceObject[result_?(AssociationQ[#] && ListQ[#["Data"]] && !MissingQ[#["Samples"]] && !MissingQ[#["GeneratingDistribution"]]&)]
 ] := With[{
     dist = Block[{
@@ -1396,18 +1465,18 @@ calculationReport[inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Sam
             } -> {
             With[{
                 dat = Transpose @ {
-                    Values @ result[["Samples", All, "SampledX", "Mean"]],
+                    Values @ result[["Samples", All, "SampledLogX", "Mean"]],
                     Values @ result[["Samples", All, "LogLikelihood"]]
                 }
             },
                 Manipulate[
                     Show[
-                        ListLogLinearPlot[
+                        ListPlot[
                             dat,
-                            PlotRange -> MinMax[dat[[All, 2]]],
+                            PlotRange -> {All, MinMax[dat[[All, 2]]]},
                             PlotRangePadding -> {{0, 0}, {0, Scaled[0.01]}},
                             PlotLabel -> "Skilling's plot",
-                            Sequence @@ style["X; enclosed prior mass", "LogLikelihood"]
+                            Sequence @@ style["Log[X]; enclosed prior mass", "LogLikelihood"]
                         ],
                         PlotRange -> {{All, Log[1]}, {Dynamic[min], All}}
                     ],
