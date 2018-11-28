@@ -413,7 +413,7 @@ of logevidence or a factor of ",
 Cell[CellGroupData[{
 
 Cell["\<\
-Brief explanation of the algorithm with Interactive animation\
+Brief explanation of the algorithm with interactive animation\
 \>", "Subsubsection",ExpressionUUID->"3d147c61-b591-4dea-89b4-471c8bfd6168"],
 
 Cell["\<\
