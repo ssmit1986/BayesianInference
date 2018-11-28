@@ -35,7 +35,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[43]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -1053,7 +1053,7 @@ Cell[BoxData[{
     "This", " ", "is", " ", "an", " ", "optional", " ", "property", " ", 
      "that", " ", "we", " ", "attach", " ", "for", " ", "convenience"}], " ", 
     "*)"}], "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->"In[3]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
+ CellLabel->"In[8]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
 
 Cell["\<\
 Note that the data has been transformed from a vector to a matrix as part of \
@@ -1114,7 +1114,7 @@ Cell[BoxData[{
    "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<LogEvidence\>\"", "]"}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<Properties\>\"", "]"}]}], "Input",
- CellLabel->"In[6]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
+ CellLabel->"In[11]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
 
 Cell[TextData[{
  "The standard error on the logevidence is obtained by Monte Carlo sampling \
@@ -1224,8 +1224,7 @@ Cell[BoxData[{
     RowBox[{"{", 
      RowBox[{"None", ",", "\"\<Log\>\"", ",", "None"}], "}"}]}]}], 
   "\[IndentingNewLine]", "]"}]}], "Input",
- CellLabel->
-  "In[171]:=",ExpressionUUID->"5ea9102c-5b40-4d5d-b824-05ccb85bc18e"],
+ CellLabel->"In[6]:=",ExpressionUUID->"5ea9102c-5b40-4d5d-b824-05ccb85bc18e"],
 
 Cell[TextData[{
  "Plot the marginal PDFs of ",
@@ -1289,17 +1288,14 @@ Cell[BoxData[
         "x"}], "]"}], ",", "\[IndentingNewLine]", 
       RowBox[{"PDF", "[", 
        RowBox[{
-        RowBox[{"EstimatedDistribution", "[", 
-         RowBox[{
-          RowBox[{"Flatten", " ", "@", " ", 
-           RowBox[{"result", "[", "\"\<Data\>\"", "]"}]}], ",", 
-          RowBox[{"result", "[", "\"\<GeneratingDistribution\>\"", "]"}], ",", 
-          RowBox[{"ParameterEstimator", "->", 
-           RowBox[{"{", 
-            RowBox[{"\"\<MaximumLikelihood\>\"", ",", " ", 
-             RowBox[{"Method", " ", "->", " ", "\"\<FindMaximum\>\""}]}], 
-            "}"}]}]}], "]"}], ",", " ", "x"}], "]"}], ",", 
-      "\[IndentingNewLine]", 
+        RowBox[{"predictiveDistribution", "[", 
+         RowBox[{"truncatedResult", ",", "\"\<MaximumLikelihood\>\""}], "]"}],
+         ",", " ", "x"}], "]"}], ",", "\[IndentingNewLine]", 
+      RowBox[{"PDF", "[", 
+       RowBox[{
+        RowBox[{"predictiveDistribution", "[", 
+         RowBox[{"truncatedResult", ",", "\"\<MAP\>\""}], "]"}], ",", " ", 
+        "x"}], "]"}], ",", "\[IndentingNewLine]", 
       RowBox[{"PDF", "[", 
        RowBox[{
         RowBox[{"result", "[", "\"\<OriginalDistribution\>\"", "]"}], ",", 
@@ -1313,11 +1309,11 @@ Cell[BoxData[
     RowBox[{"{", 
      RowBox[{
      "\"\<Posterior predictive PDF\>\"", ",", " ", 
-      "\"\<PDF based on maximum likelihood estimate\>\"", ",", " ", 
+      "\"\<PDF based on maximum likelihood estimate\>\"", ",", 
+      "\"\<PDF based on maximum posterior (MAP) estimate\>\"", ",", " ", 
       "\"\<PDF of original distribution\>\""}], "}"}]}]}], 
   "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->
-  "In[191]:=",ExpressionUUID->"7cf996e1-36e2-4b55-878a-616faeff539e"],
+ CellLabel->"In[16]:=",ExpressionUUID->"7cf996e1-36e2-4b55-878a-616faeff539e"],
 
 Cell["\<\
 Compute the evidence of a competing model to see if it offers a better \
@@ -2083,7 +2079,7 @@ Cell[BoxData[{
      RowBox[{"{", 
       RowBox[{"t", ",", "0", ",", "6"}], "}"}]}], "]"}]}], 
   "\[IndentingNewLine]", "]"}]}], "Input",
- CellLabel->"In[14]:=",ExpressionUUID->"c80e7c48-2a33-4ca8-8579-b93a4b22b8b9"],
+ CellLabel->"In[17]:=",ExpressionUUID->"c80e7c48-2a33-4ca8-8579-b93a4b22b8b9"],
 
 Cell["\<\
 The model can be defined by putting a logistic sigmoid inside of a  \
@@ -2122,18 +2118,16 @@ Cell[BoxData[
        RowBox[{"NormalDistribution", "[", 
         RowBox[{"0", ",", "50"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
    "]"}]}]], "Input",
- CellLabel->"In[59]:=",ExpressionUUID->"6459ff03-11f9-4fb3-944d-805df792bd71"],
+ CellLabel->"In[19]:=",ExpressionUUID->"6459ff03-11f9-4fb3-944d-805df792bd71"],
 
 Cell[TextData[{
  "Note the strong negative correlation between ",
  Cell[BoxData[
-  FormBox["a", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["a", TraditionalForm]],ExpressionUUID->
   "c02c783f-11f5-4979-921e-5871ec47cb19"],
  " and ",
  Cell[BoxData[
-  FormBox["b", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["b", TraditionalForm]],ExpressionUUID->
   "a864b4eb-1e88-48ac-9e37-c7b8ea0fe574"],
  " in the posterior distribution:"
 }], "Text",ExpressionUUID->"f027b807-daf4-4760-b58f-17698adf1f34"],
@@ -2153,23 +2147,60 @@ Cell[BoxData[{
     RowBox[{"result", ",", "0.99"}], "]"}], ",", 
    RowBox[{"{", 
     RowBox[{"a", ",", "b"}], "}"}]}], "]"}]}], "Input",
- CellLabel->"In[67]:=",ExpressionUUID->"e6908fe6-a985-4b86-bb2d-665582340f10"],
+ CellLabel->"In[20]:=",ExpressionUUID->"e6908fe6-a985-4b86-bb2d-665582340f10"],
 
-Cell["The predictions are very conservative:", \
-"Text",ExpressionUUID->"e9954343-51e2-46ce-98c1-2e4126d1c94d"],
+Cell[TextData[{
+ "To plot the regression probabilities, we need to pull the ",
+ Cell[BoxData[
+  FormBox["p", TraditionalForm]],
+  FormatType->"TraditionalForm",ExpressionUUID->
+  "787b6bdb-befa-4296-b59f-f4582b758176"],
+ " values out of the Bernoulli distributions that are combined in the \
+predictions:"
+}], "Text",ExpressionUUID->"e9954343-51e2-46ce-98c1-2e4126d1c94d"],
 
-Cell[BoxData[{
+Cell[BoxData[
  RowBox[{
   RowBox[{"predictions", "=", 
-   RowBox[{"predictiveDistribution", "[", 
+   RowBox[{
     RowBox[{
-     RowBox[{"takePosteriorFraction", "[", 
-      RowBox[{"result", ",", "0.99"}], "]"}], ",", 
-     RowBox[{"Range", "[", 
-      RowBox[{"0", ",", "6", ",", "0.25"}], "]"}]}], "]"}]}], ";"}], "\n", 
- RowBox[{"regressionPlot1D", "[", 
-  RowBox[{"result", ",", "predictions"}], "]"}]}], "Input",
- CellLabel->"In[63]:=",ExpressionUUID->"bc0e54bd-2323-434a-b0b5-232386fef056"]
+     RowBox[{"EmpiricalDistribution", "[", 
+      RowBox[{
+       RowBox[{"#", "[", 
+        RowBox[{"[", "1", "]"}], "]"}], "\[Rule]", " ", 
+       RowBox[{"#", "[", 
+        RowBox[{"[", 
+         RowBox[{"2", ",", "All", ",", "1"}], "]"}], "]"}]}], "]"}], "&"}], "/@", 
+    RowBox[{"predictiveDistribution", "[", 
+     RowBox[{
+      RowBox[{"takePosteriorFraction", "[", 
+       RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+      RowBox[{"Range", "[", 
+       RowBox[{"0", ",", "6", ",", "0.25"}], "]"}]}], "]"}]}]}], 
+  ";"}]], "Input",
+ CellLabel->"In[71]:=",ExpressionUUID->"11c08d5b-373e-4092-81e6-773eef224a81"],
+
+Cell["\<\
+Plot the spread in the classification probabilities and compare with the \
+maximum likelihood estimate:\
+\>", "Text",ExpressionUUID->"6abcc83e-fd98-4843-9aa9-6287f115baf9"],
+
+Cell[BoxData[
+ RowBox[{"Show", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"regressionPlot1D", "[", 
+    RowBox[{"result", ",", "predictions"}], "]"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"ListLinePlot", "[", 
+    RowBox[{
+     RowBox[{"First", "/@", 
+      RowBox[{"predictiveDistribution", "[", 
+       RowBox[{"result", ",", 
+        RowBox[{"Range", "[", 
+         RowBox[{"0", ",", "6", ",", "0.25"}], "]"}], ",", " ", 
+        "\"\<MaximumLikelihood\>\""}], "]"}]}], ",", 
+     RowBox[{"PlotStyle", "\[Rule]", "Dashed"}]}], "]"}]}], 
+  "\[IndentingNewLine]", "]"}]], "Input",
+ CellLabel->"In[72]:=",ExpressionUUID->"bc0e54bd-2323-434a-b0b5-232386fef056"]
 }, Closed]],
 
 Cell[CellGroupData[{
@@ -2924,7 +2955,7 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"ts", " ", "=", 
     RowBox[{"TimeSeries", "[", "ts", "]"}]}], ";"}], 
-  "\[IndentingNewLine]"}], "\n", 
+  "\n"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"process", " ", "=", " ", 
    RowBox[{"GeometricBrownianMotionProcess", "[", 

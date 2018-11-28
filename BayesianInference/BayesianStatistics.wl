@@ -983,7 +983,10 @@ nestedSamplingInternal[
                 variableSamplePoints,
                 iteration + nSamples -> Append[
                     newPoint[[{"Point", "AcceptanceRate", "MeanEstimate", "CovarianceEstimate"}]],
-                    "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]]
+                    <|
+                        "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]],
+                        "LogPriorPDF" -> logPriorDensityFunction[newPoint[["Point"]]]
+                    |>
                 ]
             ],
             nSamples
@@ -1354,6 +1357,36 @@ predictiveDistribution[
     Message[predictiveDistribution::MissGenDist];
     $Failed
 );
+
+predictiveDistribution[
+    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]]&)],
+    rest___,
+    "MaximumLikelihood"
+] := predictiveDistribution[
+    inferenceObject[
+        Query[
+            {
+                "Samples" -> TakeLargestBy[#LogLikelihood&, 1]
+            }
+        ] @ result
+    ],
+    rest
+];
+
+predictiveDistribution[
+    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]]&)],
+    rest___,
+    "MAP"
+] := predictiveDistribution[
+    inferenceObject[
+        Query[
+            {
+                "Samples" -> TakeLargestBy[#LogLikelihood + #LogPriorPDF &, 1]
+            }
+        ] @ result
+    ],
+    rest
+];
 
 predictiveDistribution[
     inferenceObject[result_?(AssociationQ[#] && ListQ[#["Data"]] && !MissingQ[#["Samples"]] && !MissingQ[#["GeneratingDistribution"]]&)]
