@@ -721,7 +721,7 @@ nsMCMC[
     ]
 ];
 
-trapezoidWeigths = Compile[{
+trapezoidWeigths["Linear"] = Compile[{
     {list, _Real, 1}
 },
     0.5 * Subtract[
@@ -730,8 +730,24 @@ trapezoidWeigths = Compile[{
     ],
     RuntimeAttributes -> {Listable}
 ];
+trapezoidWeigths["Log"] = Compile[{
+    {logList, _Real, 1}
+},
+    Log[0.5] + Append[
+        MapThread[
+            logSubtract,
+            {
+                Prepend[logList[[;; -3]], logSubtract[Log[2.], First[logList]]],
+                Rest[logList]
+            }
+        ],
+        logAdd[logList[[-2]], logList[[-1]]]
+    ],
+    RuntimeAttributes -> {Listable},
+    CompilationOptions -> {"InlineExternalDefinitions" -> True, "InlineCompiledFunctions" -> True}
+];
 
-calculateXValues = Compile[{
+calculateXValues["Linear"] = Compile[{
     {nSamplePool, _Real},
     {nDeleted, _Real}
 },
@@ -739,6 +755,21 @@ calculateXValues = Compile[{
         Exp[-Divide[#, nSamplePool]]& /@ Range[nDeleted],
         Table[
             (i / (nSamplePool + 1)) * Exp[-Divide[nDeleted, nSamplePool]],
+            {i, nSamplePool, 1, -1}
+        ]
+    ]
+];
+calculateXValues["Log"] = Compile[{
+    {nSamplePool, _Real},
+    {nDeleted, _Real}
+},
+    Join[
+        -Divide[#, nSamplePool]& /@ Range[nDeleted],
+        Table[
+            Subtract[
+                Subtract[Log[i], Log[nSamplePool + 1]],
+                Divide[nDeleted, nSamplePool]
+            ],
             {i, nSamplePool, 1, -1}
         ]
     ]
@@ -758,18 +789,19 @@ calculateEntropy[samples_Association, logEvidence_] := Subtract[
 calculateWeightsCrude[samplePoints_Association, nSamplePool_Integer] := Module[{
     nDeleted = Length[samplePoints] - nSamplePool,
     sorted = SortBy[{#LogLikelihood, #Point}&] @ samplePoints, (* Sorting by #Point is used to break ties. *)
-    xValues,
-    weights,
+    logXValues,
+    logWeights,
     keys
 },
     keys = Keys[sorted];
-    xValues = calculateXValues[nSamplePool, nDeleted];
-    weights = trapezoidWeigths[xValues];
+    logXValues = calculateXValues["Log"][nSamplePool, nDeleted];
+    logWeights = trapezoidWeigths["Log"][logXValues];
     Join[
         sorted,
         GeneralUtilities`AssociationTranspose @ <|
-            "X" -> AssociationThread[keys, xValues],
-            "CrudeLogPosteriorWeight" -> AssociationThread[keys, Log[weights] + Values @ sorted[[All, "LogLikelihood"]]]
+            "X" -> AssociationThread[keys, Exp[logXValues]],
+            "LogX" -> AssociationThread[keys, logXValues],
+            "CrudeLogPosteriorWeight" -> AssociationThread[keys, logWeights + Values @ sorted[[All, "LogLikelihood"]]]
         |>,
         2
     ]
@@ -1140,7 +1172,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
             Values @ result[["Samples", All, "LogLikelihood"]],
             nRuns
         ],
-        Log @ trapezoidWeigths[
+        Log @ trapezoidWeigths["Linear"][
             sampledX = Map[
                 Join[
                     #,
