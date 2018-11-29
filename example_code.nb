@@ -1812,7 +1812,7 @@ Cell[BoxData[{
    RowBox[{"ListPlot", "[", 
     RowBox[{"List", "@@@", "testdata"}], "]"}]}], "\[IndentingNewLine]", 
   "]"}], "\[IndentingNewLine]", "testdata"}], "Input",
- CellLabel->"In[30]:=",ExpressionUUID->"eda63068-e7af-4003-bbc7-9d06cd13dced"],
+ CellLabel->"In[3]:=",ExpressionUUID->"eda63068-e7af-4003-bbc7-9d06cd13dced"],
 
 Cell[TextData[{
  "Note that the data is specified as a list of rules or as a rule of lists (",
@@ -1872,7 +1872,7 @@ Cell[BoxData[{
        " ", "\"\<ScaleParameter\>\""}], "}"}]}]}], "\[IndentingNewLine]", 
    "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"obj", "[", "\"\<Data\>\"", "]"}]}], "Input",
- CellLabel->"In[32]:=",ExpressionUUID->"0bece909-f8bd-4067-914d-743675c6bff2"],
+ CellLabel->"In[5]:=",ExpressionUUID->"0bece909-f8bd-4067-914d-743675c6bff2"],
 
 Cell[TextData[{
  "The functions ",
@@ -1899,7 +1899,84 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"result", ",", "predictions"}], "]"}]}], "Input",
- CellLabel->"In[34]:=",ExpressionUUID->"d7c9dbb4-5f69-48f3-8a47-1d1c6af3ff80"],
+ CellLabel->"In[7]:=",ExpressionUUID->"d7c9dbb4-5f69-48f3-8a47-1d1c6af3ff80"],
+
+Cell["\<\
+You can visualise the different lines that are used in this result:\
+\>", "Text",ExpressionUUID->"d4a4caf1-3ef6-48a0-8630-7c67f5267bd4"],
+
+Cell[BoxData[
+ RowBox[{"With", "[", 
+  RowBox[{
+   RowBox[{"{", "\[IndentingNewLine]", 
+    RowBox[{"result", " ", "=", " ", 
+     RowBox[{"takePosteriorFraction", "[", 
+      RowBox[{"result", ",", "0.99"}], "]"}]}], "\[IndentingNewLine]", "}"}], 
+   ",", "\[IndentingNewLine]", 
+   RowBox[{"With", "[", 
+    RowBox[{
+     RowBox[{"{", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"points", " ", "=", " ", 
+        RowBox[{"Values", "@", 
+         RowBox[{"result", "[", 
+          RowBox[{
+          "\"\<Samples\>\"", ",", " ", "All", ",", " ", "\"\<Point\>\""}], 
+          "]"}]}]}], ",", "\[IndentingNewLine]", 
+       RowBox[{"weights", " ", "=", " ", 
+        RowBox[{"Values", "@", 
+         RowBox[{"Quiet", "@", 
+          RowBox[{"Exp", "[", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"#", "-", 
+              RowBox[{"Max", "[", "#", "]"}]}], "&"}], "@", 
+            RowBox[{"result", "[", 
+             RowBox[{
+             "\"\<Samples\>\"", ",", " ", "All", ",", " ", 
+              "\"\<LogPosteriorWeight\>\"", ",", "\"\<Mean\>\""}], "]"}]}], 
+           "]"}]}]}]}], ",", "\[IndentingNewLine]", 
+       RowBox[{"model", " ", "=", 
+        RowBox[{"expressionToFunction", "[", 
+         RowBox[{
+          RowBox[{"result", "[", 
+           RowBox[{"\"\<GeneratingDistribution\>\"", ",", " ", "1"}], "]"}], 
+          ",", 
+          RowBox[{"result", "[", "\"\<ParameterSymbols\>\"", "]"}]}], 
+         "]"}]}]}], "\[IndentingNewLine]", "}"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"Show", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"Show", " ", "@", " ", 
+        RowBox[{"MapThread", "[", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"Plot", "[", 
+            RowBox[{
+             RowBox[{"Evaluate", "@", 
+              RowBox[{"model", "[", "#1", "]"}]}], ",", 
+             RowBox[{"{", 
+              RowBox[{"x", ",", 
+               RowBox[{"-", "2"}], ",", "2"}], "}"}], ",", 
+             RowBox[{"PlotStyle", "\[Rule]", 
+              RowBox[{"Directive", "[", 
+               RowBox[{"Black", ",", 
+                RowBox[{"Opacity", "[", "#2", "]"}]}], "]"}]}]}], "]"}], 
+           "&"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"{", 
+           RowBox[{"points", ",", "weights"}], "}"}]}], "\[IndentingNewLine]",
+          "]"}]}], ",", "\[IndentingNewLine]", 
+       RowBox[{"ListPlot", "[", 
+        RowBox[{
+         RowBox[{"Transpose", "[", 
+          RowBox[{"List", "@@", 
+           RowBox[{"(", 
+            RowBox[{"Flatten", "/@", 
+             RowBox[{"result", "[", "\"\<Data\>\"", "]"}]}], ")"}]}], "]"}], 
+         ",", 
+         RowBox[{"PlotStyle", "\[Rule]", "Red"}]}], "]"}]}], 
+      "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", "]"}]}], 
+  "\[IndentingNewLine]", "]"}]], "Input",
+ CellLabel->"In[26]:=",ExpressionUUID->"e90d9225-d094-4f01-8a3d-3f19cf209db4"],
 
 Cell["Compare 3 polynomial models of increasing order:", \
 "Text",ExpressionUUID->"0bee3961-019b-413b-a42c-5880deccbcd7"],
@@ -2152,8 +2229,7 @@ Cell[BoxData[{
 Cell[TextData[{
  "To plot the regression probabilities, we need to pull the ",
  Cell[BoxData[
-  FormBox["p", TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+  FormBox["p", TraditionalForm]],ExpressionUUID->
   "787b6bdb-befa-4296-b59f-f4582b758176"],
  " values out of the Bernoulli distributions that are combined in the \
 predictions:"
@@ -2955,7 +3031,7 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"ts", " ", "=", 
     RowBox[{"TimeSeries", "[", "ts", "]"}]}], ";"}], 
-  "\n"}], "\[IndentingNewLine]", 
+  "\[IndentingNewLine]"}], "\n", 
  RowBox[{
   RowBox[{"process", " ", "=", " ", 
    RowBox[{"GeometricBrownianMotionProcess", "[", 
