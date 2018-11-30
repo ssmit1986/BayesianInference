@@ -31,8 +31,8 @@ The package has been overhauled significantly and now relies largely on the MCMC
 
 * 24 November 2018
 
-	* Add an example section that shows how to use nested sampling for timeseries regression with a `GeometricBrownianMotionProcess`
-	* Improve the numerical stability of the evidence computation
+	* Add an example section that shows how to use nested sampling for timeseries regression with a `GeometricBrownianMotionProcess`.
+	* Improve the numerical stability of the evidence computation.
 
 * 25 Novermber 2018
 
@@ -45,7 +45,7 @@ The package has been overhauled significantly and now relies largely on the MCMC
 * 28 Novermber 2018
 
 	* Add a new section to the example notebook that explains the goals of the package in broader terms. Also features an animated visualisation of the nested sampling algorithm. Check it out!
-	* Add example of classification using logistic regression
+	* Add example of classification using logistic regression.
 
 * 30 November 2018
 
