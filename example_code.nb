@@ -35,7 +35,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[68]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -2326,7 +2326,25 @@ Cell[BoxData[
         RowBox[{"[", 
          RowBox[{"1", ",", "1"}], "]"}], "]"}], "]"}]}]}]}], 
    "\[IndentingNewLine]", "]"}], ";"}]], "Input",
- CellLabel->"In[45]:=",ExpressionUUID->"367bec5b-76de-4b37-878c-8192777187c6"],
+ CellLabel->"In[3]:=",ExpressionUUID->"367bec5b-76de-4b37-878c-8192777187c6"],
+
+Cell["Normalise the input features:", \
+"Text",ExpressionUUID->"ebc1c94c-e438-416c-9dbd-30f9b029a040"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"normalInputData", "=", 
+   RowBox[{"normalizeData", "[", 
+    RowBox[{"data", "[", 
+     RowBox[{"[", 
+      RowBox[{"All", ",", "1"}], "]"}], "]"}], "]"}]}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"data", "[", 
+    RowBox[{"[", 
+     RowBox[{"All", ",", "1"}], "]"}], "]"}], "=", 
+   RowBox[{"normalInputData", "[", "\"\<NormalizedData\>\"", "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"cf8d7871-74f7-4660-9224-278062d09a98"],
 
 Cell["\<\
 The first thing to do, is to define a higher dimensional version of the \
@@ -2352,15 +2370,14 @@ Cell[BoxData[
       RowBox[{"class", ",", "1", ",", 
        RowBox[{"Length", "[", "pvector", "]"}], ",", "1"}], "}"}]}], 
     "\[IndentingNewLine]", "]"}]}], ";"}]], "Input",
- CellLabel->"In[46]:=",ExpressionUUID->"82166071-81e9-4d88-9e7b-f88219d6d023"],
+ CellLabel->"In[11]:=",ExpressionUUID->"82166071-81e9-4d88-9e7b-f88219d6d023"],
 
 Cell[TextData[{
  "To map the 4 input features onto a probability vector of length 3, we first \
 define a parameterised ",
  Cell[BoxData[
   FormBox[
-   RowBox[{"2", "\[Times]", "4"}], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+   RowBox[{"2", "\[Times]", "4"}], TraditionalForm]],ExpressionUUID->
   "3090d54c-f530-4dde-ad38-eb6f8af87c80"],
  " matrix and a length-2 bias vector:"
 }], "Text",ExpressionUUID->"a3840cad-60d4-4f85-a944-845810be4b38"],
@@ -2397,7 +2414,7 @@ Cell[BoxData[{
        RowBox[{"StringForm", "[", 
         RowBox[{"\"\<x`1`\>\"", ",", "#1"}], "]"}]}], "]"}], "&"}], ",", 
     "nInputFeatures"}], "]"}]}]}], "Input",
- CellLabel->"In[47]:=",ExpressionUUID->"6903f44e-0fb2-4560-b2ec-9f790fbc7859"],
+ CellLabel->"In[12]:=",ExpressionUUID->"6903f44e-0fb2-4560-b2ec-9f790fbc7859"],
 
 Cell[TextData[{
  "Use a modified softmax operation to turn the 2D regression vector into a 3D \
@@ -2423,7 +2440,7 @@ Cell[BoxData[
         RowBox[{
          RowBox[{"matrix", ".", "inputCoord"}], "+", "biases"}], "]"}], ",", 
        "1"}], "]"}], ",", "Total"}], "]"}]}]}]], "Input",
- CellLabel->"In[51]:=",ExpressionUUID->"4aabf11a-e9a5-4f8f-8df5-3fec07f2a3d5"],
+ CellLabel->"In[15]:=",ExpressionUUID->"4aabf11a-e9a5-4f8f-8df5-3fec07f2a3d5"],
 
 Cell["\<\
 Combine everything to define the inference problem and sample it:\
@@ -2453,7 +2470,7 @@ Cell[BoxData[
      RowBox[{"Table", "[", 
       RowBox[{
        RowBox[{"NormalDistribution", "[", 
-        RowBox[{"0", ",", "20"}], "]"}], ",", 
+        RowBox[{"0", ",", "10"}], "]"}], ",", 
        RowBox[{"{", 
         RowBox[{"sym", ",", 
          RowBox[{"Flatten", "[", 
@@ -2462,13 +2479,12 @@ Cell[BoxData[
       "]"}]}], ",", "\[IndentingNewLine]", 
     RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", "inputCoord"}]}], 
    "\[IndentingNewLine]", "]"}]}]], "Input",
- CellLabel->"In[70]:=",ExpressionUUID->"acf793f5-e047-415a-b3ed-5c1070fc9e07"],
+ CellLabel->"In[18]:=",ExpressionUUID->"acf793f5-e047-415a-b3ed-5c1070fc9e07"],
 
 Cell[BoxData[
  RowBox[{"result", "=", 
-  RowBox[{
-  "parallelNestedSampling", "[", "obj", 
-   "]"}]}]], "Input",ExpressionUUID->"7f13cc42-0dc3-4b28-8ba9-926f253b4e11"],
+  RowBox[{"parallelNestedSampling", "[", "obj", "]"}]}]], "Input",
+ CellLabel->"In[19]:=",ExpressionUUID->"7f13cc42-0dc3-4b28-8ba9-926f253b4e11"],
 
 Cell["Generate the predicted probability vectors:", \
 "Text",ExpressionUUID->"b5048ba9-88e8-4c66-b6a6-c7c9ae730cea"],
@@ -2483,24 +2499,24 @@ Cell[BoxData[{
      RowBox[{"Rest", "[", 
       RowBox[{"dist", "[", 
        RowBox[{"[", "2", "]"}], "]"}], "]"}]}]}], "]"}]}], "\n", 
- RowBox[{"predictions", "=", 
-  RowBox[{
+ RowBox[{
+  RowBox[{"predictions", "=", 
    RowBox[{
-    RowBox[{"EmpiricalDistribution", "[", 
-     RowBox[{
-      RowBox[{"#", "[", 
-       RowBox[{"[", "1", "]"}], "]"}], "\[Rule]", " ", 
-      RowBox[{"distToProbabilityVector", "/@", 
-       RowBox[{"#", "[", 
-        RowBox[{"[", "2", "]"}], "]"}]}]}], "]"}], "&"}], "/@", 
-   RowBox[{"predictiveDistribution", "[", 
     RowBox[{
-     RowBox[{"takePosteriorFraction", "[", 
-      RowBox[{"result", ",", "0.99"}], "]"}], ",", 
-     RowBox[{"result", "[", 
-      RowBox[{"\"\<Data\>\"", ",", "1"}], "]"}]}], "]"}]}]}]}], "Input",
- CellLabel->
-  "In[101]:=",ExpressionUUID->"1269449d-1f1d-457f-b64e-2fd3e536a86a"],
+     RowBox[{"EmpiricalDistribution", "[", 
+      RowBox[{
+       RowBox[{"#", "[", 
+        RowBox[{"[", "1", "]"}], "]"}], "\[Rule]", " ", 
+       RowBox[{"distToProbabilityVector", "/@", 
+        RowBox[{"#", "[", 
+         RowBox[{"[", "2", "]"}], "]"}]}]}], "]"}], "&"}], "/@", 
+    RowBox[{"predictiveDistribution", "[", 
+     RowBox[{
+      RowBox[{"takePosteriorFraction", "[", 
+       RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+      RowBox[{"result", "[", 
+       RowBox[{"\"\<Data\>\"", ",", "1"}], "]"}]}], "]"}]}]}], 
+  ";"}]}], "Input",ExpressionUUID->"1269449d-1f1d-457f-b64e-2fd3e536a86a"],
 
 Cell["\<\
 Find out which examples have the greatest spread in classification \
@@ -3286,7 +3302,7 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"ts", " ", "=", 
     RowBox[{"TimeSeries", "[", "ts", "]"}]}], ";"}], 
-  "\[IndentingNewLine]"}], "\n", 
+  "\n"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"process", " ", "=", " ", 
    RowBox[{"GeometricBrownianMotionProcess", "[", 
