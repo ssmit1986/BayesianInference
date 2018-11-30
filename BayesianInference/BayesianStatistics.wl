@@ -839,177 +839,180 @@ nestedSamplingInternal[
     startingPoints_,
     params : {paramSpecPattern..},
     opts : OptionsPattern[]
-] := Module[{
-    maxiterations = Max[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
-    miniterations = Min[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
-    mcSteps = Replace[
-        OptionValue["MonteCarloSteps"],
-        {
-            i_Integer :> {i, i, 5 * i},
-            other : Except[{_Integer, _Integer, _Integer}] :> (
-                Message[nestedSampling::MCSteps, Short[other], {200, 200, 1000}];
-                {200, 200, 5}
-            )
-        } 
-    ],
-    termination = OptionValue["TerminationFraction"],
-    minMaxAcceptanceRate = OptionValue["MinMaxAcceptanceRate"],
-    variableSamplePoints = startingPoints,
-    nSamples,
-    parameterSpaceDimension,
-    likelihoodThreshold = 0,
-    iteration = 1,
-    bestPoints,
-    newPoint,
-    constrainedLogDensity,
-    meanEst,
-    covEst,
-    factor,
-    estimatedMissingEvidence,
-    logEvidence = $MachineLogZero,
-    entropy = 0,
-    interrupted = False,
-    statusCell,
-    output,
-    constraintFunction
-},
-    {nSamples, parameterSpaceDimension} = Dimensions[startingPoints];
-    constraintFunction = constraintsToFunction[params];
-    variableSamplePoints = SortBy[{#LogLikelihood, #Point}&] @ Association @ MapIndexed[
-        Function[
-            {point, index},
-            Rule[
-                First[index],
-                <|
-                    "Point" -> point,
-                    "LogLikelihood" -> logLikelihoodFunction[point],
-                    "AcceptanceRate" -> Missing["InitialSample"]
-                |>
-            ]
+] := Quiet[
+    Module[{
+        maxiterations = Max[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
+        miniterations = Min[OptionValue["MaxIterations"], OptionValue["MinIterations"]],
+        mcSteps = Replace[
+            OptionValue["MonteCarloSteps"],
+            {
+                i_Integer :> {i, i, 5 * i},
+                other : Except[{_Integer, _Integer, _Integer}] :> (
+                    Message[nestedSampling::MCSteps, Short[other], {200, 200, 1000}];
+                    {200, 200, 5}
+                )
+            } 
         ],
-        variableSamplePoints
-    ];
-    If[ !numericVectorQ[
-            Values @ variableSamplePoints[[All, "LogLikelihood"]]
-        ],
-        Return["Bad likelihood function"]
-    ];
-    meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
-    covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
-    
-    estimatedMissingEvidence = Switch[ OptionValue["LogLikelihoodMaximum"],
-        _?NumericQ,
-            With[{lmax = Exp[OptionValue["LogLikelihoodMaximum"]]},
-                Function[
-                    lmax * Min[DeleteMissing @ #[[All, "X"]]]
-                ]
-            ],
-        _,
+        termination = OptionValue["TerminationFraction"],
+        minMaxAcceptanceRate = OptionValue["MinMaxAcceptanceRate"],
+        variableSamplePoints = startingPoints,
+        nSamples,
+        parameterSpaceDimension,
+        likelihoodThreshold = 0,
+        iteration = 1,
+        bestPoints,
+        newPoint,
+        constrainedLogDensity,
+        meanEst,
+        covEst,
+        factor,
+        estimatedMissingEvidence,
+        logEvidence = $MachineLogZero,
+        entropy = 0,
+        interrupted = False,
+        statusCell,
+        output,
+        constraintFunction
+    },
+        {nSamples, parameterSpaceDimension} = Dimensions[startingPoints];
+        constraintFunction = constraintsToFunction[params];
+        variableSamplePoints = SortBy[{#LogLikelihood, #Point}&] @ Association @ MapIndexed[
             Function[
-                Times[
-                    Min[DeleteMissing @ #[[All, "X"]]],
-                    Exp @ Max[#[[All, "LogLikelihood"]]]
-                ]
-            ]
-    ];
-    
-    If[ TrueQ[OptionValue["Monitor"]],
-        statusCell = PrintTemporary[
-            Dynamic[
-                Grid[
-                    {
-                        {"Iteration: ", iteration},
-                        {"Samples: ", Length[variableSamplePoints]},
-                        {"Log evidence: ", NumberForm[logEvidence, 5]},
-                        {"Entropy: ", NumberForm[entropy, 5]},
-                        {
-                            Button[
-                                "Finish",
-                                interrupted = True,
-                                ImageSize -> 70
-                            ],
-                            SpanFromLeft
-                        }
-                    },
-                    Alignment -> Left,
-                    BaseStyle -> "Text"
-                ],
-                TrackedSymbols :> {}, UpdateInterval -> 1
-            ]
-        ]
-    ];
-    (* Main loop starts here *)
-    While[
-        And[
-            !TrueQ[interrupted],
-            iteration <= maxiterations,
-            Or[
-                iteration === 1,
-                iteration <= miniterations,
-                !TrueQ[
-                    estimatedMissingEvidence[variableSamplePoints] <= Exp[logEvidence] * termination
-                ]
-            ]
-        ]
-        ,
-        bestPoints = Take[variableSamplePoints, -nSamples];
-        likelihoodThreshold = Min[bestPoints[[All, "LogLikelihood"]]];
-        constrainedLogDensity = nsDensity[
-            logPriorDensityFunction,
-            logLikelihoodFunction,
-            likelihoodThreshold,
-            constraintFunction
-        ];
-        factor = 1;
-        covEst = Divide[covEst + Covariance[Values @ bestPoints[[All, "Point"]]], 2]; (* Retain a fraction of the previous covariance estimate *)
-        While[ True,
-            newPoint = nsMCMC[
-                constrainedLogDensity,
-                RandomChoice[Values @ bestPoints[[All, "Point"]]],
-                meanEst,
-                covEst,
-                Ceiling[factor * mcSteps],
-                minMaxAcceptanceRate
-            ];
-            {meanEst, covEst} = Values @ newPoint[[{"MeanEstimate", "CovarianceEstimate"}]];
-            If[ Between[newPoint["AcceptanceRate"], minMaxAcceptanceRate],
-                Break[],
-                factor *= 1.25
-            ]
-        ];
-        
-        variableSamplePoints = calculateWeightsCrude[
-            Append[
-                variableSamplePoints,
-                iteration + nSamples -> Append[
-                    newPoint[[{"Point", "AcceptanceRate", "MeanEstimate", "CovarianceEstimate"}]],
+                {point, index},
+                Rule[
+                    First[index],
                     <|
-                        "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]],
-                        "LogPriorPDF" -> logPriorDensityFunction[newPoint[["Point"]]]
+                        "Point" -> point,
+                        "LogLikelihood" -> logLikelihoodFunction[point],
+                        "AcceptanceRate" -> Missing["InitialSample"]
                     |>
                 ]
             ],
-            nSamples
+            variableSamplePoints
         ];
-        logEvidence = logSumExp[variableSamplePoints[[All, "CrudeLogPosteriorWeight"]]];
-        entropy = calculateEntropy[variableSamplePoints, logEvidence];
-        PreIncrement[iteration];
-    ];
-    
-    If[ ValueQ[statusCell], NotebookDelete[statusCell]];
-    output = evidenceSampling[
-        <|
-            "Samples" -> variableSamplePoints,
-            "SamplePoolSize" -> nSamples,
-            "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples,
-            "TotalSamples" -> Length[variableSamplePoints],
-            "ParameterRanges" -> CoordinateBounds[Values @ variableSamplePoints[[All, "Point"]]]
-        |>,
-        params[[All, 1]],
-        Sequence @@ passOptionsDown[nestedSampling, evidenceSampling, {opts}]
-    ];
-    Share[output];
-    output
+        If[ !numericVectorQ[
+                Values @ variableSamplePoints[[All, "LogLikelihood"]]
+            ],
+            Return["Bad likelihood function"]
+        ];
+        meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
+        covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
+        
+        estimatedMissingEvidence = Switch[ OptionValue["LogLikelihoodMaximum"],
+            _?NumericQ,
+                With[{lmax = Exp[OptionValue["LogLikelihoodMaximum"]]},
+                    Function[
+                        lmax * Min[DeleteMissing @ #[[All, "X"]]]
+                    ]
+                ],
+            _,
+                Function[
+                    Times[
+                        Min[DeleteMissing @ #[[All, "X"]]],
+                        Exp @ Max[#[[All, "LogLikelihood"]]]
+                    ]
+                ]
+        ];
+        
+        If[ TrueQ[OptionValue["Monitor"]],
+            statusCell = PrintTemporary[
+                Dynamic[
+                    Grid[
+                        {
+                            {"Iteration: ", iteration},
+                            {"Samples: ", Length[variableSamplePoints]},
+                            {"Log evidence: ", NumberForm[logEvidence, 5]},
+                            {"Entropy: ", NumberForm[entropy, 5]},
+                            {
+                                Button[
+                                    "Finish",
+                                    interrupted = True,
+                                    ImageSize -> 70
+                                ],
+                                SpanFromLeft
+                            }
+                        },
+                        Alignment -> Left,
+                        BaseStyle -> "Text"
+                    ],
+                    TrackedSymbols :> {}, UpdateInterval -> 1
+                ]
+            ]
+        ];
+        (* Main loop starts here *)
+        While[
+            And[
+                !TrueQ[interrupted],
+                iteration <= maxiterations,
+                Or[
+                    iteration === 1,
+                    iteration <= miniterations,
+                    !TrueQ[
+                        estimatedMissingEvidence[variableSamplePoints] <= Exp[logEvidence] * termination
+                    ]
+                ]
+            ]
+            ,
+            bestPoints = Take[variableSamplePoints, -nSamples];
+            likelihoodThreshold = Min[bestPoints[[All, "LogLikelihood"]]];
+            constrainedLogDensity = nsDensity[
+                logPriorDensityFunction,
+                logLikelihoodFunction,
+                likelihoodThreshold,
+                constraintFunction
+            ];
+            factor = 1;
+            covEst = Divide[covEst + Covariance[Values @ bestPoints[[All, "Point"]]], 2]; (* Retain a fraction of the previous covariance estimate *)
+            While[ True,
+                newPoint = nsMCMC[
+                    constrainedLogDensity,
+                    RandomChoice[Values @ bestPoints[[All, "Point"]]],
+                    meanEst,
+                    covEst,
+                    Ceiling[factor * mcSteps],
+                    minMaxAcceptanceRate
+                ];
+                {meanEst, covEst} = Values @ newPoint[[{"MeanEstimate", "CovarianceEstimate"}]];
+                If[ Between[newPoint["AcceptanceRate"], minMaxAcceptanceRate],
+                    Break[],
+                    factor *= 1.25
+                ]
+            ];
+            
+            variableSamplePoints = calculateWeightsCrude[
+                Append[
+                    variableSamplePoints,
+                    iteration + nSamples -> Append[
+                        newPoint[[{"Point", "AcceptanceRate", "MeanEstimate", "CovarianceEstimate"}]],
+                        <|
+                            "LogLikelihood" -> logLikelihoodFunction[newPoint[["Point"]]],
+                            "LogPriorPDF" -> logPriorDensityFunction[newPoint[["Point"]]]
+                        |>
+                    ]
+                ],
+                nSamples
+            ];
+            logEvidence = logSumExp[variableSamplePoints[[All, "CrudeLogPosteriorWeight"]]];
+            entropy = calculateEntropy[variableSamplePoints, logEvidence];
+            PreIncrement[iteration];
+        ];
+        
+        If[ ValueQ[statusCell], NotebookDelete[statusCell]];
+        output = evidenceSampling[
+            <|
+                "Samples" -> variableSamplePoints,
+                "SamplePoolSize" -> nSamples,
+                "GeneratedNestedSamples" -> Length[variableSamplePoints] - nSamples,
+                "TotalSamples" -> Length[variableSamplePoints],
+                "ParameterRanges" -> CoordinateBounds[Values @ variableSamplePoints[[All, "Point"]]]
+            |>,
+            params[[All, 1]],
+            Sequence @@ passOptionsDown[nestedSampling, evidenceSampling, {opts}]
+        ];
+        Share[output];
+        output
+    ],
+    {General::munfl}
 ];
 
 Options[generateStartingPoints] = {
