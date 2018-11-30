@@ -35,7 +35,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[68]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -2156,7 +2156,7 @@ Cell[BoxData[{
      RowBox[{"{", 
       RowBox[{"t", ",", "0", ",", "6"}], "}"}]}], "]"}]}], 
   "\[IndentingNewLine]", "]"}]}], "Input",
- CellLabel->"In[17]:=",ExpressionUUID->"c80e7c48-2a33-4ca8-8579-b93a4b22b8b9"],
+ CellLabel->"In[3]:=",ExpressionUUID->"c80e7c48-2a33-4ca8-8579-b93a4b22b8b9"],
 
 Cell["\<\
 The model can be defined by putting a logistic sigmoid inside of a  \
@@ -2277,6 +2277,261 @@ Cell[BoxData[
      RowBox[{"PlotStyle", "\[Rule]", "Dashed"}]}], "]"}]}], 
   "\[IndentingNewLine]", "]"}]], "Input",
  CellLabel->"In[72]:=",ExpressionUUID->"bc0e54bd-2323-434a-b0b5-232386fef056"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+Logistic classification with multi dimensional input and multiple classes\
+\>", "Subsubsection",ExpressionUUID->"4310b3b0-fd31-4d00-808c-36e1c98af187"],
+
+Cell["\<\
+Load the Fisher iris  example dataset and put it in a more usable form:\
+\>", "Text",ExpressionUUID->"0de519a0-2239-471b-a64b-9d29608e2979"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"With", "[", 
+   RowBox[{
+    RowBox[{"{", "\[IndentingNewLine]", 
+     RowBox[{"dat", "  ", "=", 
+      RowBox[{"ExampleData", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"\"\<MachineLearning\>\"", ",", "\"\<FisherIris\>\""}], 
+         "}"}], ",", "\"\<Data\>\""}], "]"}]}], "\[IndentingNewLine]", "}"}], 
+    ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"classes", "=", 
+      RowBox[{"Union", "@", 
+       RowBox[{"dat", "[", 
+        RowBox[{"[", 
+         RowBox[{"All", ",", "2"}], "]"}], "]"}]}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"nclasses", "=", 
+      RowBox[{"Length", "[", "classes", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"data", "=", 
+      RowBox[{"MapAt", "[", 
+       RowBox[{
+        RowBox[{"NetEncoder", "[", 
+         RowBox[{"{", 
+          RowBox[{"\"\<Class\>\"", ",", "classes"}], "}"}], "]"}], ",", "dat",
+         ",", 
+        RowBox[{"{", 
+         RowBox[{"All", ",", "2"}], "}"}]}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"nInputFeatures", "=", 
+      RowBox[{"Length", "[", 
+       RowBox[{"data", "[", 
+        RowBox[{"[", 
+         RowBox[{"1", ",", "1"}], "]"}], "]"}], "]"}]}]}]}], 
+   "\[IndentingNewLine]", "]"}], ";"}]], "Input",
+ CellLabel->"In[45]:=",ExpressionUUID->"367bec5b-76de-4b37-878c-8192777187c6"],
+
+Cell["\<\
+The first thing to do, is to define a higher dimensional version of the \
+BernoulliDistribution. We can do this with ProbabilityDistribution:\
+\>", "Text",ExpressionUUID->"ce1046b2-16a1-470c-9679-a4ec3ce7d63a"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"dist", "[", "pvector_List", "]"}], ":=", 
+   RowBox[{"ProbabilityDistribution", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"Total", " ", "@", " ", 
+      RowBox[{"MapIndexed", "[", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"#1", "*", 
+          RowBox[{"Boole", "[", 
+           RowBox[{"class", "\[Equal]", 
+            RowBox[{"First", "[", "#2", "]"}]}], "]"}]}], "&"}], ",", 
+        "pvector"}], "]"}]}], ",", "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{"class", ",", "1", ",", 
+       RowBox[{"Length", "[", "pvector", "]"}], ",", "1"}], "}"}]}], 
+    "\[IndentingNewLine]", "]"}]}], ";"}]], "Input",
+ CellLabel->"In[46]:=",ExpressionUUID->"82166071-81e9-4d88-9e7b-f88219d6d023"],
+
+Cell[TextData[{
+ "To map the 4 input features onto a probability vector of length 3, we first \
+define a parameterised ",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"2", "\[Times]", "4"}], TraditionalForm]],
+  FormatType->"TraditionalForm",ExpressionUUID->
+  "3090d54c-f530-4dde-ad38-eb6f8af87c80"],
+ " matrix and a length-2 bias vector:"
+}], "Text",ExpressionUUID->"a3840cad-60d4-4f85-a944-845810be4b38"],
+
+Cell[BoxData[{
+ RowBox[{"matrix", "=", 
+  RowBox[{"Array", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Symbol", "[", 
+      RowBox[{"ToString", "@", 
+       RowBox[{"StringForm", "[", 
+        RowBox[{"\"\<a`1``2`\>\"", ",", "#1", ",", "#2"}], "]"}]}], "]"}], 
+     "&"}], ",", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"nclasses", "-", "1"}], ",", "nInputFeatures"}], "}"}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"biases", " ", "=", " ", 
+  RowBox[{"Array", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Symbol", "[", 
+      RowBox[{"ToString", "@", 
+       RowBox[{"StringForm", "[", 
+        RowBox[{"\"\<b`1`\>\"", ",", "#1"}], "]"}]}], "]"}], "&"}], ",", 
+    RowBox[{"nclasses", "-", "1"}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"inputCoord", " ", "=", " ", 
+  RowBox[{"Array", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Symbol", "[", 
+      RowBox[{"ToString", "@", 
+       RowBox[{"StringForm", "[", 
+        RowBox[{"\"\<x`1`\>\"", ",", "#1"}], "]"}]}], "]"}], "&"}], ",", 
+    "nInputFeatures"}], "]"}]}]}], "Input",
+ CellLabel->"In[47]:=",ExpressionUUID->"6903f44e-0fb2-4560-b2ec-9f790fbc7859"],
+
+Cell[TextData[{
+ "Use a modified softmax operation to turn the 2D regression vector into a 3D \
+probability vector (see ",
+ Cell[BoxData[
+  TemplateBox[{
+   StyleBox["\"https://en.wikipedia.org/wiki/Multinomial_logistic_regression#\
+As_a_log-linear_model\"", "Text", StripOnInput -> False],
+    "https://en.wikipedia.org/wiki/Multinomial_logistic_regression#As_a_log-\
+linear_model"},
+   "HyperlinkURL"]],ExpressionUUID->"a54dd6e8-5e24-4492-8a8e-dfc48e70acf6"],
+ "):"
+}], "Text",ExpressionUUID->"bf60edd4-222e-48ec-83d1-cec43e1a95d1"],
+
+Cell[BoxData[
+ RowBox[{"model", "=", 
+  RowBox[{"dist", "@", 
+   RowBox[{"Normalize", "[", 
+    RowBox[{
+     RowBox[{"Append", "[", 
+      RowBox[{
+       RowBox[{"Exp", "[", 
+        RowBox[{
+         RowBox[{"matrix", ".", "inputCoord"}], "+", "biases"}], "]"}], ",", 
+       "1"}], "]"}], ",", "Total"}], "]"}]}]}]], "Input",
+ CellLabel->"In[51]:=",ExpressionUUID->"4aabf11a-e9a5-4f8f-8df5-3fec07f2a3d5"],
+
+Cell["\<\
+Combine everything to define the inference problem and sample it:\
+\>", "Text",ExpressionUUID->"14184c9a-5b58-404a-b178-889b87afb594"],
+
+Cell[BoxData[
+ RowBox[{"obj", "=", 
+  RowBox[{"defineInferenceProblem", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"\"\<Data\>\"", "\[Rule]", " ", "data"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<GeneratingDistribution\>\"", "\[Rule]", "model"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"\"\<Parameters\>\"", " ", "\[Rule]", " ", 
+     RowBox[{"Table", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"sym", ",", 
+         RowBox[{"-", "\[Infinity]"}], ",", "\[Infinity]"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"sym", ",", 
+         RowBox[{"Flatten", "[", 
+          RowBox[{"{", 
+           RowBox[{"matrix", ",", "biases"}], "}"}], "]"}]}], "}"}]}], 
+      "]"}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<PriorDistribution\>\"", "\[Rule]", " ", 
+     RowBox[{"Table", "[", 
+      RowBox[{
+       RowBox[{"NormalDistribution", "[", 
+        RowBox[{"0", ",", "20"}], "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"sym", ",", 
+         RowBox[{"Flatten", "[", 
+          RowBox[{"{", 
+           RowBox[{"matrix", ",", "biases"}], "}"}], "]"}]}], "}"}]}], 
+      "]"}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<IndependentVariables\>\"", "\[Rule]", " ", "inputCoord"}]}], 
+   "\[IndentingNewLine]", "]"}]}]], "Input",
+ CellLabel->"In[70]:=",ExpressionUUID->"acf793f5-e047-415a-b3ed-5c1070fc9e07"],
+
+Cell[BoxData[
+ RowBox[{"result", "=", 
+  RowBox[{
+  "parallelNestedSampling", "[", "obj", 
+   "]"}]}]], "Input",ExpressionUUID->"7f13cc42-0dc3-4b28-8ba9-926f253b4e11"],
+
+Cell["Generate the predicted probability vectors:", \
+"Text",ExpressionUUID->"b5048ba9-88e8-4c66-b6a6-c7c9ae730cea"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+  "distToProbabilityVector", "[", "dist_ProbabilityDistribution", "]"}], ":=", 
+  RowBox[{"PDF", "[", 
+   RowBox[{"dist", ",", 
+    RowBox[{"Range", "@@", 
+     RowBox[{"Rest", "[", 
+      RowBox[{"dist", "[", 
+       RowBox[{"[", "2", "]"}], "]"}], "]"}]}]}], "]"}]}], "\n", 
+ RowBox[{"predictions", "=", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"EmpiricalDistribution", "[", 
+     RowBox[{
+      RowBox[{"#", "[", 
+       RowBox[{"[", "1", "]"}], "]"}], "\[Rule]", " ", 
+      RowBox[{"distToProbabilityVector", "/@", 
+       RowBox[{"#", "[", 
+        RowBox[{"[", "2", "]"}], "]"}]}]}], "]"}], "&"}], "/@", 
+   RowBox[{"predictiveDistribution", "[", 
+    RowBox[{
+     RowBox[{"takePosteriorFraction", "[", 
+      RowBox[{"result", ",", "0.99"}], "]"}], ",", 
+     RowBox[{"result", "[", 
+      RowBox[{"\"\<Data\>\"", ",", "1"}], "]"}]}], "]"}]}]}]}], "Input",
+ CellLabel->
+  "In[101]:=",ExpressionUUID->"1269449d-1f1d-457f-b64e-2fd3e536a86a"],
+
+Cell["\<\
+Find out which examples have the greatest spread in classification \
+probabilities:\
+\>", "Text",ExpressionUUID->"14ca8532-fc82-429d-9d06-654b266f2ef4"],
+
+Cell[BoxData[
+ RowBox[{"SortBy", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"Table", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"InverseCDF", "[", 
+        RowBox[{
+         RowBox[{"MarginalDistribution", "[", 
+          RowBox[{"#", ",", "i"}], "]"}], ",", 
+         RowBox[{"{", 
+          RowBox[{"0.05", ",", "0.5", ",", "0.9"}], "}"}]}], "]"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{"i", ",", "1", ",", "3"}], "}"}]}], "\[IndentingNewLine]", 
+      "]"}], "&"}], "/@", "predictions"}], ",", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"-", 
+     RowBox[{"Max", "[", 
+      RowBox[{
+       RowBox[{"Abs", "@*", 
+        RowBox[{"Apply", "[", "Subtract", "]"}], "@*", "MinMax"}], "/@", 
+       "#"}], "]"}]}], "&"}]}], "\[IndentingNewLine]", "]"}]], "Input",
+ CellLabel->"In[100]:=",ExpressionUUID->"ea1585c3-5c25-45e7-96b2-51f875050211"]
 }, Closed]],
 
 Cell[CellGroupData[{

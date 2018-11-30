@@ -46,3 +46,7 @@ The package has been overhauled significantly and now relies largely on the MCMC
 
 	* Add a new section to the example notebook that explains the goals of the package in broader terms. Also features an animated visualisation of the nested sampling algorithm. Check it out!
 	* Add example of classification using logistic regression
+
+* 30 November 2018
+
+	* Add an example of Bayesian logistic classification for the Fisher Iris dataset.
