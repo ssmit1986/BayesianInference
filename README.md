@@ -18,8 +18,8 @@ You can now load the package by evaluating:
 Alternatively, you can just set the working directory of your notebook to the same directory as `example_code.nb` and load the package using the line above (see the initialisation cell in the notebook for an example).
 
 There package also includes code that helps to construct neural networks for quasi-Baysian regression as explained on the following pages:
-http://mlg.eng.cam.ac.uk/yarin/blog_3d801aa532c1ce.html
-http://blog.wolfram.com/2018/05/31/how-optimistic-do-you-want-to-be-bayesian-neural-network-regression-with-prediction-errors/
+* http://mlg.eng.cam.ac.uk/yarin/blog_3d801aa532c1ce.html
+* http://blog.wolfram.com/2018/05/31/how-optimistic-do-you-want-to-be-bayesian-neural-network-regression-with-prediction-errors/
 
 
 ## Using the package:
