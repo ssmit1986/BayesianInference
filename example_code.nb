@@ -35,7 +35,8 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->
+  "In[106]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -1087,8 +1088,15 @@ convergence is reached.\
 
 Cell["\<\
 \[OpenCurlyDoubleQuote]MaxIterations\[CloseCurlyDoubleQuote] determines the \
-maximum number of samples that will be generated\
+maximum number of samples that will be generated.\
 \>", "Item",ExpressionUUID->"6d70996d-94ab-4800-9bfa-2c408817d8a9"],
+
+Cell["\<\
+\[OpenCurlyDoubleQuote]MinIterations\[CloseCurlyDoubleQuote] specifies the \
+minimum number of nested samples that will be generated. For loglikelihood \
+functions that are sharply peaked, it may be necessary to increase this \
+option value to make sure the algorithm finds the bulk of the posterior. \
+\>", "Item",ExpressionUUID->"77316d2b-644a-4fba-8d49-fe53cae74570"],
 
 Cell["\<\
 \[OpenCurlyDoubleQuote]LogLikelihoodMaximum\[CloseCurlyDoubleQuote] allows \
@@ -2984,8 +2992,8 @@ Cell[BoxData[{
        RowBox[{"Today", "-", 
         TemplateBox[{"3","\"mo\"","months","\"Months\""},
          "Quantity"]}], ",", "Today"}], "}"}]}], "]"}]}], ";"}], "\n", 
- RowBox[{"DateListPlot", "[", "data", "]"}]}], "Input",
- CellLabel->"In[22]:=",ExpressionUUID->"98599f55-defc-452c-803a-46d006653df6"],
+ RowBox[{"DateListPlot", "[", "data", 
+  "]"}]}], "Input",ExpressionUUID->"98599f55-defc-452c-803a-46d006653df6"],
 
 Cell["Alternatively, you can use the following pre-cached data:", \
 "Text",ExpressionUUID->"d756215f-7f43-4433-8003-450bf9d73c40"],
@@ -3068,7 +3076,7 @@ Cell[BoxData[{
  RowBox[{
   RowBox[{"ts", " ", "=", 
    RowBox[{"TimeSeries", "[", "ts", "]"}]}], ";"}]}], "Input",
- CellLabel->"In[29]:=",ExpressionUUID->"04cb4d59-e2ca-461f-b8cd-032e5c08c094"]
+ CellLabel->"In[73]:=",ExpressionUUID->"04cb4d59-e2ca-461f-b8cd-032e5c08c094"]
 }, Closed]],
 
 Cell[CellGroupData[{
@@ -3565,7 +3573,7 @@ Cell[BoxData[{
         RowBox[{
          RowBox[{"Length", "[", "data", "]"}], "-", "1"}]}], "}"}]}], 
      "]"}]}]}], ";"}]}], "Input",
- CellLabel->"In[47]:=",ExpressionUUID->"827f9385-0c02-4d41-a019-d031a3421176"],
+ CellLabel->"In[66]:=",ExpressionUUID->"827f9385-0c02-4d41-a019-d031a3421176"],
 
 Cell[BoxData[
  RowBox[{"transformedData", " ", "=", " ", 
@@ -3594,7 +3602,7 @@ Cell[BoxData[
      RowBox[{"i", ",", " ", "2", ",", 
       RowBox[{"Length", "[", "data", "]"}]}], "}"}]}], "\[IndentingNewLine]", 
    "]"}]}]], "Input",
- CellLabel->"In[49]:=",ExpressionUUID->"3563e0cc-7249-457c-b352-34792b7965c9"],
+ CellLabel->"In[77]:=",ExpressionUUID->"3563e0cc-7249-457c-b352-34792b7965c9"],
 
 Cell["The inference problem can now be defined like this:", \
 "Text",ExpressionUUID->"2c55f640-7a66-4a47-936e-edda9ef298fd"],
@@ -3633,7 +3641,7 @@ Cell[BoxData[
        RowBox[{"NormalDistribution", "[", 
         RowBox[{"0", ",", "10"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
    "]"}]}]], "Input",
- CellLabel->"In[50]:=",ExpressionUUID->"88d8915a-1fab-424f-93d2-99cd9354ba09"],
+ CellLabel->"In[79]:=",ExpressionUUID->"88d8915a-1fab-424f-93d2-99cd9354ba09"],
 
 Cell["\<\
 Compare the constructed loglikelihood function with the built-in version to \
@@ -3662,7 +3670,7 @@ Cell[BoxData[
         RowBox[{"mu", ",", " ", 
          RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], "]"}], 
        ",", "ts"}], "]"}]}]}]}], "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->"In[51]:=",ExpressionUUID->"b7d25a44-4cb4-4d83-89e0-a10835a524b7"],
+ CellLabel->"In[94]:=",ExpressionUUID->"b7d25a44-4cb4-4d83-89e0-a10835a524b7"],
 
 Cell["\<\
 For the purpose of plotting the data later, we can restore the original data \
@@ -3677,7 +3685,7 @@ Cell[BoxData[
     RowBox[{"obj", ",", " ", 
      RowBox[{"\"\<Data\>\"", "\[Rule]", " ", 
       RowBox[{"TimeSeries", "[", "data", "]"}]}]}], "]"}]}], ";"}]], "Input",
- CellLabel->"In[52]:=",ExpressionUUID->"a7862a70-e08c-4330-8b96-24262909d76d"],
+ CellLabel->"In[81]:=",ExpressionUUID->"a7862a70-e08c-4330-8b96-24262909d76d"],
 
 Cell["Run the nested sampling algorithm:", \
 "Text",ExpressionUUID->"fade880b-e3ed-4e37-8a3b-18cb31bfca1d"],
@@ -3690,8 +3698,10 @@ Cell[BoxData[{
     "\[IndentingNewLine]", 
     RowBox[{"\"\<MonteCarloSteps\>\"", "\[Rule]", "300"}], ",", 
     "\[IndentingNewLine]", 
-    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], ",",
-     "\[IndentingNewLine]", 
+    RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.001"}], 
+    ",", "\[IndentingNewLine]", 
+    RowBox[{"\"\<MinIterations\>\"", "\[Rule]", "500"}], ",", 
+    "\[IndentingNewLine]", 
     RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], "\[IndentingNewLine]",
     "]"}]}], "\n", 
  RowBox[{"posteriorBubbleChart", "[", 
@@ -3700,7 +3710,8 @@ Cell[BoxData[{
     RowBox[{"result", ",", "0.99"}], "]"}], ",", 
    RowBox[{"{", 
     RowBox[{"mu", ",", "logsigma"}], "}"}]}], "]"}]}], "Input",
- CellLabel->"In[55]:=",ExpressionUUID->"98bdcad8-4abc-47dc-ab76-bc02dffafef8"],
+ CellLabel->
+  "In[132]:=",ExpressionUUID->"98bdcad8-4abc-47dc-ab76-bc02dffafef8"],
 
 Cell[TextData[{
  "The first thing we can do is visualise the prediction errors at each data \
@@ -3718,24 +3729,20 @@ Cell[BoxData[{
     RowBox[{"result", ",", "0.99"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"predictions", "=", 
-   RowBox[{"AssociationThread", "[", "\[IndentingNewLine]", 
-    RowBox[{
+   RowBox[{"predictiveDistribution", "[", 
+    RowBox[{"truncatedResult", ",", 
+     RowBox[{"transformedData", "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", "1"}], "]"}], "]"}], ",", 
      RowBox[{"data", "[", 
       RowBox[{"[", 
        RowBox[{
-        RowBox[{"2", ";;"}], ",", "1"}], "]"}], "]"}], ",", 
-     "\[IndentingNewLine]", 
-     RowBox[{"Values", "@", 
-      RowBox[{"predictiveDistribution", "[", 
-       RowBox[{"truncatedResult", ",", 
-        RowBox[{"transformedData", "[", 
-         RowBox[{"[", 
-          RowBox[{"All", ",", "1"}], "]"}], "]"}]}], "]"}]}]}], 
-    "\[IndentingNewLine]", "]"}]}], ";"}], "\n", 
+        RowBox[{"2", ";;"}], ",", "1"}], "]"}], "]"}]}], "]"}]}], ";"}], "\n", 
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"result", ",", "predictions", ",", 
    RowBox[{"PlotRange", "\[Rule]", "All"}]}], "]"}]}], "Input",
- CellLabel->"In[57]:=",ExpressionUUID->"a18ca735-ef4d-4a2a-9db8-9c23d1a87ef2"],
+ CellLabel->
+  "In[134]:=",ExpressionUUID->"a18ca735-ef4d-4a2a-9db8-9c23d1a87ef2"],
 
 Cell["\<\
 We can also visualise how well our posterior knowledge could predict the \
@@ -3791,7 +3798,8 @@ Cell[BoxData[{
        RowBox[{"ts", "[", "\"\<Times\>\"", "]"}]}], "]"}], ",", 
      RowBox[{"PlotStyle", "\[Rule]", "Dashed"}]}], "]"}]}], 
   "\[IndentingNewLine]", "]"}]}], "Input",
- CellLabel->"In[60]:=",ExpressionUUID->"dac5ac3d-c265-4916-b8d0-0a368d8c7465"],
+ CellLabel->
+  "In[113]:=",ExpressionUUID->"dac5ac3d-c265-4916-b8d0-0a368d8c7465"],
 
 Cell["Finally, we can also predict future values:", \
 "Text",ExpressionUUID->"461565e4-6b5e-49ae-9876-ffb9b5a6f4f2"],
