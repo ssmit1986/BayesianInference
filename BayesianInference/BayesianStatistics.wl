@@ -1412,7 +1412,12 @@ predictiveDistribution[
 predictiveDistribution[
     fst_,
     inputs : Except[_List?numericMatrixQ | _?FailureQ]
-] := predictiveDistribution[fst, dataNormalForm[inputs]]
+] := predictiveDistribution[fst, dataNormalForm[inputs], inputs];
+
+predictiveDistribution[
+    fst_,
+    inputs_List?numericMatrixQ
+] := predictiveDistribution[fst, inputs, inputs];
 
 predictiveDistribution[
     inferenceObject[result_?(
@@ -1423,8 +1428,9 @@ predictiveDistribution[
             !MissingQ[#["Samples"]], !MissingQ[#["GeneratingDistribution"]]
         ]&
     )],
-    inputs_List?numericMatrixQ
-] := With[{
+    inputs_List?numericMatrixQ,
+    keys_List
+] /; Length[keys] === Length[inputs]:= With[{
     dist = Block[{
         paramVector, inputData
     },
@@ -1437,14 +1443,17 @@ predictiveDistribution[
         ]
     ]
 },
-    AssociationMap[
-        Function[{input},
-            MixtureDistribution[
-                Values @ result[["Samples", All, "CrudePosteriorWeight"]],
-                dist[#, input]& /@ Values[result[["Samples", All, "Point"]]]
-            ]
-        ],
-        inputs
+    AssociationThread[
+        keys,
+        Map[
+            Function[{input},
+                MixtureDistribution[
+                    Values @ result[["Samples", All, "CrudePosteriorWeight"]],
+                    dist[#, input]& /@ Values[result[["Samples", All, "Point"]]]
+                ]
+            ],
+            inputs
+        ]
     ]
 ];
 

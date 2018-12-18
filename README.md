@@ -53,3 +53,7 @@ The package has been overhauled significantly and now relies largely on the MCMC
 * 30 November 2018
 
 	* Add an example of Bayesian logistic classification for the Fisher Iris dataset.
+
+* 18 December 2018
+	* Add a new usecase for `predictiveDistribution` where you can specify different keys in the 3rd argument to populate the output association with. This is useful when the inputs contain duplicates (such as can happen in the timeseries regression example in the last section) or when you need to undo a transformation you applied to the independent coordinates.
+	* Some small updates to the example notebook.
