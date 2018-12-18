@@ -165,9 +165,9 @@ Cell[TextData[{
   "8fd5acbe-adfa-414e-b4f5-a185b3755f50"],
  ", which is an unnormalised function of \[Mu] and \[Sigma]. In this package, \
 the likelihood is generally expressed as loglikelihood, because \
-machine-precision arthmatic will often underflow when calculating the regular \
-likelihood function. Whenever I mention the loglikelihood function in the \
-context of this code package, I will always mean a function that:"
+machine-precision arithmetic will often underflow when calculating the \
+regular likelihood function. Whenever I mention the loglikelihood function in \
+the context of this code package, I will always mean a function that:"
 }], "Item",ExpressionUUID->"a8786c69-b027-4b09-8fc5-2c9a347f1b3a"],
 
 Cell[CellGroupData[{
@@ -1053,7 +1053,7 @@ Cell[BoxData[{
     "This", " ", "is", " ", "an", " ", "optional", " ", "property", " ", 
      "that", " ", "we", " ", "attach", " ", "for", " ", "convenience"}], " ", 
     "*)"}], "\[IndentingNewLine]", "]"}]}]}], "Input",
- CellLabel->"In[8]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
+ CellLabel->"In[3]:=",ExpressionUUID->"89f371e4-4212-4849-8da4-bc154bf5086d"],
 
 Cell["\<\
 Note that the data has been transformed from a vector to a matrix as part of \
@@ -1114,7 +1114,7 @@ Cell[BoxData[{
    "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<LogEvidence\>\"", "]"}], "\[IndentingNewLine]", 
  RowBox[{"result", "[", "\"\<Properties\>\"", "]"}]}], "Input",
- CellLabel->"In[11]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
+ CellLabel->"In[6]:=",ExpressionUUID->"51cb9ac9-9a78-449e-b410-15d3a99a7df9"],
 
 Cell[TextData[{
  "The standard error on the logevidence is obtained by Monte Carlo sampling \
@@ -1345,12 +1345,7 @@ Cell[BoxData[{
       RowBox[{"{", 
        RowBox[{
        "\"\<LocationParameter\>\"", ",", " ", "\"\<ScaleParameter\>\""}], 
-       "}"}]}]}], "\[IndentingNewLine]", "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"obj2", "=", 
-   RowBox[{"generateStartingPoints", "[", 
-    RowBox[{"obj2", ",", " ", "25"}], "]"}]}], ";"}], "\n", 
+       "}"}]}]}], "\[IndentingNewLine]", "]"}]}], ";"}], "\n", 
  RowBox[{"result2", " ", "=", 
   RowBox[{"parallelNestedSampling", "[", "\[IndentingNewLine]", 
    RowBox[{"obj2", ",", "\[IndentingNewLine]", 
@@ -1359,8 +1354,7 @@ Cell[BoxData[{
     RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}]}], 
    "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"result2", "[", "\"\<LogEvidence\>\"", "]"}]}], "Input",
- CellLabel->
-  "In[235]:=",ExpressionUUID->"2375529a-b224-4e04-8f0b-6cfce3e8ab9a"],
+ CellLabel->"In[13]:=",ExpressionUUID->"2375529a-b224-4e04-8f0b-6cfce3e8ab9a"],
 
 Cell[BoxData[
  RowBox[{"LogPlot", "[", "\[IndentingNewLine]", 
@@ -3302,7 +3296,7 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"ts", " ", "=", 
     RowBox[{"TimeSeries", "[", "ts", "]"}]}], ";"}], 
-  "\n"}], "\[IndentingNewLine]", 
+  "\[IndentingNewLine]"}], "\n", 
  RowBox[{
   RowBox[{"process", " ", "=", " ", 
    RowBox[{"GeometricBrownianMotionProcess", "[", 
