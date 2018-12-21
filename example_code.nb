@@ -2088,17 +2088,7 @@ Cell[BoxData[
      RowBox[{"takePosteriorFraction", "[", 
       RowBox[{"#", ",", "0.99"}], "]"}], "&"}], ",", "\[IndentingNewLine]", 
     "result"}], "\[IndentingNewLine]", "]"}]}]], "Input",
- CellLabel->
-  "In[178]:=",ExpressionUUID->"094fb4a8-d123-4687-a48b-7234c6a1c4ce"],
-
-Cell[BoxData[
- RowBox[{"result", "[", "\"\<CrudeLogEvidence\>\"", "]"}]], "Input",
- CellLabel->
-  "In[303]:=",ExpressionUUID->"93db15bf-618e-4de0-b650-9d06e2e3eab0"],
-
-Cell[BoxData[
- RowBox[{"calculationReport", "[", "result", "]"}]], "Input",
- CellLabel->"In[302]:=",ExpressionUUID->"184d938f-cbc6-4c62-997a-d135429b61db"]
+ CellLabel->"In[178]:=",ExpressionUUID->"094fb4a8-d123-4687-a48b-7234c6a1c4ce"]
 }, Closed]],
 
 Cell[CellGroupData[{
