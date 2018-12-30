@@ -14,7 +14,8 @@ Begin["`Private`"]
 *)
 
 updateDistributionParameters[
-    data_List,
+    data_List?VectorQ,
+    NormalDistribution[_Symbol, _Symbol],
     normalInverseGammaDistribution[mu0_, lambda0_, beta0_, nu0_]
 ] := With[{
     mean = Mean[data],
@@ -39,7 +40,7 @@ normalInverseGammaLogPDF[{mu_, lambda_, beta_, nu_}, {x_, var_}]:=
     LogLikelihood[NormalDistribution[mu, Sqrt[var/lambda]], {x}] + LogLikelihood[InverseGammaDistribution[nu, beta], {var}];
 
 Options[posteriorNormal] = {
-    "Prior" -> {"Mu" -> 0, "Lambda" -> 1/100, "Beta" -> 1, "Nu" -> 1/100}
+    "Prior" -> {"Mu" -> 0, "Lambda" -> 1/100, "Beta" -> 1/200, "Nu" -> 1/200}
 };
 
 posteriorNormal[
@@ -114,7 +115,8 @@ posteriorNormal[
 *)
 
 updateDistributionParameters[
-    data_List,
+    data_List?MatrixQ,
+    MultinormalDistribution[_Symbol, _Symbol],
     normalInverseWishartDistribution[mu0_, lambda0_, psi0_, nu0_]
 ] := Module[{
     mean = Mean[data],
@@ -160,7 +162,7 @@ normalInverseWishartLogPDF[{mu_?VectorQ, lambda_, psi_?SquareMatrixQ, nu_},{x_?V
         LogLikelihood[MultinormalDistribution[mu, sigma/lambda], {x}] + inverseWishartLogPDF[{nu,psi}, sigma];
 
 Options[posteriorMultivariateNormal] = {
-    "Prior" -> {"Mu" -> 0, "Lambda" -> 1/100, "Psi" -> 1, "Nu" -> Automatic},
+    "Prior" -> {"Mu" -> 0, "Lambda" -> 1/100, "Psi" -> 1/100, "Nu" -> Automatic},
     "CovarianceSamples" -> 100
 };
 
