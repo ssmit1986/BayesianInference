@@ -13,6 +13,13 @@ Begin["`Private`"]
     nu0: 2 * the number of samples used to estimate beta0. nu0 > 0
 *)
 
+normalInverseGammaDistribution /: ParameterMixtureDistribution[
+    normalInverseGammaDistribution[mu_, lambda_, beta_, nu_]
+] := ParameterMixtureDistribution[
+    NormalDistribution[mu, Sqrt[\[FormalV] / lambda]],
+    Distributed[\[FormalV], InverseGammaDistribution[nu, beta]]
+];
+
 updateDistributionParameters[
     data_List?VectorQ,
     NormalDistribution[_Symbol, _Symbol],
@@ -237,6 +244,31 @@ posteriorMultivariateNormal[
         ]
     |>
 ];
+
+linearModelDistribution /: ParameterMixtureDistribution[
+    linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, alpha_, beta_]
+] /; Length[mu] === Length[lambda] := ParameterMixtureDistribution[
+    MultinormalDistribution[mu, \[FormalV] * LinearSolve[lambda, IdentityMatrix[Length[lambda]]]],
+    Distributed[\[FormalV], InverseGammaDistribution[alpha, beta]] 
+];
+
+updateDistributionParameters[
+    designMatrix_List?MatrixQ -> yVec_List?VectorQ,
+    "LinearModel",
+    linearModelDistribution[mu0_List?VectorQ, lambda0_List?SquareMatrixQ, a0_, b0_]
+] /; Length[designMatrix] === Length[yVec] && Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0] := Module[{
+    designSq = Transpose[designMatrix] . designMatrix,
+    mun,
+    nDat = Length[yVec]
+},
+    mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + Transpose[designMatrix] . yVec)];
+    linearModelConjugatePrior[
+        mun,
+        designSq + lambda0,
+        a0 + nDat/2,
+        b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambda0.mun)/2
+    ]
+]
 
 End[]
 
