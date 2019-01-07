@@ -2343,7 +2343,9 @@ The first thing to do, is to define a higher dimensional version of the \
 BernoulliDistribution. We can do this with ProbabilityDistribution:\
 \>", "Text",ExpressionUUID->"ce1046b2-16a1-470c-9679-a4ec3ce7d63a"],
 
-Cell[BoxData[
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"ClearAll", "[", "dist", "]"}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{
    RowBox[{"dist", "[", "pvector_List", "]"}], ":=", 
@@ -2361,8 +2363,8 @@ Cell[BoxData[
      RowBox[{"{", 
       RowBox[{"class", ",", "1", ",", 
        RowBox[{"Length", "[", "pvector", "]"}], ",", "1"}], "}"}]}], 
-    "\[IndentingNewLine]", "]"}]}], ";"}]], "Input",
- CellLabel->"In[11]:=",ExpressionUUID->"82166071-81e9-4d88-9e7b-f88219d6d023"],
+    "\[IndentingNewLine]", "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"82166071-81e9-4d88-9e7b-f88219d6d023"],
 
 Cell[TextData[{
  "To map the 4 input features onto a probability vector of length 3, we first \
