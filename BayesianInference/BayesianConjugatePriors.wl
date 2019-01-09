@@ -6,6 +6,7 @@ updateDistributionParameters::usage = "posterior = updateDistributionParameters[
 normalInverseGammaDistribution;
 normalInverseWishartDistribution;
 linearModelDistribution;
+linearModel;
 
 Begin["`Private`"]
 
@@ -404,21 +405,21 @@ linearModelDistribution /: LogLikelihood[
 ];
 
 
-updateDistributionParameters[{"LinearModel", basis_List, symbols_List}] :=
-    linearModelDistribution[{"LinearModel", Length[basis]}];
-
 (* General non-informative prior *)
-updateDistributionParameters[{"LinearModel", dim_Integer?Positive}] :=
+updateDistributionParameters[linearModel[basis_List, symbols_List]] := With[{
+    dim = Length[basis]
+},
     linearModelDistribution[
         ConstantArray[0, dim],
         IdentityMatrix[dim]/200,
         1/200,
         1/200
-    ];
+    ]
+];
 
 updateDistributionParameters[
     data : {__Rule},
-    {"LinearModel", basis_List, symbols_List},
+    linearModel[basis_List, symbols_List],
     rest___
 ] := With[{
     inputs = Replace[
@@ -429,51 +430,66 @@ updateDistributionParameters[
 },
     updateDistributionParameters[
         inputs -> outputs,
-        {"LinearModel", basis, symbols},
+        linearModel[basis, symbols],
         rest
     ]
 ];
 
 updateDistributionParameters[
     input_List?MatrixQ -> yvec_List?VectorQ,
-    {"LinearModel", basis_List, symbols_List},
+    linearModel[basis_List, symbols_List],
     rest___
 ] := updateDistributionParameters[
-    DesignMatrix[
-        Join[input, ArrayReshape[yvec, {Length[yvec], 1}], 2],
-        basis,
-        symbols,
-        IncludeConstantBasis -> False
-    ] -> yvec,
-    "LinearModel",
+    <|
+        "DesignMatrix" -> DesignMatrix[
+            Join[input, ArrayReshape[yvec, {Length[yvec], 1}], 2],
+            basis,
+            symbols,
+            IncludeConstantBasis -> False
+        ],
+        "Output" -> yvec
+    |>,
+    linearModel[basis, symbols],
     rest
 ];
 
 updateDistributionParameters[
-    designMatrix_List?MatrixQ -> yVec_List?VectorQ,
-    "LinearModel"
+    assoc : KeyValuePattern[{
+        "DesignMatrix" -> _List?MatrixQ,
+        "Output" -> _List?VectorQ
+    }],
+    linearModel[basis_List, symbols_List]
 ] := updateDistributionParameters[
-    designMatrix -> yVec,
-    "LinearModel",
-    updateDistributionParameters[{"LinearModel", Dimensions[designMatrix][[2]]}]
+    assoc,
+    linearModel[basis, symbols],
+    updateDistributionParameters[linearModel[basis, symbols]]
 ];
 
 updateDistributionParameters[
-    designMatrix_List?MatrixQ -> yVec_List?VectorQ,
-    "LinearModel",
+    assoc : KeyValuePattern[{
+        "DesignMatrix" -> _List?MatrixQ,
+        "Output" -> _List?VectorQ
+    }],
+    linearModel[basis_List, symbols_List],
     linearModelDistribution[mu0_List?VectorQ, lambda0_List?SquareMatrixQ, a0_, b0_]
-] /; Length[designMatrix] === Length[yVec] && Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0] := Module[{
-    designSq = Transpose[designMatrix] . designMatrix,
+] := Module[{
+    designMatrix = Lookup[assoc, "DesignMatrix"],
+    yVec = Lookup[assoc, "Output"],
+    designSq,
     mun,
-    nDat = Length[yVec]
+    nDat
 },
-    mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + Transpose[designMatrix] . yVec)];
-    linearModelDistribution[
-        mun,
-        designSq + lambda0,
-        a0 + nDat/2,
-        b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambda0.mun)/2
-    ]
+    (
+        designSq = Transpose[designMatrix] . designMatrix;
+        nDat = Length[yVec];
+        mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + Transpose[designMatrix] . yVec)];
+        linearModelDistribution[
+            mun,
+            designSq + lambda0,
+            a0 + nDat/2,
+            b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambda0.mun)/2
+        ]
+    ) /; Length[designMatrix] === Length[yVec] && Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0]
 ];
 
 End[]
