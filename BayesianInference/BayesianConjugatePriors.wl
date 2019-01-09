@@ -56,6 +56,8 @@ normalInverseGammaDistribution /: LogLikelihood[normalInverseGammaDistribution[m
         {pt, pts}
     ];
 
+updateDistributionParameters[{} | {{}} | (_ -> {}), _, prior_] := prior; (* Cannot update without data *)
+
 (* Default non-informative prior *)
 updateDistributionParameters[NormalDistribution[_Symbol, _Symbol]] := normalInverseGammaDistribution[0, 1/100, 1/200, 1/200];
 
@@ -72,11 +74,12 @@ updateDistributionParameters[
     data_List?VectorQ,
     NormalDistribution[_Symbol, _Symbol],
     normalInverseGammaDistribution[mu0_, lambda0_, beta0_, nu0_]
-] := With[{
+] := Module[{
     mean = Mean[data],
-    var = Variance[data],
+    var,
     nDat = Length[data]
 },
+    var = If[ nDat === 1, 0, Variance[data]];
     normalInverseGammaDistribution[
         Divide[
             lambda0 * mu0 + nDat * mean,
@@ -121,8 +124,8 @@ posteriorNormal[
     nu = nu0 + nDat/2;
     varDist = InverseGammaDistribution[nu, beta];
     <|
-        "Mean"-> mean,
-        "Variance"->var,
+        "Mean" -> mean,
+        "Variance" -> var,
         "StandardDeviation"-> Sqrt[var],
         "MuDistribution" -> StudentTDistribution[mu, Sqrt[beta/(lambda * nu)], 2 * nu](* == ParameterMixtureDistribution[
             NormalDistribution[mu, Sqrt[\[FormalV] / lambda]],
@@ -247,10 +250,11 @@ updateDistributionParameters[
     normalInverseWishartDistribution[mu0_, lambda0_, psi0_, nu0_]
 ] := Module[{
     mean = Mean[data],
-    cov = Covariance[data],
+    cov,
     nDat = Length[data],
     meanDiff
 },
+    cov = If[ nDat === 1, 0, Covariance[data]];
     meanDiff = mean - mu0;
     normalInverseWishartDistribution[
         Divide[
