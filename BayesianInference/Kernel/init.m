@@ -5,7 +5,8 @@ ClearAll[
     "BayesianStatistics`*","BayesianStatistics`Private`*",
     "BayesianGaussianProcess`*", "BayesianGaussianProcess`Private`*",
     "BayesianVisualisations`*", "BayesianVisualisations`Private`*",
-    "BayesianNeuralNetworks`*", "BayesianNeuralNetworks`Private`*"
+    "BayesianNeuralNetworks`*", "BayesianNeuralNetworks`Private`*",
+    "BayesianConjugatePriors`*", "BayesianConjugatePriors`Private`*"
 ];
 Needs["GeneralUtilities`"];
 Get["BayesianInference`BayesianUtilities`"];

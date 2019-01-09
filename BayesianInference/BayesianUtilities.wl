@@ -42,7 +42,8 @@ $BayesianContexts = Flatten[
                 "BayesianUtilities`",
                 "BayesianStatistics`",
                 "BayesianGaussianProcess`",
-                "BayesianVisualisations`"
+                "BayesianVisualisations`",
+                "BayesianConjugatePriors`"
             }
         ],
         "Global`"
