@@ -565,6 +565,7 @@ updateDistributionParameters[
         ];
         <|
             "Model" -> model,
+            "Prior" -> prior,
             "Posterior" -> post,
             "LogEvidence" -> logEvidence,
             "PosteriorPredictiveDistribution" -> predictiveDist
