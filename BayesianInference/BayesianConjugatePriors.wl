@@ -2,7 +2,7 @@ BeginPackage["BayesianConjugatePriors`", {"BayesianUtilities`", "GeneralUtilitie
 
 posteriorNormal;
 posteriorMultivariateNormal;
-updateDistributionParameters::usage = "posterior = updateDistributionParameters[data, model, conjugate prior] updates the distribution of the parameters of a model";
+conjugatePriorModel::usage = "posterior = conjugatePriorModel[data, model, conjugate prior] updates the distribution of the parameters of a model";
 normalInverseGammaDistribution;
 normalInverseWishartDistribution;
 linearModelDistribution;
@@ -58,41 +58,65 @@ normalInverseGammaDistribution /: LogLikelihood[normalInverseGammaDistribution[m
         {pt, pts}
     ];
 
-updateDistributionParameters[{} | {{}} | (_ -> {}), _, prior_] := prior; (* Cannot update without data *)
+conjugatePriorModel[{} | {{}} | (_ -> {}), _, prior_] := prior; (* Cannot update without data *)
 
 (* Default non-informative prior *)
-updateDistributionParameters[NormalDistribution[_Symbol, _Symbol]] := normalInverseGammaDistribution[0, 1/100, 1/200, 1/200];
+conjugatePriorModel[NormalDistribution[_Symbol, _Symbol]] := normalInverseGammaDistribution[0, 1/100, 1/200, 1/200];
 
-updateDistributionParameters[
+conjugatePriorModel[
     data_List?VectorQ,
     dist_NormalDistribution
-] := updateDistributionParameters[
+] := conjugatePriorModel[
     data,
     dist,
-    updateDistributionParameters[dist]
+    conjugatePriorModel[dist]
 ];
 
-updateDistributionParameters[
+conjugatePriorModel[
     data_List?VectorQ,
-    NormalDistribution[_Symbol, _Symbol],
-    normalInverseGammaDistribution[mu0_, lambda0_, beta0_, nu0_]
+    model : NormalDistribution[_Symbol, _Symbol],
+    prior : normalInverseGammaDistribution[mu0_, lambda0_, beta0_, nu0_]
 ] := Module[{
     mean = Mean[data],
     var,
-    nDat = Length[data]
+    mu, lambda, beta, nu,
+    nDat = Length[data],
+    post,
+    logEvidence,
+    predictiveDist
 },
     var = If[ nDat === 1, 0, Variance[data]];
-    normalInverseGammaDistribution[
-        Divide[
+    post = normalInverseGammaDistribution[
+        mu = Divide[
             lambda0 * mu0 + nDat * mean,
             lambda0 + nDat
         ],
-        lambda0 + nDat,
-        beta0 + Divide[(nDat-1) * var, 2] + Divide[lambda0 * nDat, 2 * (lambda0 + nDat)] * (mean - mu0)^2,
-        nu0 + nDat/2
-    ]
+        lambda = lambda0 + nDat,
+        beta = beta0 + Divide[(nDat-1) * var, 2] + Divide[lambda0 * nDat, 2 * (lambda0 + nDat)] * (mean - mu0)^2,
+        nu = nu0 + nDat/2
+    ];
+    logEvidence = If[ TrueQ[lambda0 > 0 && nu0 > 0&& beta0 > 0],
+        With[{
+            muTest = mean,
+            varTest = var
+        },
+            Plus[
+                LogLikelihood[NormalDistribution[muTest, Sqrt[varTest]], data],
+                LogLikelihood[prior, {muTest, varTest}] - LogLikelihood[post, {muTest, varTest}]
+            ]
+        ],
+        Undefined
+    ];
+    predictiveDist = StudentTDistribution[mu, Sqrt[beta * (lambda + 1)/(lambda * nu)], 2 * nu];
+    <|
+        "Model" -> model,
+        "Prior" -> prior,
+        "Posterior" -> post,
+        "LogEvidence" -> logEvidence,
+        "PosteriorPredictiveDistribution" -> predictiveDist
+    |>
 ];
-
+(*
 Options[posteriorNormal] = {
     "Prior" -> {"Mu" -> 0, "Lambda" -> 1/100, "Beta" -> 1/200, "Nu" -> 1/200}
 };
@@ -161,7 +185,7 @@ posteriorNormal[
             Undefined
         ]
     |>
-];
+];*)
 
 (*
     normalInverseWishartDistribution[mu0, lambda0, psi0, nu0] :
@@ -229,7 +253,7 @@ normalInverseWishartDistribution /: LogLikelihood[
 ];
 
 (* Default non-informative prior *)
-updateDistributionParameters[{MultinormalDistribution[_Symbol, _Symbol], dim_Integer?Positive}] := 
+conjugatePriorModel[{MultinormalDistribution[_Symbol, _Symbol], dim_Integer?Positive}] := 
     normalInverseWishartDistribution[
         ConstantArray[0, dim],
         1/100,
@@ -237,16 +261,16 @@ updateDistributionParameters[{MultinormalDistribution[_Symbol, _Symbol], dim_Int
         dim - 1 + 1/100
     ];
 
-updateDistributionParameters[
+conjugatePriorModel[
     data_List?MatrixQ,
     dist_MultinormalDistribution
-] := updateDistributionParameters[
+] := conjugatePriorModel[
     data,
     dist,
-    updateDistributionParameters[{dist, Dimensions[data][[2]]}]
+    conjugatePriorModel[{dist, Dimensions[data][[2]]}]
 ];
 
-updateDistributionParameters[
+conjugatePriorModel[
     data_List?MatrixQ,
     MultinormalDistribution[_Symbol, _Symbol],
     normalInverseWishartDistribution[mu0_, lambda0_, psi0_, nu0_]
@@ -477,7 +501,7 @@ linearModel /: LogLikelihood[
 ];
 
 (* General non-informative prior *)
-updateDistributionParameters[linearModel[basis_List, symbols_List, ___]] := With[{
+conjugatePriorModel[linearModel[basis_List, symbols_List, ___]] := With[{
     dim = Length[basis]
 },
     linearModelDistribution[
@@ -488,34 +512,34 @@ updateDistributionParameters[linearModel[basis_List, symbols_List, ___]] := With
     ]
 ];
 
-updateDistributionParameters[
+conjugatePriorModel[
     data : ((_List?MatrixQ -> _List?VectorQ) | {__Rule}),
     linearModel[basis_List, symbols_List, ___],
     rest___
-] := updateDistributionParameters[
+] := conjugatePriorModel[
     makeDesignMatrix[linearModel[basis, symbols], data],
     linearModel[basis, symbols],
     rest
 ];
 
-updateDistributionParameters[
+conjugatePriorModel[
     assoc : designMatrixPattern,
     linearModel[basis_List, symbols_List, ___]
-] := updateDistributionParameters[
+] := conjugatePriorModel[
     assoc,
     linearModel[basis, symbols],
-    updateDistributionParameters[linearModel[basis, symbols]]
+    conjugatePriorModel[linearModel[basis, symbols]]
 ];
 
-updateDistributionParameters[
+conjugatePriorModel[
     assoc : designMatrixPattern,
     model : linearModel[basis_List, symbols_List, ___],
     prior : linearModelDistribution[mu0_List?VectorQ, lambda0_List?SquareMatrixQ, a0_, b0_]
 ] := Module[{
     designMatrix = assoc["DesignMatrix"],
     yVec = assoc["Output"],
+    mun, lambdan, an, bn,
     designSq,
-    mun,
     nDat,
     post,
     rv,
@@ -528,9 +552,9 @@ updateDistributionParameters[
         mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + Transpose[designMatrix] . yVec)];
         post = linearModelDistribution[
             mun,
-            designSq + lambda0,
-            a0 + nDat/2,
-            b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambda0.mun)/2
+            lambdan = designSq + lambda0,
+            an = a0 + nDat/2,
+            bn = b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambda0.mun)/2
         ];
         rv = First @ RandomVariate[post];
         logEvidence = Plus[
@@ -539,7 +563,7 @@ updateDistributionParameters[
         ];
         predictiveDist = With[{
             meanVec = Array[\[FormalM], Length[basis]],
-            invLambda = LinearSolve[post[[2]], IdentityMatrix[Length[post[[2]]]]],
+            invLambda = LinearSolve[lambdan, IdentityMatrix[Length[lambdan]]],
             dMat = First @ makeDesignMatrix[
                 linearModel[basis, symbols],
                 {symbols}
@@ -554,10 +578,10 @@ updateDistributionParameters[
                         ],
                         Distributed[
                             meanVec,
-                            MultinormalDistribution[post[[1]], \[FormalV] * invLambda]
+                            MultinormalDistribution[mun, \[FormalV] * invLambda]
                         ]
                     ],
-                    Distributed[\[FormalV], InverseGammaDistribution @@ post[[{3, 4}]]]
+                    Distributed[\[FormalV], InverseGammaDistribution[an, bn]]
                 ],
                 symbols
             ]
