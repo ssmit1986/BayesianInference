@@ -35,13 +35,12 @@ normalInverseGammaDistribution /: MarginalDistribution[
 normalInverseGammaDistribution /: RandomVariate[
     normalInverseGammaDistribution[mu_, lambda_, beta_, nu_],
     n_Integer?Positive
-] := With[{
-    samples = RandomVariate[InverseGammaDistribution[nu, beta], n]
+] := Module[{
+    varSamples = RandomVariate[InverseGammaDistribution[nu, beta], n],
+    muSamples
 },
-    Table[
-        {RandomVariate[NormalDistribution[mu, Sqrt[var / lambda]]], var},
-        {var, samples}
-    ]
+    muSamples = RandomVariate[NormalDistribution[], n] * Sqrt[varSamples / lambda] + mu; (* == Table[RandomVariate[NormalDistribution[mu, Sqrt[var / lambda]]], {var, samples}]*)
+    Transpose[{muSamples, varSamples}]
 ];
 
 
