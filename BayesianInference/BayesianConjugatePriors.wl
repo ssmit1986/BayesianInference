@@ -9,8 +9,11 @@ linearModelDistribution;
 linearModel;
 linearModelPredictiveDistribution;
 makeDesignMatrix;
+normalInverseWishartPredictiveDistribution;
 
 Begin["`Private`"]
+
+integerOrListIntegerPattern = Alternatives[_Integer?Positive, {_Integer?Positive}];
 
 (*
     normalInverseGammaDistribution[mu0, lambda0, beta0, nu0] :
@@ -34,15 +37,14 @@ normalInverseGammaDistribution /: MarginalDistribution[
 
 normalInverseGammaDistribution /: RandomVariate[
     normalInverseGammaDistribution[mu_, lambda_, beta_, nu_],
-    n_Integer?Positive
+    n : integerOrListIntegerPattern : 1
 ] := Module[{
     varSamples = RandomVariate[InverseGammaDistribution[nu, beta], n],
     muSamples
 },
-    muSamples = RandomVariate[NormalDistribution[], n] * Sqrt[varSamples / lambda] + mu; (* == Table[RandomVariate[NormalDistribution[mu, Sqrt[var / lambda]]], {var, samples}]*)
+    muSamples = RandomVariate[NormalDistribution[], n] * Sqrt[varSamples / lambda] + mu; (* == Table[RandomVariate[NormalDistribution[mu, Sqrt[var / lambda]]], {var, varSamples}]*)
     Transpose[{muSamples, varSamples}]
 ];
-
 
 normalInverseGammaDistribution /: PDF[normalInverseGammaDistribution[mu_, lambda_, beta_, nu_], {x_, var_}] :=
     PDF[NormalDistribution[mu, Sqrt[var/lambda]], x] * PDF[InverseGammaDistribution[nu, beta], var];
@@ -107,7 +109,15 @@ conjugatePriorModel[
         ],
         Undefined
     ];
-    predictiveDist = StudentTDistribution[mu, Sqrt[beta * (lambda + 1)/(lambda * nu)], 2 * nu];
+    predictiveDist = StudentTDistribution[mu, Sqrt[beta * (lambda + 1)/(lambda * nu)], 2 * nu]; (* ==
+        ParameterMixtureDistribution[
+            ParameterMixtureDistribution[
+                NormalDistribution[\[FormalU], Sqrt[\[FormalV]]],
+                Distributed[\[FormalU], NormalDistribution[mu, Sqrt[\[FormalV]/lambda]]]
+            ],
+            Distributed[\[FormalV], varDist]
+        ]
+    *)
     <|
         "Model" -> model,
         "Prior" -> prior,
@@ -220,14 +230,47 @@ normalInverseWishartDistribution /: MarginalDistribution[
 ] := InverseWishartMatrixDistribution[nu, psi];
 
 normalInverseWishartDistribution /: RandomVariate[
+    dist_normalInverseWishartDistribution,
+    n : integerOrListIntegerPattern : 1
+] := Flatten[RandomVariate[dist, Flatten @ {n, 1}], 1]
+
+normalInverseWishartDistribution /: RandomVariate[
     normalInverseWishartDistribution[mu_?VectorQ, lambda_, psi_?SquareMatrixQ, nu_],
-    n_Integer?Positive
+    {n_Integer?Positive, m_Integer?Positive}
 ] /; Length[mu] === Length[psi] := With[{
     samples = RandomVariate[InverseWishartMatrixDistribution[nu, psi], n]
 },
     Table[
-        {RandomVariate[MultinormalDistribution[mu, cov/lambda]], cov},
+        Transpose[{
+            RandomVariate[MultinormalDistribution[mu, cov/lambda], m],
+            ConstantArray[cov, m]
+        }],
         {cov, samples}
+    ]
+];
+
+normalInverseWishartPredictiveDistribution /: RandomVariate[
+    dist_normalInverseWishartPredictiveDistribution,
+    n : integerOrListIntegerPattern : 1
+] := Flatten[RandomVariate[dist, Flatten @ {n, 1, 1}], 2];
+
+normalInverseWishartPredictiveDistribution /: RandomVariate[
+    dist_normalInverseWishartPredictiveDistribution,
+    {k_Integer?Positive, l_Integer?Positive}
+] := Flatten[RandomVariate[dist, {k, l, 1}], {{1}, {2, 3}}];
+
+normalInverseWishartPredictiveDistribution /: RandomVariate[
+    normalInverseWishartPredictiveDistribution[mu_?VectorQ, lambda_, psi_?SquareMatrixQ, nu_],
+    {k_Integer?Positive, l_Integer?Positive, m_Integer?Positive}
+] /; Length[mu] === Length[psi] := Module[{
+    distSamples = RandomVariate[normalInverseWishartDistribution[mu, lambda, psi, nu], {k, l}]
+},
+    Table[
+        Table[
+            RandomVariate[MultinormalDistribution[samp[[1]], samp[[2]]], m],
+            {samp, sampOuter}
+        ],
+        {sampOuter, distSamples}
     ]
 ];
 
@@ -272,27 +315,47 @@ conjugatePriorModel[
 
 conjugatePriorModel[
     data_List?MatrixQ,
-    MultinormalDistribution[_Symbol, _Symbol],
-    normalInverseWishartDistribution[mu0_, lambda0_, psi0_, nu0_]
+    model : MultinormalDistribution[_Symbol, _Symbol],
+    prior : normalInverseWishartDistribution[mu0_, lambda0_, psi0_, nu0_]
 ] := Module[{
     mean = Mean[data],
     cov,
     nDat = Length[data],
-    meanDiff
+    meanDiff,
+    post,
+    mun, lambdan, psin, nun,
+    logEvidence
 },
     cov = If[ nDat === 1, 0, Covariance[data]];
     meanDiff = mean - mu0;
-    normalInverseWishartDistribution[
-        Divide[
+    post = normalInverseWishartDistribution[
+        mun = Divide[
             lambda0 * mu0 + nDat * mean,
             lambda0 + nDat
         ],
-        lambda0 + nDat,
-        psi0 + (nDat-1) * cov + Divide[lambda0 * nDat, lambda0 + nDat] * (List /@ meanDiff) . {meanDiff},
-        nu0 + nDat
-    ]
+        lambdan = lambda0 + nDat,
+        psin = psi0 + (nDat - 1) * cov + Divide[lambda0 * nDat, lambda0 + nDat] * (List /@ meanDiff) . {meanDiff},
+        nun = nu0 + nDat
+    ];
+    logEvidence = With[{
+        muTest = mean,
+        covTest = cov
+    },
+        Replace[Except[_?NumericQ]-> Undefined] @ Quiet @ Plus[
+            LogLikelihood[MultinormalDistribution[muTest, covTest], data],
+            LogLikelihood[prior, {muTest, covTest}] - LogLikelihood[post, {muTest, covTest}]
+        ]
+    ];
+    <|
+        "Model" -> model,
+        "Prior" -> prior,
+        "Posterior" -> post,
+        "LogEvidence" -> logEvidence,
+        "PosteriorPredictiveDistribution" -> normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun]
+    |>
 ];
 
+(*
 Options[posteriorMultivariateNormal] = {
     "Prior" -> {"Mu" -> 0, "Lambda" -> 1/100, "Psi" -> 1/100, "Nu" -> Automatic},
     "CovarianceSamples" -> 100
@@ -372,6 +435,7 @@ posteriorMultivariateNormal[
         ]
     |>
 ];
+*)
 
 precisionMultinormalDistribution /: LogLikelihood[precisionMultinormalDistribution[mu_, lambda_], list : {__List}] :=
     Sum[
@@ -397,13 +461,13 @@ linearModelDistribution /: MarginalDistribution[
 
 linearModelDistribution /: RandomVariate[
     linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, alpha_, beta_],
-    n : (_Integer?Positive) : 1
+    n : integerOrListIntegerPattern : 1
 ] := With[{
     inv = LinearSolve[lambda, IdentityMatrix[Length[lambda]]],
     samples = RandomVariate[InverseGammaDistribution[alpha, beta], n]
 },
     Transpose @ {
-        RandomVariate[MultinormalDistribution[mu, inv], n] * Sqrt[samples], (* == Table[RandomVariate[MultinormalDistribution[mu, var * inv], n], {var, samples}]*)
+        RandomVariate[MultinormalDistribution[mu, inv], n] * Sqrt[samples], (* == Table[RandomVariate[MultinormalDistribution[mu, var * inv]], {var, samples}]*)
         samples
     }
 ];
