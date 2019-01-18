@@ -169,11 +169,9 @@ normalInverseWishartPredictiveDistribution /: RandomVariate[
     distSamples = RandomVariate[normalInverseWishartDistribution[mu, lambda, psi, nu], {k, l}]
 },
     Table[
-        Table[
-            RandomVariate[MultinormalDistribution[samp[[1]], samp[[2]]], m],
-            {samp, sampOuter}
-        ],
-        {sampOuter, distSamples}
+        RandomVariate[MultinormalDistribution[samp[[1]], samp[[2]]], m],
+        {sampOuter, distSamples},
+        {samp, sampOuter}
     ]
 ];
 
