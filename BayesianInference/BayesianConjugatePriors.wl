@@ -511,7 +511,7 @@ makeDesignMatrix[lm_linearModel, data : {__Rule}] := With[{
 ];
 
 makeDesignMatrix[
-    linearModel[basis_, symbols_, ___],
+    linearModel[basis_List, symbols : {__Symbol}, ___],
     input_List?MatrixQ -> yvec_List?VectorQ
 ] /; Length[input] === Length[yvec] := <|
     "DesignMatrix" -> DesignMatrix[
@@ -531,13 +531,11 @@ designMatrixPattern = PatternTest[
     AssociationQ[#] && Length[#["DesignMatrix"]] === Length[#["Output"]]&
 ];
 
-linearModelPredictiveDistribution[
-    lm : linearModel[basis_, symbols_, {coefficientVector_List?VectorQ, var_}],
-    input_List?MatrixQ
-] := linearModelPredictiveDistribution[lm, makeDesignMatrix[lm, input]]
+linearModelPredictiveDistribution[lm_linearModel, input_List?MatrixQ] :=
+    linearModelPredictiveDistribution[lm, makeDesignMatrix[lm, input]];
 
 linearModelPredictiveDistribution[
-    linearModel[basis_, symbols_, {coefficientVector_List?VectorQ, var_}],
+    linearModel[basis_List, symbols : {__Symbol}, {coefficientVector_List?VectorQ, var_}],
     designMatrix : designMatrixPattern
 ] /; Length[coefficientVector] === Dimensions[designMatrix["DesignMatrix"]][[2]] := With[{
     nDat = Length[designMatrix["DesignMatrix"]]
@@ -546,10 +544,45 @@ linearModelPredictiveDistribution[
         designMatrix["DesignMatrix"] . coefficientVector,
         var * IdentityMatrix[nDat]
     ]
-]
+];
+
+linearModelPredictiveDistribution[
+    lm_linearModel,
+    dist_linearModelDistribution,
+    input_List?MatrixQ
+] := linearModelPredictiveDistribution[lm, dist] /@ input;
+
+linearModelPredictiveDistribution[
+    linearModel[basis_List, symbols : {__Symbol}, ___],
+    linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, a_, b_]
+] /; Length[basis] === Length[mu] === Length[lambda]:= With[{
+    meanVec = Array[\[FormalM], Length[basis]],
+    invLambda = LinearSolve[lambda, IdentityMatrix[Length[lambda]]],
+    dMat = First @ makeDesignMatrix[
+        linearModel[basis, symbols],
+        {symbols}
+    ]["DesignMatrix"]
+},
+    expressionToFunction[
+        ParameterMixtureDistribution[
+            ParameterMixtureDistribution[
+                NormalDistribution[
+                    dMat . meanVec,
+                    Sqrt[\[FormalV]]
+                ],
+                Distributed[
+                    meanVec,
+                    MultinormalDistribution[mu, \[FormalV] * invLambda]
+                ]
+            ],
+            Distributed[\[FormalV], InverseGammaDistribution[a, b]]
+        ],
+        symbols
+    ]
+];
 
 linearModel /: LogLikelihood[
-    linearModel[basis_, symbols_, {coefficientVector_List?VectorQ, var_}],
+    linearModel[basis_List, symbols : {__Symbol}, {coefficientVector_List?VectorQ, var_}],
     data : (_List | _Rule)
 ] := LogLikelihood[
     linearModel[basis, symbols, {coefficientVector, var}],
@@ -557,7 +590,7 @@ linearModel /: LogLikelihood[
 ];
 
 linearModel /: LogLikelihood[
-    linearModel[basis_, symbols_, {coefficientVector_List?VectorQ, var_}],
+    linearModel[basis_List, symbols : {__Symbol}, {coefficientVector_List?VectorQ, var_}],
     designMatrix : designMatrixPattern
 ] := LogLikelihood[
     linearModelPredictiveDistribution[linearModel[basis, symbols, {coefficientVector, var}], designMatrix],
@@ -565,7 +598,7 @@ linearModel /: LogLikelihood[
 ];
 
 (* General non-informative prior *)
-conjugatePriorModel[linearModel[basis_List, symbols_List, ___]] := With[{
+conjugatePriorModel[linearModel[basis_List, symbols : {__Symbol}, ___]] := With[{
     dim = Length[basis]
 },
     linearModelDistribution[
@@ -578,7 +611,7 @@ conjugatePriorModel[linearModel[basis_List, symbols_List, ___]] := With[{
 
 conjugatePriorModel[
     data : ((_List?MatrixQ -> _List?VectorQ) | {__Rule}),
-    linearModel[basis_List, symbols_List, ___],
+    linearModel[basis_List, symbols : {__Symbol}, ___],
     rest___
 ] := conjugatePriorModel[
     makeDesignMatrix[linearModel[basis, symbols], data],
@@ -588,7 +621,7 @@ conjugatePriorModel[
 
 conjugatePriorModel[
     assoc : designMatrixPattern,
-    linearModel[basis_List, symbols_List, ___]
+    linearModel[basis_List, symbols : {__Symbol}, ___]
 ] := conjugatePriorModel[
     assoc,
     linearModel[basis, symbols],
@@ -597,7 +630,7 @@ conjugatePriorModel[
 
 conjugatePriorModel[
     assoc : designMatrixPattern,
-    model : linearModel[basis_List, symbols_List, ___],
+    model : linearModel[basis_List, symbols : {__Symbol}, ___],
     prior : linearModelDistribution[mu0_List?VectorQ, lambda0_List?SquareMatrixQ, a0_, b0_]
 ] := Module[{
     designMatrix = assoc["DesignMatrix"],
@@ -625,31 +658,7 @@ conjugatePriorModel[
             LogLikelihood[linearModel[basis, symbols, rv], assoc],
             LogLikelihood[prior, {rv}]- LogLikelihood[post, {rv}]
         ];
-        predictiveDist = With[{
-            meanVec = Array[\[FormalM], Length[basis]],
-            invLambda = LinearSolve[lambdan, IdentityMatrix[Length[lambdan]]],
-            dMat = First @ makeDesignMatrix[
-                linearModel[basis, symbols],
-                {symbols}
-            ]["DesignMatrix"]
-        },
-            expressionToFunction[
-                ParameterMixtureDistribution[
-                    ParameterMixtureDistribution[
-                        NormalDistribution[
-                            dMat . meanVec,
-                            Sqrt[\[FormalV]]
-                        ],
-                        Distributed[
-                            meanVec,
-                            MultinormalDistribution[mun, \[FormalV] * invLambda]
-                        ]
-                    ],
-                    Distributed[\[FormalV], InverseGammaDistribution[an, bn]]
-                ],
-                symbols
-            ]
-        ];
+        predictiveDist = linearModelPredictiveDistribution[model, post];
         <|
             "Model" -> model,
             "Prior" -> prior,
