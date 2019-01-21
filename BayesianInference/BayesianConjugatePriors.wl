@@ -68,18 +68,11 @@ conjugatePriorModel[ (* Update a previously computed model with new data by usin
 ] := Module[{
     updatedModel
 },
-    updatedModel = conjugatePriorModel[
-        data,
-        model["Model"],
-        model["Posterior"]
-    ];
-    Join[
-        updatedModel,
-        <|
-            "Prior" -> model["Prior"],
-            "LogEvidence" -> updatedModel["LogEvidence"] + model["LogEvidence"]
-        |>
-    ]
+    updatedModel = conjugatePriorModel[data, model["Model"], model["Posterior"]];
+    updatedModel["Prior"] = model["Prior"];
+    updatedModel["LogEvidence"] += model["LogEvidence"];
+    
+    updatedModel
 ];
 
 (* Default non-informative prior *)
