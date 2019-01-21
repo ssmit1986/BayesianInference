@@ -62,6 +62,26 @@ normalInverseGammaDistribution /: LogLikelihood[normalInverseGammaDistribution[m
 
 conjugatePriorModel[{} | {{}} | (_ -> {}), _, prior_] := prior; (* Cannot update without data *)
 
+conjugatePriorModel[ (* Update a previously computed model with new data by using the posterior as a new prior *)
+    data : _List | _Rule,
+    model : KeyValuePattern[{"Model" -> _, "Posterior" -> _, "LogEvidence" -> _, "Prior" -> _}]?AssociationQ
+] := Module[{
+    updatedModel
+},
+    updatedModel = conjugatePriorModel[
+        data,
+        model["Model"],
+        model["Posterior"]
+    ];
+    Join[
+        updatedModel,
+        <|
+            "Prior" -> model["Prior"],
+            "LogEvidence" -> updatedModel["LogEvidence"] + model["LogEvidence"]
+        |>
+    ]
+];
+
 (* Default non-informative prior *)
 conjugatePriorModel[NormalDistribution[_Symbol, _Symbol]] := normalInverseGammaDistribution[0, 1/100, 1/200, 1/200];
 
