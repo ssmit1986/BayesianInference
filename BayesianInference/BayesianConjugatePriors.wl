@@ -371,11 +371,11 @@ linearModelPredictiveDistribution[
     linearModel[basis_List, symbols : {__Symbol}, {coefficientVector_List?VectorQ, var_}],
     designMatrix : designMatrixPattern
 ] /; Length[coefficientVector] === Dimensions[designMatrix["DesignMatrix"]][[2]] := With[{
-    nDat = Length[designMatrix["DesignMatrix"]]
+    stdev = Sqrt[var]
 },
-    MultinormalDistribution[
-        designMatrix["DesignMatrix"] . coefficientVector,
-        var * IdentityMatrix[nDat]
+    ProductDistribution @@ Map[
+        NormalDistribution[#, stdev]&,
+        designMatrix["DesignMatrix"] . coefficientVector
     ]
 ];
 
