@@ -485,7 +485,7 @@ conjugatePriorModel[
             mun,
             lambdan = designSq + lambda0,
             an = a0 + nDat/2,
-            bn = b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambda0.mun)/2
+            bn = b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambdan.mun)/2
         ];
         rv = First @ RandomVariate[post];
         logEvidence = Plus[
