@@ -463,9 +463,10 @@ conjugatePriorModel[
 
 conjugatePriorModel[
     assoc : designMatrixPattern,
-    model : linearModel[basis_List, symbols : {__Symbol}, ___],
+    linearModel[basis_List, symbols : {__Symbol}, ___],
     prior : linearModelDistribution[mu0_List?VectorQ, lambda0_List?SquareMatrixQ, a0_, b0_]
 ] := Module[{
+    model = linearModel[basis, symbols],
     designMatrix = assoc["DesignMatrix"],
     yVec = assoc["Output"],
     mun, lambdan, an, bn,
