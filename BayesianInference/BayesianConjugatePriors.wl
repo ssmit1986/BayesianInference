@@ -8,6 +8,9 @@ normalInverseWishartDistribution;
 linearModelDistribution;
 linearModel;
 linearModelPredictiveDistribution;
+multiLinearModel;
+multiLinearModelDistribution;
+multiLinearModelPredictiveDistribution;
 makeDesignMatrix;
 normalInverseWishartPredictiveDistribution;
 
@@ -326,29 +329,29 @@ linearModelDistribution /: LogLikelihood[
     {pt, pts}
 ];
 
-makeDesignMatrix[lm_linearModel, input : Except[{__Rule} | _Rule | _List]] := makeDesignMatrix[lm, {{input}}];
-makeDesignMatrix[lm_linearModel, input : Except[{__Rule}, _List?VectorQ]] := makeDesignMatrix[lm, List /@ input];
+makeDesignMatrix[lm_, input : Except[{__Rule} | _Rule | _List]] := makeDesignMatrix[lm, {{input}}];
+makeDesignMatrix[lm_, input : Except[{__Rule}, _List?VectorQ]] := makeDesignMatrix[lm, List /@ input];
 
-makeDesignMatrix[lm_linearModel, input_List?MatrixQ] := makeDesignMatrix[
+makeDesignMatrix[lm_, input_List?MatrixQ] := makeDesignMatrix[
     lm,
     input -> ConstantArray[Missing[], Length[input]]
 ];
 
-makeDesignMatrix[lm_linearModel, data : {__Rule}] := With[{
+makeDesignMatrix[lm_, data : {__Rule}] := With[{
     inputs = Replace[
         data[[All, 1]],
         vec_List?VectorQ :> ArrayReshape[vec, {Length[vec], 1}]
     ]
 },
-    makeDesignMatrix[lm, inputs -> Flatten @ data[[All, 2]]]
+    makeDesignMatrix[lm, inputs -> data[[All, 2]]]
 ];
 
 makeDesignMatrix[
-    linearModel[basis_List, symbols : {__Symbol}, ___],
-    input_List?MatrixQ -> yvec_List?VectorQ
+    (linearModel | multiLinearModel)[basis_List, symbols : {__Symbol}, ___],
+    input_List?MatrixQ -> yvec_List?(VectorQ[#] || MatrixQ[#]&)
 ] /; Length[input] === Length[yvec] := <|
     "DesignMatrix" -> DesignMatrix[
-        Join[input, ArrayReshape[yvec, {Length[yvec], 1}], 2],
+        Join[input, ConstantArray[0, {Length[yvec], 1}], 2],
         basis,
         symbols,
         IncludeConstantBasis -> False
@@ -501,6 +504,70 @@ conjugatePriorModel[
             "PosteriorPredictiveDistribution" -> predictiveDist
         |>
     ) /; Length[designMatrix] === Length[yVec] && Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0]
+];
+
+conjugatePriorModel[
+    assoc : designMatrixPattern,
+    multiLinearModel[basis_List, symbols : {__Symbol}, ___]
+] := conjugatePriorModel[
+    assoc,
+    multiLinearModel[basis, symbols],
+    conjugatePriorModel[multiLinearModel[basis, symbols]] (* TODO: does not work yet *)
+];
+
+conjugatePriorModel[
+    assoc : designMatrixPattern,
+    multiLinearModel[basis_List, symbols : {__Symbol}, ___],
+    prior : multiLinearModelDistribution[mu0_List?MatrixQ, lambda0_List?SquareMatrixQ, psi0_?SquareMatrixQ, nu0_]
+] /; Length[Dimensions[assoc["Output"]]] === 2 := Module[{
+    model,
+    designMatrix = assoc["DesignMatrix"],
+    yMat = assoc["Output"],
+    mun, lambdan, nun, psin,
+    designSq,
+    nDat,
+    nOut,
+    post,
+    rv,
+    logEvidence,
+    predictiveDist
+},
+    (
+        designSq = Transpose[designMatrix] . designMatrix;
+        {nDat, nOut} = Dimensions[yMat];
+        model = multiLinearModel[basis, symbols, nOut];
+        mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + Transpose[designMatrix] . yMat)];
+        post = multiLinearModelDistribution[
+            mun,
+            lambdan = designSq + lambda0,
+            psin = With[{
+                residuals = yMat - designMatrix . mun,
+                muUpdate = mun - mu0
+            },
+                psi0 + Transpose[residuals].residuals + muUpdate.lambda0.muUpdate
+            ],
+            nun = nu0 + nDat
+        ]
+        
+        (* TODO 
+        rv = First @ RandomVariate[post];
+        logEvidence = Plus[
+            LogLikelihood[linearModel[basis, symbols, rv], assoc],
+            LogLikelihood[prior, {rv}]- LogLikelihood[post, {rv}]
+        ];
+        predictiveDist = multiLinearModelPredictiveDistribution[model, post];
+        <|
+            "Model" -> model,
+            "Prior" -> prior,
+            "Posterior" -> post,
+            "LogEvidence" -> logEvidence,
+            "PosteriorPredictiveDistribution" -> predictiveDist
+        |>*)
+    ) /; And[
+        Length[designMatrix] === Length[yMat],
+        Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0],
+        Dimensions[yMat][[2]] === Dimensions[mu0][[2]]
+    ]
 ];
 
 End[]
