@@ -392,7 +392,7 @@ linearModelPredictiveDistribution[
     linearModel[basis_List, symbols : {__Symbol}, ___],
     linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, a_, b_]
 ] /; Length[basis] === Length[mu] === Length[lambda]:= With[{
-    meanVec = Array[\[FormalM], Length[basis]],
+    meanVec = Array[\[FormalM], Length[mu]],
     invLambda = LinearSolve[lambda, IdentityMatrix[Length[lambda]]],
     dMat = First @ makeDesignMatrix[
         linearModel[basis, symbols],
@@ -456,6 +456,16 @@ conjugatePriorModel[
 ];
 
 conjugatePriorModel[
+    data : ((_List?MatrixQ -> _List?MatrixQ) | {__Rule}),
+    multiLinearModel[basis_List, symbols : {__Symbol}, ___],
+    rest___
+] := conjugatePriorModel[
+    makeDesignMatrix[multiLinearModel[basis, symbols], data],
+    multiLinearModel[basis, symbols],
+    rest
+];
+
+conjugatePriorModel[
     assoc : designMatrixPattern,
     linearModel[basis_List, symbols : {__Symbol}, ___]
 ] := conjugatePriorModel[
@@ -506,13 +516,41 @@ conjugatePriorModel[
     ) /; Length[designMatrix] === Length[yVec] && Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0]
 ];
 
+(* Multivariate regression *)
+linearModelPredictiveDistribution[lm_multiLinearModel, input_List?MatrixQ] :=
+    linearModelPredictiveDistribution[lm, makeDesignMatrix[lm, input]];
+
+linearModelPredictiveDistribution[
+    multiLinearModel[basis_List, symbols : {__Symbol}, {coefficientMatrix_List?MatrixQ, cov_List?SquareMatrixQ}],
+    designMatrix : designMatrixPattern
+] /; And[
+    Length[coefficientMatrix] === Dimensions[designMatrix["DesignMatrix"]][[2]],
+    Dimensions[coefficientMatrix][[2]] === Length[cov]
+] := (
+    ProductDistribution @@ Map[
+        MultinormalDistribution[#, cov]&,
+        designMatrix["DesignMatrix"] . coefficientMatrix
+    ]
+);
+
+conjugatePriorModel[multiLinearModel[basis_List, symbols : {__Symbol}, dimOut_Integer, ___]] := With[{
+    dimIn = Length[basis]
+},
+    multiLinearModelDistribution[
+        ConstantArray[0, {dimIn, dimOut}],
+        IdentityMatrix[dimIn]/100,
+        IdentityMatrix[dimOut]/100,
+        1/100
+    ]
+];
+
 conjugatePriorModel[
     assoc : designMatrixPattern,
     multiLinearModel[basis_List, symbols : {__Symbol}, ___]
-] := conjugatePriorModel[
+] /; Length[Dimensions[assoc["Output"]]] === 2 := conjugatePriorModel[
     assoc,
     multiLinearModel[basis, symbols],
-    conjugatePriorModel[multiLinearModel[basis, symbols]] (* TODO: does not work yet *)
+    conjugatePriorModel[multiLinearModel[basis, symbols, Dimensions[assoc["Output"]][[2]]]] (* TODO: does not work yet *)
 ];
 
 conjugatePriorModel[
