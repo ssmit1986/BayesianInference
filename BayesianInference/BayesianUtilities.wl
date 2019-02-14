@@ -28,7 +28,9 @@ inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] give
 $BayesianContexts;
 directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood";
 logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y - x]. Threads over lists";
-logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists"
+logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
+conditionalDistribution::usage = "conditionalDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
+
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -456,6 +458,38 @@ directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
             ]
         ],
         vars
+    ]
+];
+
+conditionalDistribution /: RandomVariate[dist_conditionalDistribution,spec : _Integer] := RandomVariate[dist, {spec}];
+
+conditionalDistribution /: RandomVariate[
+    conditionalDistribution[dist_, distributed_],
+    integers : {__Integer}
+] := Module[{
+    spec = If[ Length[integers] > 1,
+        {Most[integers], Last[integers]},
+        {First[integers], 1}
+    ],
+    distributions,
+    reshape
+},
+    reshape = If[ Length[spec[[1]]] > 1,
+        Flatten[#, Length[spec[[1]]] - 1]&,
+        Identity
+    ];
+    distributions = Flatten @ Last @  Reap[
+        ReplaceAll[distributed, Distributed[sym_Symbol, d_] :> Sow[sym -> reshape @ RandomVariate[d, spec[[1]]]]]
+    ];
+    Transpose @ Prepend[ (* Need to reshape back to format specified by integers *)
+        distributions[[All, 2]],
+        MapThread[
+            Function[
+                Evaluate[distributions[[All, 1]]],
+                RandomVariate[dist, spec[[2]]]
+            ],
+            distributions[[All, 2]]
+        ]
     ]
 ];
 
