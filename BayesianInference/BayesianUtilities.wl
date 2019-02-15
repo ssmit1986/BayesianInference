@@ -479,7 +479,12 @@ conditionalDistribution /: RandomVariate[
         Identity
     ];
     distributions = Flatten @ Last @  Reap[
-        ReplaceAll[distributed, Distributed[sym_Symbol, d_] :> Sow[sym -> reshape @ RandomVariate[d, spec[[1]]]]]
+        ReplaceAll[
+            distributed,
+            Distributed[sym_Symbol, d_] :> Sow[
+                sym -> If[ Head[d] =!= conditionalDistribution, reshape, Identity] @ RandomVariate[d, spec[[1]]]
+            ]
+        ]
     ];
     Transpose @ Prepend[ (* Need to reshape back to format specified by integers *)
         distributions[[All, 2]],
