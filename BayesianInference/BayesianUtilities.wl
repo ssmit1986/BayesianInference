@@ -29,7 +29,7 @@ $BayesianContexts;
 directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood";
 logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y - x]. Threads over lists";
 logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
-conditionalDistribution::usage = "conditionalDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
+conditionalProductDistribution::usage = "conditionalProductDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
 
 
 Begin["`Private`"] (* Begin Private Context *)
@@ -461,10 +461,10 @@ directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
     ]
 ];
 
-conditionalDistribution /: RandomVariate[dist_conditionalDistribution,spec : _Integer] := RandomVariate[dist, {spec}];
+conditionalProductDistribution /: RandomVariate[dist_conditionalProductDistribution,spec : _Integer] := RandomVariate[dist, {spec}];
 
-conditionalDistribution /: RandomVariate[
-    conditionalDistribution[dist_, distributed_],
+conditionalProductDistribution /: RandomVariate[
+    conditionalProductDistribution[dist_, distributed_],
     integers : {__Integer}
 ] := Module[{
     spec = If[ Length[integers] > 1,
@@ -482,7 +482,7 @@ conditionalDistribution /: RandomVariate[
         ReplaceAll[
             distributed,
             Distributed[sym_Symbol, d_] :> Sow[
-                sym -> If[ Head[d] =!= conditionalDistribution, reshape, Identity] @ RandomVariate[d, spec[[1]]]
+                sym -> If[ Head[d] =!= conditionalProductDistribution, reshape, Identity] @ RandomVariate[d, spec[[1]]]
             ]
         ]
     ];
