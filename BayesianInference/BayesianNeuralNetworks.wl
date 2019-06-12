@@ -145,12 +145,12 @@ regressionLossNet[
         "loss" -> gaussianLossLayer[]
     |>,
     {
-        NetPort["x"] -> "regression",
+        NetPort["Input"] -> "regression",
         "regression" -> "part1",
         "regression" -> "part2",
-        {NetPort["y"], "part1", "part2"} -> "loss" -> NetPort["Loss"]
+        {NetPort["Target"], "part1", "part2"} -> "loss" -> NetPort["Loss"]
     },
-    "x" -> OptionValue["Input"]
+    "Input" -> OptionValue["Input"]
 ];
 
 regressionLossNet[
@@ -167,13 +167,13 @@ regressionLossNet[
         "alphaDiv" -> alphaDivergenceLoss[alpha, k]
     |>,
     {
-        NetPort["x"] -> "regression",
+        NetPort["Input"] -> "regression",
         "regression" -> "part1",
         "regression" -> "part2",
-        NetPort["y"] -> "repY",
+        NetPort["Target"] -> "repY",
         {"repY", "part1", "part2"} -> "loss" -> "alphaDiv" -> NetPort["Loss"]
     },
-    "x" -> OptionValue["Input"]
+    "Input" -> OptionValue["Input"]
 ];
 
 alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, _] := AggregationLayer[Mean, All];
