@@ -219,11 +219,6 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
 ];
 alphaDivergenceLoss[layer_, _] := layer;
 
-Options[sampleTrainedNet] = {
-    TargetDevice -> "CPU",
-    "StandardDeviations" -> 1
-};
-
 extractRegressionNet[net_NetTrainResultsObject] := extractRegressionNet[net["TrainedNet"]];
 
 extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
@@ -245,6 +240,10 @@ netWeights[net_] := Flatten @ Normal @ Values @ NetInformation[
     "Arrays"
 ];
 
+Options[sampleTrainedNet] = {
+    TargetDevice -> "CPU"
+};
+
 sampleTrainedNet[
     net : (_NetTrainResultsObject | _NetChain | _NetGraph),
     xvalues_List,
@@ -253,7 +252,6 @@ sampleTrainedNet[
 ] := 
     Module[{
         regnet = extractRegressionNet[net],
-        nstdevs = OptionValue["StandardDeviations"],
         samples,
         mean,
         stdv
@@ -267,14 +265,10 @@ sampleTrainedNet[
             Length[xvalues]
         ];
         mean = Mean[samples[[All, All, 1]]];
-        stdv = nstdevs * Sqrt[Variance[samples[[All, All, 1]]] + Mean[Exp[-samples[[All, All, 2]]]]];
+        stdv = Sqrt[Variance[samples[[All, All, 1]]] + Mean[Exp[-samples[[All, All, 2]]]]];
         AssociationThread[
             xvalues,
-            Transpose[{
-                mean - stdv,
-                mean,
-                mean + stdv
-            }]
+            Thread[NormalDistribution[mean, stdv]]
         ]
     ];
 
