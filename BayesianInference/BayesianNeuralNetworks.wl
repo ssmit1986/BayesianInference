@@ -10,6 +10,7 @@ alphaDivergenceLoss;
 extractRegressionNet;
 sampleTrainedNet;
 netRegularizationLoss;
+networkLogEvidence;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -47,9 +48,9 @@ gaussianLossLayer["StandardDeviation"] = With[{
 ];
 
 Options[regressionNet] = {
-    "NetworkDepth" -> 3,
+    "NetworkDepth" -> 4,
     "LayerSize" -> 100,
-    "ActivationFunction" -> Ramp,
+    "ActivationFunction" -> "SELU",
     "DropoutProbability" -> 0.25
 };
 
@@ -91,11 +92,10 @@ regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
     ]
 ];
 
-regressionNet[opts : OptionsPattern[]] := regressionNet["HeteroScedastic", Automatic, opts];
+regressionNet[opts : OptionsPattern[]] := regressionNet["HeteroScedastic", opts];
 
 regressionNet[
     "HomoScedastic",
-    trainingModel : Automatic : Automatic,
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
@@ -109,17 +109,9 @@ regressionNet[
     }
 ];
 
-regressionNet[
-    "HeteroScedastic",
-    trainingModel : Automatic : Automatic,
-    opts : OptionsPattern[]
-] := regressionNet[{Automatic, {2}}, opts];
+regressionNet["HeteroScedastic", opts : OptionsPattern[]] := regressionNet[{Automatic, {2}}, opts];
 
-regressionNet[
-    errorModel_,
-    trainingModel : {"AlphaDivergence", {_, k_Integer} | k_Integer},
-    opts : OptionsPattern[]
-] := NetChain[
+regressionNet[errorModel_, opts : OptionsPattern[]] := NetChain[
     <|
         "repInput" -> ReplicateLayer[k],
         "map" -> NetMapOperator[regressionNet[errorModel, Automatic, opts]]
@@ -128,18 +120,67 @@ regressionNet[
 
 Options[regressionLossNet] = Join[
     Options[regressionNet],
-    {"Input" -> Automatic}
+    {
+        "Input" -> Automatic,
+        "LossModel" -> Automatic
+    }
 ];
 
-regressionLossNet[opts : OptionsPattern[]] := regressionLossNet["HeteroScedastic", Automatic, opts];
+regressionLossNet[opts : OptionsPattern[]] := regressionLossNet["HeteroScedastic", opts];
 
 regressionLossNet[
-    errorModel_,
-    trainingModel : Automatic : Automatic,
+    errorModel : "HeteroScedastic" | "HomoScedastic",
+    opts : OptionsPattern[]
+] := regressionLossNet[
+    regressionNet[errorModel, FilterRules[{opts}, Options[regressionNet]]],
+    opts
+];
+
+regressionLossNet[
+    net : (_NetGraph | _NetChain),
+    opts : OptionsPattern[]
+] := Module[{
+    lossModel = Replace[
+        OptionValue["LossModel"],
+        {
+            "AlphaDivergence" -> <||>,
+            {"AlphaDivergence", subOpts : (___Rule | {___Rule} | _?AssociationQ)} :> Association[subOpts]
+        }
+    ],
+    alpha,
+    k
+},
+    (
+        alpha = Lookup[lossModel, "Alpha", 1];
+        k = Lookup[lossModel, "SampleNumber", 10];
+        NetGraph[
+            <|
+                "repInput" -> ReplicateLayer[k],
+                "regression" -> NetMapOperator[net],
+                "part1" -> PartLayer[{All, 1}],
+                "part2" -> PartLayer[{All, 2}],
+                "repY" -> ReplicateLayer[k],
+                "loss" -> gaussianLossLayer[],
+                "alphaDiv" -> alphaDivergenceLoss[alpha, k]
+            |>,
+            {
+                NetPort["Input"] -> "repInput" -> "regression",
+                "regression" -> "part1",
+                "regression" -> "part2",
+                NetPort["Target"] -> "repY",
+                {"repY", "part1", "part2"} -> "loss" -> "alphaDiv" -> NetPort["Loss"]
+            },
+            "Input" -> OptionValue["Input"]
+        ]
+    ) /; AssociationQ[lossModel]
+];
+
+regressionLossNet[
+    net : (_NetGraph | _NetChain),
     opts : OptionsPattern[]
 ] := NetGraph[
     <|
-        "regression" -> regressionNet[errorModel, trainingModel, FilterRules[{opts}, Options[regressionNet]]],
+        "regression" -> net,
         "part1" -> PartLayer[1],
         "part2" -> PartLayer[2],
         "loss" -> gaussianLossLayer[]
@@ -153,32 +194,9 @@ regressionLossNet[
     "Input" -> OptionValue["Input"]
 ];
 
-regressionLossNet[
-    errorModel_,
-    trainingModel : {"AlphaDivergence", {alpha_, k_Integer}},
-    opts : OptionsPattern[]
-] := NetGraph[
-    <|
-        "regression" -> regressionNet[errorModel, trainingModel, FilterRules[{opts}, Options[regressionNet]]],
-        "part1" -> PartLayer[{All, 1}],
-        "part2" -> PartLayer[{All, 2}],
-        "repY" -> ReplicateLayer[k],
-        "loss" -> gaussianLossLayer[],
-        "alphaDiv" -> alphaDivergenceLoss[alpha, k]
-    |>,
-    {
-        NetPort["Input"] -> "regression",
-        "regression" -> "part1",
-        "regression" -> "part2",
-        NetPort["Target"] -> "repY",
-        {"repY", "part1", "part2"} -> "loss" -> "alphaDiv" -> NetPort["Loss"]
-    },
-    "Input" -> OptionValue["Input"]
-];
-
-alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, _] := AggregationLayer[Mean, All];
-alphaDivergenceLoss[DirectedInfinity[1], _]     := AggregationLayer[Min,    All];
-alphaDivergenceLoss[DirectedInfinity[-1], _]    := AggregationLayer[Max,    All];
+alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, _] :=    AggregationLayer[Mean, All];
+alphaDivergenceLoss[DirectedInfinity[1], _] :=              AggregationLayer[Min, All];
+alphaDivergenceLoss[DirectedInfinity[-1], _] :=             AggregationLayer[Max, All];
 
 alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
     <|
@@ -212,10 +230,11 @@ extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
     layers = Keys @ NetInformation[net, "Layers"]
 },
     Which[
-        MemberQ[layers, {"alphaDiv", ___}],
-            NetExtract[net, {"regression", "map", "Net"}],
         MemberQ[layers, {"regression", ___}],
-            NetExtract[net, "regression"],
+            Replace[
+                NetExtract[net, "regression"],
+                map_NetMapOperator :> NetExtract[map, "Net"]
+            ],
         True,
             net
     ]
@@ -262,7 +281,7 @@ sampleTrainedNet[
 netRegularizationLoss[net : (_NetTrainResultsObject | _NetChain | _NetGraph), rest__] :=
     netRegularizationLoss[netWeights[net], rest];
 
-netRegularizationLoss[weights_List, lambda_, p_?NumericQ] := If[
+netRegularizationLoss[weights_List, lambda_, p : (_?NumericQ) : 2] := If[
     TrueQ[p == 0]
     ,
     lambda * Length[weights]
@@ -280,6 +299,46 @@ netRegularizationLoss[
         {lambdaList, pList}
     ]
 ];
+
+networkLogEvidence[net_, data : {__Rule}, rest___] := networkLogEvidence[
+    net,
+    <|"Input" -> data[[All, 1]], "Target" -> data[[All, 2]]|>,
+    rest
+];
+
+networkLogEvidence[net_, data_Rule, rest___] := networkLogEvidence[
+    net,
+    <|"Input" -> data[[1]], "Target" -> data[[2]]|>,
+    rest
+];
+
+Options[networkLogEvidence] = {"Alpha" -> Automatic, "SampleNumber" -> 100};
+
+networkLogEvidence[obj_NetTrainResultsObject, rest___] := networkLogEvidence[obj["TrainedNet"], rest];
+
+networkLogEvidence[net : (_NetChain | _NetGraph), data_?AssociationQ, lambda2_, opts : OptionsPattern[]] := Module[{
+    nSamples = OptionValue["SampleNumber"],
+    alpha = Replace[
+        OptionValue["Alpha"],
+        Automatic :> FirstCase[
+            Keys @ NetInformation[net, "Layers"],
+            layer : {___, "alphaDiv", "timesAlpha"} :> NetExtract[net, Append[layer, "Function"]][-1],
+            1
+        ]
+    ],
+    negLogLike,
+    regularizationLoss
+},
+    negLogLike = Total @ regressionLossNet[
+        extractRegressionNet[net], 
+        "LossModel" -> {"AlphaDivergence",
+            "SampleNumber" -> nSamples,
+            "Alpha" -> alpha
+        }
+    ][data, NetEvaluationMode -> "Train"];
+    regularizationLoss = netRegularizationLoss[net, lambda2];
+    -(negLogLike + regularizationLoss)
+]
 
 End[] (* End Private Context *)
 
