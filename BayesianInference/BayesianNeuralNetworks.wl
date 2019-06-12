@@ -111,13 +111,6 @@ regressionNet[
 
 regressionNet["HeteroScedastic", opts : OptionsPattern[]] := regressionNet[{Automatic, {2}}, opts];
 
-regressionNet[errorModel_, opts : OptionsPattern[]] := NetChain[
-    <|
-        "repInput" -> ReplicateLayer[k],
-        "map" -> NetMapOperator[regressionNet[errorModel, Automatic, opts]]
-    |>
-];
-
 Options[regressionLossNet] = Join[
     Options[regressionNet],
     {
@@ -151,7 +144,7 @@ regressionLossNet[
     k
 },
     (
-        alpha = Lookup[lossModel, "Alpha", 1];
+        alpha = Lookup[lossModel, "Alpha", 0.5];
         k = Lookup[lossModel, "SampleNumber", 10];
         NetGraph[
             <|
@@ -317,7 +310,7 @@ networkLogEvidence[net : (_NetChain | _NetGraph), data_?AssociationQ, lambda2_, 
         Automatic :> FirstCase[
             Keys @ NetInformation[net, "Layers"],
             layer : {___, "alphaDiv", "timesAlpha"} :> NetExtract[net, Append[layer, "Function"]][-1],
-            1
+            0
         ]
     ],
     negLogLike,
