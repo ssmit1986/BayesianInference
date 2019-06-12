@@ -56,7 +56,8 @@ Options[regressionNet] = {
 regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
     pdrop = OptionValue["DropoutProbability"],
     size = OptionValue["LayerSize"],
-    activation = OptionValue["ActivationFunction"]
+    activation = OptionValue["ActivationFunction"],
+    depth = OptionValue["NetworkDepth"]
 },
     NetChain[
         Flatten @ {
@@ -69,16 +70,19 @@ regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
                     ElementwiseLayer[
                         If[Head[activation] === Function, activation[i], activation]
                     ],
-                    Switch[ pdrop,
-                        _?NumericQ,
-                            DropoutLayer[pdrop],
-                        _Function,
-                            DropoutLayer[pdrop[i]],
-                        _,
-                            Nothing
+                    If[ i === depth,
+                        Nothing,
+                        Switch[ pdrop,
+                            _?NumericQ,
+                                DropoutLayer[pdrop],
+                            _Function,
+                                DropoutLayer[pdrop[i]],
+                            _,
+                                Nothing
+                        ]
                     ]
                 },
-                {i, OptionValue["NetworkDepth"]}
+                {i, depth}
             ],
             LinearLayer[]
         },
@@ -86,6 +90,8 @@ regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
         "Output" -> output
     ]
 ];
+
+regressionNet[opts : OptionsPattern[]] := regressionNet["HeteroScedastic", Automatic, opts];
 
 regressionNet[
     "HomoScedastic",
@@ -124,6 +130,8 @@ Options[regressionLossNet] = Join[
     Options[regressionNet],
     {"Input" -> Automatic}
 ];
+
+regressionLossNet[opts : OptionsPattern[]] := regressionLossNet["HeteroScedastic", Automatic, opts];
 
 regressionLossNet[
     errorModel_,
@@ -168,7 +176,7 @@ regressionLossNet[
     "x" -> OptionValue["Input"]
 ];
 
-alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, _] := AggregationLayer[Mean,   All];
+alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, _] := AggregationLayer[Mean, All];
 alphaDivergenceLoss[DirectedInfinity[1], _]     := AggregationLayer[Min,    All];
 alphaDivergenceLoss[DirectedInfinity[-1], _]    := AggregationLayer[Max,    All];
 
