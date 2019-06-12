@@ -221,11 +221,8 @@ extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
     ]
 ];
 
-netWeights[net_] := Flatten @ Values @ NetInformation[
-    NetReplace[
-        extractRegressionNet[net],
-        _BatchNormalizationLayer -> Nothing
-    ],
+netWeights[net_] := Flatten @ Normal @ Values @ NetInformation[
+    NetReplace[net, _BatchNormalizationLayer -> Nothing],
     "Arrays"
 ];
 
