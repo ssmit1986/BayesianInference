@@ -337,7 +337,7 @@ batchnormToChain[batch_BatchNormalizationLayer] := Block[{
         List /@ {"Biases", "Scaling", "MovingMean", "MovingVariance", "Epsilon"}
     ];
     sigma = Sqrt[movVar + eps];
-    NetChain[{
+    NetChain[{ (* It's possible to use only 2 layers instead of 3, but it seems like the numerical error is smaller with 3 layers *)
         ConstantPlusLayer["Biases" -> -movMean],
         ConstantTimesLayer["Scaling" -> Divide[scaling, sigma]],
         ConstantPlusLayer["Biases" -> biases]
