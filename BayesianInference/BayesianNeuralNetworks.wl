@@ -74,16 +74,13 @@ regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
                     ElementwiseLayer[
                         If[Head[activation] === Function, activation[i], activation]
                     ],
-                    If[ i === depth,
-                        Nothing,
-                        Switch[ pdrop,
-                            _?NumericQ,
-                                DropoutLayer[pdrop],
-                            _Function,
-                                DropoutLayer[pdrop[i]],
-                            _,
-                                Nothing
-                        ]
+                    Switch[ pdrop,
+                        _?NumericQ,
+                            DropoutLayer[pdrop],
+                        _Function,
+                            DropoutLayer[pdrop[i]],
+                        _,
+                            Nothing
                     ]
                 },
                 {i, depth}
@@ -232,7 +229,7 @@ extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
 ];
 
 netWeights[net_] := Flatten @ Normal @ Values @ NetInformation[
-    NetReplace[net, _BatchNormalizationLayer -> Nothing],
+    Quiet[NetReplace[net, _BatchNormalizationLayer -> Nothing], {NetReplace::norep}],
     "Arrays"
 ];
 
@@ -268,7 +265,9 @@ sampleTrainedNet[
         ]
     ];
 
-netRegularizationLoss[net : (_NetTrainResultsObject | _NetChain | _NetGraph), rest__] :=
+netRegularizationLoss[obj_NetTrainResultsObject, rest___] := netRegularizationLoss[obj["TrainedNet"], rest];
+
+netRegularizationLoss[net : (_NetChain | _NetGraph), rest__] :=
     netRegularizationLoss[netWeights[net], rest];
 
 netRegularizationLoss[weights_List, lambda_, p : (_?NumericQ) : 2] := If[
@@ -290,6 +289,8 @@ netRegularizationLoss[
     ]
 ];
 
+Options[networkLogEvidence] = {"Alpha" -> Automatic, "SampleNumber" -> 100, TargetDevice -> "CPU"};
+
 networkLogEvidence[net_, data : {__Rule}, rest___] := networkLogEvidence[
     net,
     <|"Input" -> data[[All, 1]], "Target" -> data[[All, 2]]|>,
@@ -301,8 +302,6 @@ networkLogEvidence[net_, data_Rule, rest___] := networkLogEvidence[
     <|"Input" -> data[[1]], "Target" -> data[[2]]|>,
     rest
 ];
-
-Options[networkLogEvidence] = {"Alpha" -> Automatic, "SampleNumber" -> 100};
 
 networkLogEvidence[obj_NetTrainResultsObject, rest___] := networkLogEvidence[obj["TrainedNet"], rest];
 
@@ -325,7 +324,7 @@ networkLogEvidence[net : (_NetChain | _NetGraph), data_?AssociationQ, lambda2_, 
             "SampleNumber" -> nSamples,
             "Alpha" -> alpha
         }
-    ][data, NetEvaluationMode -> "Train"];
+    ][data, NetEvaluationMode -> "Train", TargetDevice -> OptionValue[TargetDevice]];
     regularizationLoss = netRegularizationLoss[net, lambda2];
     -(negLogLike + regularizationLoss)
 ];
