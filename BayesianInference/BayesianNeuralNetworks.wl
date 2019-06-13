@@ -11,6 +11,7 @@ extractRegressionNet;
 sampleTrainedNet;
 netRegularizationLoss;
 networkLogEvidence;
+batchnormToChain::usage = "batchnormToChain[net] replaces all instances of BatchNormalizationLayer with a NetChain consisting of ConstantPlusLayer and ConstantTimesLayer.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -51,14 +52,16 @@ Options[regressionNet] = {
     "NetworkDepth" -> 4,
     "LayerSize" -> 100,
     "ActivationFunction" -> "SELU",
-    "DropoutProbability" -> 0.25
+    "DropoutProbability" -> 0.25,
+    "BatchNormalization" -> False
 };
 
 regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
     pdrop = OptionValue["DropoutProbability"],
     size = OptionValue["LayerSize"],
     activation = OptionValue["ActivationFunction"],
-    depth = OptionValue["NetworkDepth"]
+    depth = OptionValue["NetworkDepth"],
+    batchNormQ = TrueQ @ OptionValue["BatchNormalization"]
 },
     NetChain[
         Flatten @ {
@@ -67,7 +70,7 @@ regressionNet[{input_, output_}, opts : OptionsPattern[]] := With[{
                     LinearLayer[
                         If[Head[size] === Function, size[i], size]
                     ],
-                    BatchNormalizationLayer[], 
+                    If[ TrueQ[batchNormQ], BatchNormalizationLayer[], Nothing],
                     ElementwiseLayer[
                         If[Head[activation] === Function, activation[i], activation]
                     ],
@@ -217,7 +220,7 @@ extractRegressionNet[net_NetTrainResultsObject] := extractRegressionNet[net["Tra
 extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
     layers = Keys @ NetInformation[net, "Layers"]
 },
-    Which[
+    batchnormToChain @ Which[
         MemberQ[layers, {"regression", ___}],
             Replace[
                 NetExtract[net, "regression"],
@@ -325,7 +328,29 @@ networkLogEvidence[net : (_NetChain | _NetGraph), data_?AssociationQ, lambda2_, 
     ][data, NetEvaluationMode -> "Train"];
     regularizationLoss = netRegularizationLoss[net, lambda2];
     -(negLogLike + regularizationLoss)
-]
+];
+
+batchnormToChain[batch_BatchNormalizationLayer] := Block[{
+    biases, scaling, movMean, movVar, eps, sigma
+},
+    {biases, scaling, movMean, movVar, eps} = Normal @ NetExtract[
+        batch,
+        List /@ {"Biases", "Scaling", "MovingMean", "MovingVariance", "Epsilon"}
+    ];
+    sigma = Sqrt[movVar + eps];
+    NetChain[{
+        ConstantPlusLayer["Biases" -> -movMean],
+        ConstantTimesLayer["Scaling" -> Divide[scaling, sigma]],
+        ConstantPlusLayer["Biases" -> biases]
+    }]
+];
+batchnormToChain[net : _NetGraph | _NetChain] := Quiet[
+    NetReplace[
+        net,
+        b_BatchNormalizationLayer :> batchnormToChain[b]
+    ],
+    {NetReplace::norep}
+];
 
 End[] (* End Private Context *)
 
