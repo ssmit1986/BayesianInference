@@ -228,10 +228,14 @@ extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
     ]
 ];
 
-netWeights[net_] := Flatten @ Normal @ Values @ NetInformation[
+netWeights[net_] := NetInformation[
     Quiet[NetReplace[net, _BatchNormalizationLayer -> Nothing], {NetReplace::norep}],
     "Arrays"
 ];
+
+pNormChain[p_?NumericQ] := (
+    pNormChain[p] = NetChain[{ElementwiseLayer[Abs[#]^p &], AggregationLayer[Total, All]}]
+);
 
 Options[sampleTrainedNet] = {
     TargetDevice -> "CPU"
@@ -267,15 +271,18 @@ sampleTrainedNet[
 
 netRegularizationLoss[obj_NetTrainResultsObject, rest___] := netRegularizationLoss[obj["TrainedNet"], rest];
 
-netRegularizationLoss[net : (_NetChain | _NetGraph), rest__] :=
-    netRegularizationLoss[netWeights[net], rest];
+netRegularizationLoss[net : (_NetChain | _NetGraph), rest__] := netRegularizationLoss[netWeights[net], rest];
 
-netRegularizationLoss[weights_List, lambda_, p : (_?NumericQ) : 2] := If[
+netRegularizationLoss[
+    weights : _List | _?AssociationQ /; AllTrue[weights, Head[#] === NumericArray&],
+    lambda_,
+    p : (_?NumericQ) : 2
+] := If[
     TrueQ[p == 0]
     ,
-    lambda * Length[weights]
+    lambda * Total @ Map[Apply[Times] @* Dimensions, weights]
     ,
-    lambda * Total[Abs[weights]^p]
+    lambda * Total[pNormChain[p] /@ weights, Infinity]
 ];
 
 netRegularizationLoss[
