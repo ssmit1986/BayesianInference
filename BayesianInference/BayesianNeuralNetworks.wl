@@ -271,14 +271,13 @@ sampleTrainedNet[
 
 netRegularizationLoss[obj_NetTrainResultsObject, rest___] := netRegularizationLoss[obj["TrainedNet"], rest];
 
-netRegularizationLoss[net : (_NetChain | _NetGraph), rest__] := netRegularizationLoss[netWeights[net], rest];
+netRegularizationLoss[net : (_NetChain | _NetGraph), rest___] := netRegularizationLoss[netWeights[net], rest];
 
 netRegularizationLoss[
-    weights : _List | _?AssociationQ /; AllTrue[weights, Head[#] === NumericArray&],
-    lambda_,
+    weights : _List | _?AssociationQ /; AllTrue[weights, Head[#] === NumericArray &],
+    lambda : _ : 1,
     p : (_?NumericQ) : 2
-] := If[
-    TrueQ[p == 0]
+] := If[ TrueQ[p == 0]
     ,
     lambda * Total @ Map[Apply[Times] @* Dimensions, weights]
     ,
