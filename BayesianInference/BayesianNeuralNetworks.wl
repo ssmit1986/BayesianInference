@@ -324,7 +324,7 @@ networkLogEvidence[net : (_NetChain | _NetGraph), data_?AssociationQ, lambda2_, 
     negLogLike,
     regularizationLoss
 },
-    negLogLike = Total @ regressionLossNet[
+    negLogLike = Mean @ regressionLossNet[
         extractRegressionNet[net], 
         "LossModel" -> {"AlphaDivergence",
             "SampleNumber" -> nSamples,
