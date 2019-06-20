@@ -6,6 +6,7 @@ BeginPackage["BayesianNeuralNetworks`"]
 gaussianLossLayer;
 regressionNet;
 regressionLossNet;
+logSumExpLayer;
 alphaDivergenceLoss;
 extractRegressionNet;
 sampleTrainedNet;
@@ -187,6 +188,52 @@ regressionLossNet[
     "Input" -> OptionValue["Input"]
 ];
 
+Options[logSumExpLayer] = {
+    "Input" -> Automatic,
+    "Output" -> Automatic,
+    "Aggregator" -> Total,
+    "LevelSorting" -> True
+};
+logSumExpLayer[levels : (_Integer | {__Integer}) : 1, opts : OptionsPattern[]] := With[{
+    sortedLevels = If[ TrueQ[OptionValue["LevelSorting"]],
+        SortBy[{Sign, Abs}], (* Sorts the positive and negative levels for the ReplicateLayer chain *)
+       Identity
+    ][Flatten@{levels}],
+    aggregator = OptionValue["Aggregator"]
+},
+    NetGraph[
+        <|
+            "max" -> AggregationLayer[Max, sortedLevels],
+            "replicate" -> NetChain[Map[ReplicateLayer[Automatic, #] &, sortedLevels]],
+            "subtract" -> ThreadingLayer[Subtract],
+            "exp" -> ElementwiseLayer[Exp],
+            "sum" -> AggregationLayer[aggregator, sortedLevels],
+            "logplusmax" -> ThreadingLayer[Function[{avg, max}, Log[avg] + max]]
+        |>,
+        {
+            NetPort["Input"] -> "max" -> "replicate",
+            {NetPort["Input"], "replicate"} -> "subtract" -> "exp" -> "sum",
+            {"sum", "max"} -> "logplusmax"
+        },
+        "Input" -> OptionValue["Input"],
+        "Output" -> OptionValue["Output"]
+    ]
+];
+
+logSumExpLayer[All, opts : OptionsPattern[]] := NetChain[
+    {
+        FlattenLayer[],
+        logSumExpLayer[
+            {1},
+            Sequence @@ FilterRules[
+                {opts},
+                Except["Input" | "Output"]
+           ]
+        ]
+    },
+    "Input" -> OptionValue["Input"],
+    "Output" -> OptionValue["Output"] 
+];
 
 Options[alphaDivergenceLoss] = {
     "Input" -> Automatic
@@ -198,23 +245,12 @@ alphaDivergenceLoss[DirectedInfinity[1], OptionsPattern[]] :=
 alphaDivergenceLoss[DirectedInfinity[-1], OptionsPattern[]] :=
     AggregationLayer[Max, All, "Input" -> OptionValue["Input"]];
 
-alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, OptionsPattern[]] := NetGraph[
+alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, OptionsPattern[]] := NetChain[
     <|
-        "timesAlpha" -> ElementwiseLayer[Function[-alpha #]],
-        "max" -> AggregationLayer[Max, 1],
-        "rep" -> ReplicateLayer[Automatic],
-        "sub" -> ThreadingLayer[Subtract],
-        "expAlph" -> ElementwiseLayer[Exp],
-        "average" -> AggregationLayer[Mean, 1],
-        "logplusmax" ->  ThreadingLayer[Function[{avg, max}, Log[avg] + max]],
-        "invalpha" -> ElementwiseLayer[Function[-(# / alpha)]]
+        "timesAlpha" -> ElementwiseLayer[Function[-alpha * #]],
+        "logMeanExp" -> logSumExpLayer[All, "Aggregator" -> Mean],
+        "invalpha" -> ElementwiseLayer[Function[-Divide[#, alpha]]]
     |>,
-    {
-        NetPort["Input"] -> "timesAlpha",
-        "timesAlpha" -> "max" -> "rep",
-        {"timesAlpha", "rep"} -> "sub" -> "expAlph" -> "average" ,
-        {"average", "max"} -> "logplusmax" -> "invalpha"
-    },
     "Input" -> OptionValue["Input"],
     "Output" -> "Real"
 ];
