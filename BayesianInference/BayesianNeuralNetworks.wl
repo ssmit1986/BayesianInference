@@ -11,7 +11,7 @@ extractRegressionNet;
 sampleTrainedNet;
 netRegularizationLoss;
 networkLogEvidence;
-batchnormToChain::usage = "batchnormToChain[net] replaces all instances of BatchNormalizationLayer with a NetChain consisting of ConstantPlusLayer and ConstantTimesLayer.";
+batchnormToChain;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -343,6 +343,7 @@ networkLogEvidence[net : (_NetChain | _NetGraph), data_?AssociationQ, lambda2_, 
     -(negLogLike + regularizationLoss)
 ];
 
+batchnormToChain::usage = "batchnormToChain[net] replaces all instances of BatchNormalizationLayer with a NetChain consisting of ConstantPlusLayer and ConstantTimesLayer.";
 batchnormToChain[batch_BatchNormalizationLayer] := Block[{
     biases, scaling, movMean, movVar, eps, sigma
 },

@@ -35,7 +35,7 @@ Cell[BoxData[{
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"<<", "BayesianInference`"}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[61]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
+ CellLabel->"In[1]:=",ExpressionUUID->"9091f228-26fe-4eaf-9bca-4b7d4425d20b"],
 
 Cell["The general workflow for using this package is as follows:", \
 "Text",ExpressionUUID->"5dcbada7-f440-4639-9044-7fc10730d39a"],
@@ -4630,8 +4630,15 @@ Cell[TextData[{
    StyleBox["BatchNormalizationLayer",
     FontWeight->"Bold"], TraditionalForm]],ExpressionUUID->
   "433fbc86-f54f-4fa8-8438-978c0339b3aa"],
- "s will be replaced by constant layers that perform the same operation \
-because ",
+ "s will be replaced by constant layers that perform the same operation (the \
+function ",
+ Cell[BoxData[
+  FormBox[
+   StyleBox["batchnormToChain",
+    FontWeight->"Bold"], TraditionalForm]],
+  FormatType->"TraditionalForm",ExpressionUUID->
+  "ed029532-7657-415d-830d-b996a69e396f"],
+ " does this) because ",
  Cell[BoxData[
   FormBox["BatchNormalizationLayer", TraditionalForm]],ExpressionUUID->
   "ca32c7c1-2640-4041-891b-8cfec2f945c1"],
