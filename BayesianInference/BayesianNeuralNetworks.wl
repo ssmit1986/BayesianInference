@@ -154,7 +154,7 @@ regressionLossNet[
                 "part2" -> PartLayer[{All, 2}],
                 "repY" -> ReplicateLayer[k],
                 "loss" -> gaussianLossLayer[],
-                "alphaDiv" -> alphaDivergenceLoss[alpha, k]
+                "alphaDiv" -> alphaDivergenceLoss[alpha]
             |>,
             {
                 NetPort["Input"] -> "repInput" -> "regression",
@@ -187,15 +187,22 @@ regressionLossNet[
     "Input" -> OptionValue["Input"]
 ];
 
-alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, _] :=    AggregationLayer[Mean, All];
-alphaDivergenceLoss[DirectedInfinity[1], _] :=              AggregationLayer[Min, All];
-alphaDivergenceLoss[DirectedInfinity[-1], _] :=             AggregationLayer[Max, All];
 
-alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
+Options[alphaDivergenceLoss] = {
+    "Input" -> Automatic
+};
+alphaDivergenceLoss[alpha_?NumericQ /; alpha == 0, OptionsPattern[]] := 
+    AggregationLayer[Mean, All, "Input" -> OptionValue["Input"]];
+alphaDivergenceLoss[DirectedInfinity[1], OptionsPattern[]] := 
+    AggregationLayer[Min, All, "Input" -> OptionValue["Input"]];
+alphaDivergenceLoss[DirectedInfinity[-1], OptionsPattern[]] :=
+    AggregationLayer[Max, All, "Input" -> OptionValue["Input"]];
+
+alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, OptionsPattern[]] := NetGraph[
     <|
         "timesAlpha" -> ElementwiseLayer[Function[-alpha #]],
         "max" -> AggregationLayer[Max, 1],
-        "rep" -> ReplicateLayer[k],
+        "rep" -> ReplicateLayer[Automatic],
         "sub" -> ThreadingLayer[Subtract],
         "expAlph" -> ElementwiseLayer[Exp],
         "average" -> AggregationLayer[Mean, 1],
@@ -208,9 +215,10 @@ alphaDivergenceLoss[alpha_?NumericQ /; alpha != 0, k_Integer] := NetGraph[
         {"timesAlpha", "rep"} -> "sub" -> "expAlph" -> "average" ,
         {"average", "max"} -> "logplusmax" -> "invalpha"
     },
-    "Input" -> {k}
+    "Input" -> OptionValue["Input"],
+    "Output" -> "Real"
 ];
-alphaDivergenceLoss[layer_, _] := layer;
+alphaDivergenceLoss[layer_] := layer;
 
 extractRegressionNet[net_NetTrainResultsObject] := extractRegressionNet[net["TrainedNet"]];
 
