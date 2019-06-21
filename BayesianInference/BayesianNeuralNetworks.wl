@@ -194,11 +194,12 @@ Options[logSumExpLayer] = {
     "Aggregator" -> Total,
     "LevelSorting" -> True
 };
-logSumExpLayer[levels : (_Integer | {__Integer}) : 1, opts : OptionsPattern[]] := With[{
+logSumExpLayer[level_Integer, opts : OptionsPattern[]] := logSumExpLayer[{level}, opts];
+logSumExpLayer[levels : {__Integer} : {1}, opts : OptionsPattern[]] := logSumExpLayer[levels, opts] = With[{
     sortedLevels = If[ TrueQ[OptionValue["LevelSorting"]],
         SortBy[{Sign, Abs}], (* Sorts the positive and negative levels for the ReplicateLayer chain *)
        Identity
-    ][Flatten@{levels}],
+    ][levels],
     aggregator = OptionValue["Aggregator"]
 },
     NetGraph[
@@ -220,7 +221,7 @@ logSumExpLayer[levels : (_Integer | {__Integer}) : 1, opts : OptionsPattern[]] :
     ]
 ];
 
-logSumExpLayer[All, opts : OptionsPattern[]] := NetChain[
+logSumExpLayer[All, opts : OptionsPattern[]] := logSumExpLayer[All, opts] = NetChain[
     {
         FlattenLayer[],
         logSumExpLayer[
