@@ -266,7 +266,7 @@ conjugatePriorModel[
         "Prior" -> prior,
         "Posterior" -> post,
         "LogEvidence" -> logEvidence,
-        "PosteriorPredictiveDistribution" -> normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun]
+        "PosteriorPredictiveDistribution" -> normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun] (* This is possibly MultivariateTDistribution[mu, (lambda + 1) * psi/(lambda * (nu - dim + 1)), nu - dim + 1] *)
     |>
 ];
 
