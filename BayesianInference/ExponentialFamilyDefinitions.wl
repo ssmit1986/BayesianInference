@@ -6,7 +6,7 @@ logPartition;
 sufficientStatistic;
 baseMeasure;
 cannonicalPDF;
-priorKernel
+priorKernel;
 
 Begin["`Private`"]
 
@@ -38,7 +38,7 @@ cannonicalPDF[dist : specifiedDefinitionPattern, x : _ : \[FormalX]] :=
     baseMeasure[Head @ dist, x] * Exp[naturalParameters[dist] . sufficientStatistic[Head @ dist, x] - logPartition[dist]];
 
 priorKernel[dist_] := With[{
-    chi = Array[\[FormalChi], Length[naturalParametersCount[dist]]]
+    chi = Array[\[FormalChi], naturalParametersCount[dist]]
 },
     Exp[naturalParameters[dist] . chi - \[FormalNu] * logPartition[dist]]
 ];
