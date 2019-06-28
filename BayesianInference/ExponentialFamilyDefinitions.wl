@@ -7,16 +7,18 @@ sufficientStatistic;
 baseMeasure;
 cannonicalPDF;
 priorKernel;
+naturalParametersAssumptions;
+naturalParametersRegion;
 
 Begin["`Private`"]
 
-specifiedDefinitionPattern = _Symbol[___Symbol];
+specifiedDistributionPattern = _Symbol[___Symbol]?DistributionParameterQ;
 
 naturalParameters[dist_Symbol] := Array[Indexed[\[FormalEta], #]&, naturalParametersCount[dist]];
 naturalParametersCount[dist_Symbol[___]] := naturalParametersCount[dist];
 
 logPartition[dist_Symbol] := logPartition[dist, \[FormalEta]];
-logPartition[dist : specifiedDefinitionPattern] := With[{
+logPartition[dist : specifiedDistributionPattern] := With[{
     params = naturalParameters[dist]
 },
     With[{
@@ -34,13 +36,37 @@ sufficientStatistic[dist_] := sufficientStatistic[dist, \[FormalX]];
 
 cannonicalPDF[dist_Symbol] :=
     baseMeasure[dist] * Exp[naturalParameters[dist] . sufficientStatistic[dist] - logPartition[dist]];
-cannonicalPDF[dist : specifiedDefinitionPattern, x : _ : \[FormalX]] :=
+cannonicalPDF[dist : specifiedDistributionPattern, x : _ : \[FormalX]] :=
     baseMeasure[Head @ dist, x] * Exp[naturalParameters[dist] . sufficientStatistic[Head @ dist, x] - logPartition[dist]];
 
 priorKernel[dist_] := With[{
-    chi = Array[\[FormalChi], naturalParametersCount[dist]]
+    chi = Array[Indexed[\[FormalChi], #]&, naturalParametersCount[dist]]
 },
-    Exp[naturalParameters[dist] . chi - \[FormalNu] * logPartition[dist]]
+    ConditionalExpression[
+        Exp[naturalParameters[dist] . chi - \[FormalNu] * logPartition[dist]],
+        Element[chi, Reals] && \[FormalNu] > 0
+    ]
+];
+
+naturalParametersAssumptions[dist : specifiedDistributionPattern] := With[{
+    eta = naturalParameters[Head @ dist]
+},
+    Simplify @ And[
+        FunctionRange[
+            {naturalParameters[dist], DistributionParameterAssumptions[dist]},
+            List @@ dist,
+            eta,
+            Reals
+        ],
+        Element[eta, Reals]
+    ]
+];
+
+naturalParametersRegion[dist : specifiedDistributionPattern] := With[{
+    assum = naturalParametersAssumptions[dist],
+    eta = naturalParameters[Head @ dist]
+},
+    ImplicitRegion[assum, eta]
 ];
 
 (* ExponentialDistribution *)
