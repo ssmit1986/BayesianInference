@@ -235,12 +235,13 @@ conjugatePriorModel[
 ] := Module[{
     mean = Mean[data],
     cov,
-    nDat = Length[data],
+    dim, nDat,
     meanDiff,
     post,
     mun, lambdan, psin, nun,
     logEvidence
 },
+    {nDat, dim} = Dimensions[data];
     cov = If[ nDat === 1, 0, Covariance[data]];
     meanDiff = mean - mu0;
     post = normalInverseWishartDistribution[
@@ -266,7 +267,7 @@ conjugatePriorModel[
         "Prior" -> prior,
         "Posterior" -> post,
         "LogEvidence" -> logEvidence,
-        "PosteriorPredictiveDistribution" -> normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun] (* This is possibly MultivariateTDistribution[mu, (lambda + 1) * psi/(lambda * (nu - dim + 1)), nu - dim + 1] *)
+        "PosteriorPredictiveDistribution" -> MultivariateTDistribution[mun, (lambdan + 1) * psin/(lambdan * (nun - dim + 1)), nun - dim + 1] (* == normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun] *)
     |>
 ];
 
