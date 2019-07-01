@@ -85,9 +85,19 @@ logPartition[NormalDistribution, sym_] := - Indexed[sym, 1]^2 / (4 * Indexed[sym
 naturalParameters[PoissonDistribution[lambda_]] := {Log[lambda]};
 naturalParametersCount[PoissonDistribution] = 1;
 
-baseMeasure[PoissonDistribution, x_] := 1/x!;
+baseMeasure[PoissonDistribution, x_] := 1/(Indexed[x, 1]!);
 sufficientStatistic[PoissonDistribution, x_] := {Indexed[x, 1]};
 logPartition[PoissonDistribution, sym_] := Exp[Indexed[sym, 1]];
+
+(* LogNormalDistribution *)
+naturalParameters[LogNormalDistribution[m_, s_]] := naturalParameters[NormalDistribution[m, s]];
+naturalParametersCount[LogNormalDistribution] = 2;
+
+baseMeasure[LogNormalDistribution, x_] := 1/(Sqrt[2 * Pi] * Indexed[x, 1]);
+sufficientStatistic[LogNormalDistribution, x_] := {Log[Indexed[x, 1]], Log[Indexed[x, 1]]^2};
+logPartition[LogNormalDistribution, sym_] := logPartition[NormalDistribution, sym];
+
+
 
 End[]
 
