@@ -129,6 +129,33 @@ baseMeasure[NormalDistribution, x_] := 1/Sqrt[2 * Pi];
 sufficientStatistic[NormalDistribution, x_] := {Indexed[x, 1], Indexed[x, 1]^2};
 logPartition[NormalDistribution, sym_] := - Indexed[sym, 1]^2 / (4 * Indexed[sym, 2]) - 1/2 * Log[-2 * Indexed[sym, 2]];
 
+conjugatePartition[NormalDistribution] = ConditionalExpression[
+    Divide[
+        2^(-1 - \[FormalNu]/2) * Sqrt[\[FormalNu]] (-(Indexed[\[FormalChi], {1}]^2/\[FormalNu]) + Indexed[\[FormalChi], {2}])^((3 + \[FormalNu])/2),
+        Sqrt[\[Pi]] Gamma[(3 + \[FormalNu])/2]
+    ],
+    \[FormalNu] > 0 && Indexed[\[FormalChi], {1}]^2 < \[FormalNu] Indexed[\[FormalChi], {2}]
+]; (* 
+    == 1 / Integrate[conjugateKernel[NormalDistribution],
+        {Indexed[\[FormalEta], {2}], -\[Infinity], 0},
+        {Indexed[\[FormalEta], {1}], -\[Infinity], \[Infinity]}
+    ]
+*)
+
+conjugatePartition[NormalDistribution[_, _]] = ConditionalExpression[
+    Divide[
+        2^(3/2 - \[FormalNu]/2) Sqrt[\[FormalNu]] (\[FormalNu]/(-Indexed[\[FormalChi], {1}]^2 + \[FormalNu] Indexed[\[FormalChi], {2}]))^(1 - \[FormalNu]/2),
+        Sqrt[\[Pi]] Gamma[-1 + \[FormalNu]/2]
+    ],
+    (Indexed[\[FormalChi], {1}] | Indexed[\[FormalChi], {2}]) \[Element] Reals && \[FormalNu] > 2
+]; (* 
+    == 1 / Integrate[conjugateKernel[NormalDistribution],
+        {Indexed[\[FormalEta], {2}], -\[Infinity], 0},
+        {Indexed[\[FormalEta], {1}], -\[Infinity], \[Infinity]}
+    ]
+*)
+
+
 (* PoissonDistribution *)
 naturalParameters[PoissonDistribution[lambda_]] := {Log[lambda]};
 naturalParametersCount[PoissonDistribution] = 1;
