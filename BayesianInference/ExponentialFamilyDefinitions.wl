@@ -21,14 +21,10 @@ logPartition[dist_Symbol] := logPartition[dist, \[FormalEta]];
 logPartition[dist : specifiedDistributionPattern] := With[{
     params = naturalParameters[dist]
 },
-    With[{
-        symbols = naturalParameters[Head[dist]]
-    },
-        ReplaceAll[
-            logPartition[Head @ dist, symbols],
-            \[FormalEta] -> params
-        ]
-    ]
+    ReplaceAll[
+        logPartition[Head @ dist],
+        \[FormalEta] -> params
+    ] /; ListQ[params]
 ];
 
 baseMeasure[dist_] := baseMeasure[dist, \[FormalX]];
