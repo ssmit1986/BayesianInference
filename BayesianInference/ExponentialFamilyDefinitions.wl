@@ -97,6 +97,13 @@ baseMeasure[LogNormalDistribution, x_] := 1/(Sqrt[2 * Pi] * Indexed[x, 1]);
 sufficientStatistic[LogNormalDistribution, x_] := {Log[Indexed[x, 1]], Log[Indexed[x, 1]]^2};
 logPartition[LogNormalDistribution, sym_] := logPartition[NormalDistribution, sym];
 
+(* GammaDistribution *)
+naturalParameters[GammaDistribution[k_, theta_]] := {k - 1, -1/theta};
+naturalParametersCount[GammaDistribution] = 2;
+
+baseMeasure[GammaDistribution, x_] := 1;
+sufficientStatistic[GammaDistribution, x_] := {Log[Indexed[x, 1]], Indexed[x, 1]};
+logPartition[GammaDistribution, sym_] := Log[Gamma[Indexed[sym, 1] + 1]] - (Indexed[sym, 1] + 1) * Log[-Indexed[sym, 2]];
 
 
 End[]
