@@ -413,7 +413,7 @@ linearModelPredictiveDistribution[
             Distributed[\[FormalV], InverseGammaDistribution[a, b]]
         ],
         symbols
-    ]
+    ] (* == StudentTDistribution[dMat . meanVec, Sqrt[(a/b) * (dMat . invLambda . dMat + 1)],2 * a] ?*)
 ];
 
 linearModel /: LogLikelihood[
