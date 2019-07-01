@@ -103,7 +103,15 @@ naturalParametersCount[GammaDistribution] = 2;
 
 baseMeasure[GammaDistribution, x_] := 1;
 sufficientStatistic[GammaDistribution, x_] := {Log[Indexed[x, 1]], Indexed[x, 1]};
-logPartition[GammaDistribution, sym_] := Log[Gamma[Indexed[sym, 1] + 1]] - (Indexed[sym, 1] + 1) * Log[-Indexed[sym, 2]];
+logPartition[GammaDistribution, sym_] := LogGamma[Indexed[sym, 1] + 1] - (Indexed[sym, 1] + 1) * Log[-Indexed[sym, 2]];
+
+(* InverseGammaDistribution *)
+naturalParameters[InverseGammaDistribution[a_, b_]] := {-a - 1, -b};
+naturalParametersCount[InverseGammaDistribution] = 2;
+
+baseMeasure[InverseGammaDistribution, x_] := 1;
+sufficientStatistic[InverseGammaDistribution, x_] := {Log[Indexed[x, 1]], 1/Indexed[x, 1]};
+logPartition[InverseGammaDistribution, sym_] := LogGamma[-Indexed[sym, 1] - 1] - (-Indexed[sym, 1] - 1) * Log[-Indexed[sym, 2]];
 
 
 End[]
