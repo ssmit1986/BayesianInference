@@ -391,15 +391,16 @@ linearModelPredictiveDistribution[
     linearModel[basis_List, symbols : {__Symbol}, ___],
     linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, a_, b_]
 ] /; Length[basis] === Length[mu] === Length[lambda]:= With[{
-    meanVec = Array[\[FormalM], Length[mu]],
-    invLambda = LinearSolve[lambda, IdentityMatrix[Length[lambda]]],
+    (*meanVec = Array[\[FormalM], Length[mu]],*)
+    invLambda = LinearSolve[Replace[lambda, mat_?numericMatrixQ :> N[mat]]],
     dMat = First @ makeDesignMatrix[
         linearModel[basis, symbols],
         {symbols}
     ]["DesignMatrix"]
 },
-    expressionToFunction[
-        ParameterMixtureDistribution[
+    ReleaseHold @ expressionToFunction[
+        StudentTDistribution[dMat . mu, Sqrt[(b/a) * (dMat . Hold[invLambda[dMat]] + 1)], 2 * a],
+        (* == ParameterMixtureDistribution[
             ParameterMixtureDistribution[
                 NormalDistribution[
                     dMat . meanVec,
@@ -411,9 +412,9 @@ linearModelPredictiveDistribution[
                 ]
             ],
             Distributed[\[FormalV], InverseGammaDistribution[a, b]]
-        ],
+        ]*)
         symbols
-    ] (* == StudentTDistribution[dMat . mu, Sqrt[(b/a) * (dMat . invLambda . dMat + 1)], 2 * a] ?*)
+    ]
 ];
 
 linearModel /: LogLikelihood[
