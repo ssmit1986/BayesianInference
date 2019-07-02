@@ -26,10 +26,11 @@ integerOrListIntegerPattern = Alternatives[_Integer?Positive, {_Integer?Positive
 normalInverseGammaDistribution /: MarginalDistribution[
     normalInverseGammaDistribution[mu_, lambda_, beta_, nu_],
     1
-] := ParameterMixtureDistribution[
-    NormalDistribution[mu, Sqrt[\[FormalV] / lambda]],
+] := StudentTDistribution[mu, Sqrt[beta/(nu * lambda)], 2 nu];
+(* == ParameterMixtureDistribution[
+    NormalDistribution[mu, Sqrt[\[FormalV]] / Sqrt[lambda]],
     Distributed[\[FormalV], InverseGammaDistribution[nu, beta]]
-];
+]*)
 
 normalInverseGammaDistribution /: MarginalDistribution[
     normalInverseGammaDistribution[mu_, lambda_, beta_, nu_],
@@ -140,6 +141,12 @@ conjugatePriorModel[
         "PosteriorPredictiveDistribution" -> predictiveDist
     |>
 ];
+
+(*normalInverseWishartDistribution /: MarginalDistribution[
+    normalInverseWishartDistribution[mu_?VectorQ, lambda_, psi_?SquareMatrixQ, nu_],
+    1
+] := MultivariateTDistribution[mu, psi / (lambda * nu), nu - Length[mu] + 1];
+*)
 
 normalInverseWishartDistribution /: MarginalDistribution[
     normalInverseWishartDistribution[mu_?VectorQ, lambda_, psi_?SquareMatrixQ, nu_],
