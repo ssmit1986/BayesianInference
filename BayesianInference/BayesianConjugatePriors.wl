@@ -291,10 +291,13 @@ precisionMultinormalDistribution /: LogLikelihood[precisionMultinormalDistributi
 linearModelDistribution /: MarginalDistribution[
     linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, alpha_, beta_],
     1
-] /; Length[mu] === Length[lambda] := ParameterMixtureDistribution[
+] /; Length[mu] === Length[lambda] := MultivariateTDistribution[mu, 
+    beta/alpha * LinearSolve[lambda, IdentityMatrix[Length[lambda]]],
+    2 * alpha
+]; (* == ParameterMixtureDistribution[
     MultinormalDistribution[mu, \[FormalV] * LinearSolve[lambda, IdentityMatrix[Length[lambda]]]],
     Distributed[\[FormalV], InverseGammaDistribution[alpha, beta]] 
-];
+]*)
 
 linearModelDistribution /: MarginalDistribution[
     linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, alpha_, beta_],
