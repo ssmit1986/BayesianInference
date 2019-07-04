@@ -142,11 +142,14 @@ conjugatePriorModel[
     |>
 ];
 
-(*normalInverseWishartDistribution /: MarginalDistribution[
+normalInverseWishartDistribution /: MarginalDistribution[
     normalInverseWishartDistribution[mu_?VectorQ, lambda_, psi_?SquareMatrixQ, nu_],
     1
-] := MultivariateTDistribution[mu, psi / (lambda * nu), nu - Length[mu] + 1];
-*)
+] := With[{
+    dim = Length[mu]
+},
+    MultivariateTDistribution[mu, psi / (lambda * (nu - dim + 1)), nu - dim + 1];
+];
 
 normalInverseWishartDistribution /: MarginalDistribution[
     normalInverseWishartDistribution[mu_?VectorQ, lambda_, psi_?SquareMatrixQ, nu_],
@@ -246,7 +249,8 @@ conjugatePriorModel[
     meanDiff,
     post,
     mun, lambdan, psin, nun,
-    logEvidence
+    logEvidence,
+    predictiveDist
 },
     {nDat, dim} = Dimensions[data];
     cov = If[ nDat === 1, 0, Covariance[data]];
@@ -269,12 +273,13 @@ conjugatePriorModel[
             LogLikelihood[prior, {muTest, covTest}] - LogLikelihood[post, {muTest, covTest}]
         ]
     ];
+    predictiveDist = MultivariateTDistribution[mun, (lambdan + 1) * psin/(lambdan * (nun - dim + 1)), nun - dim + 1]; (* == normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun] *)
     <|
         "Model" -> model,
         "Prior" -> prior,
         "Posterior" -> post,
         "LogEvidence" -> logEvidence,
-        "PosteriorPredictiveDistribution" -> MultivariateTDistribution[mun, (lambdan + 1) * psin/(lambdan * (nun - dim + 1)), nun - dim + 1] (* == normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun] *)
+        "PosteriorPredictiveDistribution" -> predictiveDist
     |>
 ];
 
