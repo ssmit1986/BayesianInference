@@ -102,7 +102,7 @@ conjugatePriorModel[
     logEvidence,
     predictiveDist
 },
-    var = If[ nDat === 1, 0, Variance[data]];
+    var = If[ nDat === 1, 1, Variance[data]];
     post = normalInverseGammaDistribution[
         mu = Divide[
             lambda0 * mu0 + nDat * mean,
@@ -253,7 +253,7 @@ conjugatePriorModel[
     predictiveDist
 },
     {nDat, dim} = Dimensions[data];
-    cov = If[ nDat === 1, 0, Covariance[data]];
+    cov = If[ nDat === 1, IdentityMatrix[dim], Covariance[data]];
     meanDiff = mean - mu0;
     post = normalInverseWishartDistribution[
         mun = Divide[
