@@ -499,6 +499,7 @@ conjugatePriorModel[
     yVec = assoc["Output"],
     mun, lambdan, an, bn,
     designSq,
+    designTrans,
     nDat,
     post,
     rv,
@@ -506,9 +507,10 @@ conjugatePriorModel[
     predictiveDist
 },
     (
-        designSq = Transpose[designMatrix] . designMatrix;
+        designTrans = Transpose[designMatrix];
+        designSq = designTrans . designMatrix;
         nDat = Length[yVec];
-        mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + Transpose[designMatrix] . yVec)];
+        mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + designTrans . yVec)];
         post = linearModelDistribution[
             mun,
             lambdan = designSq + lambda0,
@@ -578,6 +580,7 @@ conjugatePriorModel[
     yMat = assoc["Output"],
     mun, lambdan, nun, psin,
     designSq,
+    designTrans,
     nDat,
     nOut,
     post,
@@ -586,10 +589,11 @@ conjugatePriorModel[
     predictiveDist
 },
     (
-        designSq = Transpose[designMatrix] . designMatrix;
+        designTrans = Transpose[designMatrix];
+        designSq = designTrans . designMatrix;
         {nDat, nOut} = Dimensions[yMat];
         model = multiLinearModel[basis, symbols, nOut];
-        mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + Transpose[designMatrix] . yMat)];
+        mun = LinearSolve[designSq + lambda0, (lambda0 . mu0 + designTrans . yMat)];
         post = multiLinearModelDistribution[
             mun,
             lambdan = designSq + lambda0,
