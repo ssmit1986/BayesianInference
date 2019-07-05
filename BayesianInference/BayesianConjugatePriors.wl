@@ -71,7 +71,10 @@ conjugatePriorModel[ (* Update a previously computed model with new data by usin
     updatedModel
 },
     updatedModel = conjugatePriorModel[data, model["Model"], model["Posterior"]];
-    updatedModel["Prior"] = model["Prior"];
+    Scan[
+        Function[updatedModel[#] = model[#]],
+        {"Prior", "PriorPredictiveDistribution"}
+    ];
     updatedModel["LogEvidence"] += model["LogEvidence"];
     
     updatedModel
@@ -113,7 +116,7 @@ conjugatePriorModel[
         nu = nu0 + nDat/2
     ];
     logEvidence = If[ TrueQ[lambda0 > 0 && nu0 > 0&& beta0 > 0],
-        With[{
+        Simplify @ With[{
             muTest = mean,
             varTest = var
         },
@@ -124,7 +127,9 @@ conjugatePriorModel[
         ],
         Undefined
     ];
-    predictiveDist = StudentTDistribution[mu, Sqrt[beta * (lambda + 1)/(lambda * nu)], 2 * nu]; (* ==
+    predictiveDist = Function[{m, lamb, bet, n},
+        StudentTDistribution[m, Sqrt[bet * (lamb + 1)/(lamb * n)], 2 * n]
+    ]; (* ==
         ParameterMixtureDistribution[
             ParameterMixtureDistribution[
                 NormalDistribution[\[FormalU], Sqrt[\[FormalV]]],
@@ -138,7 +143,8 @@ conjugatePriorModel[
         "Prior" -> prior,
         "Posterior" -> post,
         "LogEvidence" -> logEvidence,
-        "PosteriorPredictiveDistribution" -> predictiveDist
+        "PriorPredictiveDistribution" -> predictiveDist @@ prior,
+        "PosteriorPredictiveDistribution" -> predictiveDist @@ post
     |>
 ];
 
@@ -264,7 +270,7 @@ conjugatePriorModel[
         psin = psi0 + (nDat - 1) * cov + Divide[lambda0 * nDat, lambda0 + nDat] * (List /@ meanDiff) . {meanDiff},
         nun = nu0 + nDat
     ];
-    logEvidence = With[{
+    logEvidence = Simplify @ With[{
         muTest = mean,
         covTest = cov
     },
@@ -273,13 +279,16 @@ conjugatePriorModel[
             LogLikelihood[prior, {muTest, covTest}] - LogLikelihood[post, {muTest, covTest}]
         ]
     ];
-    predictiveDist = MultivariateTDistribution[mun, (lambdan + 1) * psin/(lambdan * (nun - dim + 1)), nun - dim + 1]; (* == normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun] *)
+    predictiveDist = Function[{m, lamb, ps, n},
+        MultivariateTDistribution[m, (lamb + 1) * ps/(lamb * (n - dim + 1)), n - dim + 1]; (* == normalInverseWishartPredictiveDistribution[mun, lambdan, psin, nun] *)
+    ];
     <|
         "Model" -> model,
         "Prior" -> prior,
         "Posterior" -> post,
         "LogEvidence" -> logEvidence,
-        "PosteriorPredictiveDistribution" -> predictiveDist
+        "PriorPredictiveDistribution" -> predictiveDist @@ prior,
+        "PosteriorPredictiveDistribution" -> predictiveDist @@ post
     |>
 ];
 
@@ -520,17 +529,18 @@ conjugatePriorModel[
             bn = b0 + (yVec.yVec + mu0.lambda0.mu0 - mun.lambdan.mun)/2
         ];
         rv = First @ RandomVariate[post];
-        logEvidence = Plus[
+        logEvidence = Simplify @ Plus[
             LogLikelihood[linearModel[basis, symbols, rv], assoc],
             LogLikelihood[prior, {rv}]- LogLikelihood[post, {rv}]
         ];
-        predictiveDist = linearModelPredictiveDistribution[model, post];
+        predictiveDist = Function[linearModelPredictiveDistribution[model, #]];
         <|
             "Model" -> model,
             "Prior" -> prior,
             "Posterior" -> post,
             "LogEvidence" -> logEvidence,
-            "PosteriorPredictiveDistribution" -> predictiveDist
+            "PriorPredictiveDistribution" -> predictiveDist @ prior,
+            "PosteriorPredictiveDistribution" -> predictiveDist @ post
         |>
     ) /; Length[designMatrix] === Length[yVec] && Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0]
 ];
