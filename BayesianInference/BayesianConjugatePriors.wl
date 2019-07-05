@@ -293,6 +293,8 @@ precisionMultinormalDistribution /: LogLikelihood[precisionMultinormalDistributi
 precisionMultinormalDistribution /: LogLikelihood[precisionMultinormalDistribution[mu_, lambda_], x_List?VectorQ] :=
     (1/2) * Log[Det[lambda/ (2 * Pi)]] - With[{diff = x - mu}, (diff.lambda.diff)]/2;
 
+
+(*Bayesian linear regression https://en.wikipedia.org/wiki/Bayesian_linear_regression*)
 linearModelDistribution /: MarginalDistribution[
     linearModelDistribution[mu_List?VectorQ, lambda_List?SquareMatrixQ, alpha_, beta_],
     1
@@ -533,7 +535,7 @@ conjugatePriorModel[
     ) /; Length[designMatrix] === Length[yVec] && Dimensions[designMatrix][[2]] === Length[mu0] === Length[lambda0]
 ];
 
-(* Multivariate regression *)
+(* Multivariate regression https://en.wikipedia.org/wiki/Bayesian_multivariate_linear_regression*)
 linearModelPredictiveDistribution[lm_multiLinearModel, input_List?MatrixQ] :=
     linearModelPredictiveDistribution[lm, makeDesignMatrix[lm, input]];
 
