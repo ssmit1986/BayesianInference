@@ -546,6 +546,22 @@ conjugatePriorModel[
 ];
 
 (* Multivariate regression https://en.wikipedia.org/wiki/Bayesian_multivariate_linear_regression*)
+multiLinearModelDistribution /: MarginalDistribution[
+    multiLinearModelDistribution[mu_List?MatrixQ, lambda_List?SquareMatrixQ, psi_?SquareMatrixQ, nu_],
+    1
+] /; Dimensions[mu] === {Length[lambda], Length[psi]} := MatrixTDistribution[
+    mu,
+    LinearSolve[lambda, IdentityMatrix[Length[lambda]]],
+    psi,
+    nu - Length[mu] + 1
+];
+
+multiLinearModelDistribution /: MarginalDistribution[
+    multiLinearModelDistribution[mu_List?MatrixQ, lambda_List?SquareMatrixQ, psi_?SquareMatrixQ, nu_],
+    2
+] /; Dimensions[mu] === {Length[lambda], Length[psi]} := InverseWishartMatrixDistribution[nu, psi];
+
+
 linearModelPredictiveDistribution[lm_multiLinearModel, input_List?MatrixQ] :=
     linearModelPredictiveDistribution[lm, makeDesignMatrix[lm, input]];
 
@@ -566,9 +582,9 @@ conjugatePriorModel[multiLinearModel[basis_List, symbols : {__Symbol}, dimOut_In
     dimIn = Length[basis]
 },
     multiLinearModelDistribution[
-        ConstantArray[0, {dimIn, dimOut}],
+        ConstantArray[0, {dimIn, dimOut}], (* B on wiki*)
         IdentityMatrix[dimIn]/100,
-        IdentityMatrix[dimOut]/100,
+        IdentityMatrix[dimOut]/100, (* V on wiki*)
         1/100
     ]
 ];
