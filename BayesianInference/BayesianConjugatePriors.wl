@@ -567,6 +567,30 @@ If B \[Distributed] MatrixNormalDistribution[bMat, rowMat, colMat], and x a cons
 
 x . B \[Distributed] MultinormalDistribution[x . bMat, colMat * (x . rowMat . x)]
 *)
+linearModelPredictiveDistribution[
+    lm_multiLinearModel,
+    dist_multiLinearModelDistribution,
+    input_List?MatrixQ
+] := linearModelPredictiveDistribution[lm, dist] /@ input;
+
+linearModelPredictiveDistribution[
+    multiLinearModel[basis_List, symbols : {__Symbol}, ___],
+    multiLinearModelDistribution[mu_List?MatrixQ, lambda_List?SquareMatrixQ, psi_?SquareMatrixQ, nu_]
+] /; Dimensions[mu] === {Length[lambda], Length[psi]} && Length[basis] === Length[mu] := With[{
+    invLambda = LinearSolve[Replace[lambda, mat_?numericMatrixQ :> N[mat]]],
+    dVec = First @ makeDesignMatrix[
+        linearModel[basis, symbols],
+        {symbols}
+    ]["DesignMatrix"],
+    dim = nu - Length[mu] + 1
+},
+    (* TODO: verify *)
+    ReleaseHold @ expressionToFunction[
+        MultivariateTDistribution[dVec . mu, (psi/dim) * (dVec . Hold[invLambda[dVec]] + 1), dim],
+        symbols
+    ]
+];
+
 
 linearModelPredictiveDistribution[lm_multiLinearModel, input_List?MatrixQ] :=
     linearModelPredictiveDistribution[lm, makeDesignMatrix[lm, input]];
