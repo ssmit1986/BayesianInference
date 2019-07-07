@@ -561,6 +561,12 @@ multiLinearModelDistribution /: MarginalDistribution[
     2
 ] /; Dimensions[mu] === {Length[lambda], Length[psi]} := InverseWishartMatrixDistribution[nu, psi];
 
+(*
+Hypothesis:
+If B \[Distributed] MatrixNormalDistribution[bMat, rowMat, colMat], and x a constant vector, then
+
+x . B \[Distributed] MultinormalDistribution[x . bMat, colMat * (x . rowMat . x)]
+*)
 
 linearModelPredictiveDistribution[lm_multiLinearModel, input_List?MatrixQ] :=
     linearModelPredictiveDistribution[lm, makeDesignMatrix[lm, input]];
