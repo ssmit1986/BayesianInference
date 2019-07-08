@@ -553,7 +553,7 @@ multiLinearModelDistribution /: MarginalDistribution[
     mu,
     LinearSolve[lambda, IdentityMatrix[Length[lambda]]],
     psi,
-    nu - Length[mu] + 1
+    nu - Length[psi] + 1
 ];
 
 multiLinearModelDistribution /: MarginalDistribution[
@@ -582,7 +582,7 @@ linearModelPredictiveDistribution[
         linearModel[basis, symbols],
         {symbols}
     ]["DesignMatrix"],
-    dim = nu - Length[mu] + 1
+    dim = nu - Length[psi] + 1
 },
     (* TODO: verify *)
     ReleaseHold @ expressionToFunction[
@@ -615,7 +615,7 @@ conjugatePriorModel[multiLinearModel[basis_List, symbols : {__Symbol}, dimOut_In
         ConstantArray[0, {dimIn, dimOut}], (* B on wiki*)
         IdentityMatrix[dimIn]/100,
         IdentityMatrix[dimOut]/100, (* V on wiki*)
-        1/100
+        1/100 + dimOut - 1
     ]
 ];
 
