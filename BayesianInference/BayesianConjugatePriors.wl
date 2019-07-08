@@ -387,7 +387,7 @@ makeDesignMatrix[
 designMatrixPattern = PatternTest[
     KeyValuePattern[{
         "DesignMatrix" -> _List?MatrixQ,
-        "Output" -> _List?VectorQ
+        "Output" -> _List?(VectorQ[#] || MatrixQ[#]&) 
     }],
     AssociationQ[#] && Length[#["DesignMatrix"]] === Length[#["Output"]]&
 ];
@@ -493,11 +493,11 @@ conjugatePriorModel[
 
 conjugatePriorModel[
     assoc : designMatrixPattern,
-    linearModel[basis_List, symbols : {__Symbol}, ___]
+    (lm : (linearModel|multiLinearModel))[basis_List, symbols : {__Symbol}, ___]
 ] := conjugatePriorModel[
     assoc,
     linearModel[basis, symbols],
-    conjugatePriorModel[linearModel[basis, symbols]]
+    conjugatePriorModel[lm[basis, symbols]]
 ];
 
 conjugatePriorModel[
@@ -659,7 +659,7 @@ conjugatePriorModel[
                 residuals = yMat - designMatrix . mun,
                 muUpdate = mun - mu0
             },
-                psi0 + Transpose[residuals].residuals + muUpdate.lambda0.muUpdate
+                psi0 + Transpose[residuals].residuals + Transpose[muUpdate].lambda0.muUpdate
             ],
             nun = nu0 + nDat
         ]
