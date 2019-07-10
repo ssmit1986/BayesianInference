@@ -16,3 +16,4 @@ Get["BayesianInference`BayesianVisualisations`"];
 Get["BayesianInference`BayesianNeuralNetworks`"];
 Get["BayesianInference`ExponentialFamilyDefinitions`"];
 Get["BayesianInference`BayesianConjugatePriors`"];
+Get["BayesianInference`BayesianLinearRegression`"]

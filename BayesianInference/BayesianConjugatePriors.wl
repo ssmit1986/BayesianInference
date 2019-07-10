@@ -292,7 +292,7 @@ conjugatePriorModel[
     |>
 ];
 
-
+(*
 precisionMultinormalDistribution /: LogLikelihood[precisionMultinormalDistribution[mu_, lambda_], list : {__List}] :=
     Sum[
         LogLikelihood[precisionMultinormalDistribution[mu, lambda], x],
@@ -684,7 +684,7 @@ conjugatePriorModel[
         Dimensions[yMat][[2]] === Dimensions[mu0][[2]]
     ]
 ];
-
+*)
 End[]
 
 EndPackage[(* "BayesianConjugatePriors`" *)]
