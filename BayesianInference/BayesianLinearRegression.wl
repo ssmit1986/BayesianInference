@@ -161,51 +161,20 @@ bayesianLinearRegressionInternal[designMat_?MatrixQ, yMat_?MatrixQ /; Dimensions
 ] := Module[{
     posteriorParameters = updateParameters[prior, designMat, yMat],
     dimIn = Length[b],
-    dimOut = Dimensions[b][[2]],
-    logEvidence,
-    logLikelihood
+    dimOut = Dimensions[b][[2]]
 },
-    logEvidence = Simplify @ With[{ 
-        sampledB = posteriorParameters[[1]],
-        sampledCov = Divide @@ posteriorParameters[[{3, 4}]]
-    },
-        logLikelihood = Total[(* P[D\[Conditioned]B,\[CapitalSigma]]*)
-            MapThread[
-                LogLikelihood[
-                    MultinormalDistribution[#1.sampledB, symmetrizeMatrix @ sampledCov],
-                    {#2}
-                ]&,
-                {designMat, yMat}
-            ]
-        ];
-        Plus[
-            logLikelihood,
-            Subtract @@ Apply[
-                Plus[
-                    LogLikelihood[
-                        InverseWishartMatrixDistribution[#4, symmetrizeMatrix @ #3],
-                        {sampledCov}
-                    ],
-                    LogLikelihood[
-                        MatrixNormalDistribution[#1, symmetrizeMatrix @ LinearSolve[#2, IdentityMatrix[dimIn]], sampledCov],
-                        {sampledB}
-                    ]
-                ]&,
-                {prior, posteriorParameters},
-                {1}
-            ]
-        ]
-    ];
     <|
-        "LogEvidence" -> logEvidence,
+        "LogEvidence" -> logEvidence[prior, posteriorParameters, designMat, yMat],
         "PriorParameters" -> AssociationThread[{"B", "Lambda", "V", "Nu"}, prior],
         "PosteriorParameters" -> AssociationThread[{"B", "Lambda", "V", "Nu"}, posteriorParameters],
         "Functions" -> <|
-            "RegressionCoefficientDistribution" -> 
-                With[{d = dimOut, id = IdentityMatrix[dimIn], fun = symmetrizeMatrix},
-                    Function[
-                        MatrixTDistribution[#B, fun @ LinearSolve[#Lambda, id], #V, #Nu - d + 1]]
-                    ],
+            "RegressionCoefficientDistribution" -> With[{
+                d = dimOut,
+                id = IdentityMatrix[dimIn],
+                fun = symmetrizeMatrix
+            },
+                Function[MatrixTDistribution[#B, fun @ LinearSolve[#Lambda, id], #V, #Nu - d + 1]]
+            ],
             "ErrorDistribution" -> Function[InverseWishartMatrixDistribution[#Nu, #V]]
         |>
     |>
@@ -216,54 +185,17 @@ bayesianLinearRegressionInternal[designMat_?MatrixQ, yVec_?VectorQ,
     prior : {b_?VectorQ, lambda_?SquareMatrixQ, v : Except[_List], nu : Except[_List]}
 ] /; Length[b] === Length[lambda] === Dimensions[designMat][[2]] && Length[designMat] === Length[yVec] := Module[{
     posteriorParameters = updateParameters[prior, designMat, yVec],
-    dimIn = Length[b],
-    logEvidence,
-    logLikelihood
+    dimIn = Length[b]
 },
-    logEvidence = Simplify @ With[{ 
-        sampledB = posteriorParameters[[1]],
-        sampledVar = Divide @@ posteriorParameters[[{3, 4}]]
-    },
-        logLikelihood = Total[
-            MapThread[
-                LogLikelihood[
-                    NormalDistribution[#1.sampledB, Sqrt[sampledVar]], {#2}
-                ]&,
-                {designMat, yVec}
-            ]
-        ];
-        Plus[
-            logLikelihood,
-            Subtract @@ Apply[
-                Plus[
-                    LogLikelihood[
-                        InverseGammaDistribution[#4/2, #3/2],
-                        {sampledVar}
-                    ],
-                    LogLikelihood[
-                        MultinormalDistribution[
-                            #1,
-                            symmetrizeMatrix[sampledVar * LinearSolve[#2, IdentityMatrix[dimIn]]]
-                        ],
-                        {sampledB}
-                    ]
-                ]&,
-                {prior, posteriorParameters},
-                {1}
-            ]
-        ]
-    ];
     <|
-        "LogEvidence" -> logEvidence,
+        "LogEvidence" -> logEvidence[prior, posteriorParameters, designMat, yVec],
         "PriorParameters" -> AssociationThread[{"B", "Lambda", "V", "Nu"}, prior],
         "PosteriorParameters" -> AssociationThread[{"B", "Lambda", "V", "Nu"}, posteriorParameters],
         "Functions" -> <|
             "RegressionCoefficientDistribution" -> With[{
                 id = IdentityMatrix[dimIn], fun = symmetrizeMatrix
             },
-                Function[
-                    MultivariateTDistribution[#B, fun[(#V/#Nu) * LinearSolve[#Lambda, id]], #Nu]
-                ]
+                Function[MultivariateTDistribution[#B, fun[(#V/#Nu) * LinearSolve[#Lambda, id]], #Nu]]
             ],
             "ErrorDistribution" -> Function[InverseGammaDistribution[#Nu/2, #V/2]]
         |>
@@ -305,6 +237,88 @@ updateParameters[
     nuUpdate = nu0 + nDat;
     {bUpdate, lambdaUpdate, vUpdate, nuUpdate}
 ];
+
+(* Multivariate *)
+logEvidence[
+    prior : {b0_?MatrixQ, l0_?MatrixQ, v0_?MatrixQ, nu0_},
+    posteriorParameters : {bn_?MatrixQ, ln_?MatrixQ, vn_?MatrixQ, nun_},
+    designMat_?MatrixQ, yMat_?MatrixQ
+] /; NoneTrue[Flatten @ {Diagonal[l0], Diagonal[v0], nu0}, TrueQ @* NonPositive] := Simplify @ Module[{ 
+    sampledB = bn,
+    sampledCov = Divide[vn, nun],
+    logLikelihood,
+    dimIn = Length[bn]
+},
+    logLikelihood = Total[(* P[D\[Conditioned]B,\[CapitalSigma]]*)
+        MapThread[
+            LogLikelihood[
+                MultinormalDistribution[#1.sampledB, symmetrizeMatrix @ sampledCov],
+                {#2}
+            ]&,
+            {designMat, yMat}
+        ]
+    ];
+    Plus[
+        logLikelihood,
+        Subtract @@ Apply[
+            Plus[
+                LogLikelihood[
+                    InverseWishartMatrixDistribution[#4, symmetrizeMatrix @ #3],
+                    {sampledCov}
+                ],
+                LogLikelihood[
+                    MatrixNormalDistribution[#1, symmetrizeMatrix @ LinearSolve[#2, IdentityMatrix[dimIn]], sampledCov],
+                    {sampledB}
+                ]
+            ]&,
+            {prior, posteriorParameters},
+            {1}
+        ]
+    ]
+];
+
+(* Univariate *)
+logEvidence[
+    prior : {b0_?VectorQ, l0_?MatrixQ, v0 : Except[_List], nu0_},
+    posteriorParameters : {bn_?VectorQ, ln_?MatrixQ, vn : Except[_List], nun_},
+    designMat_?MatrixQ, yVec_?VectorQ
+] /; NoneTrue[Flatten @ {Diagonal[l0], v0, nu0}, TrueQ @* NonPositive] := Simplify @ Module[{ 
+    sampledB = bn,
+    sampledVar = Divide[vn, nun],
+    logLikelihood,
+    dimIn = Length[bn]
+},
+    logLikelihood = Total[
+        MapThread[
+            LogLikelihood[
+                NormalDistribution[#1.sampledB, Sqrt[sampledVar]], {#2}
+            ]&,
+            {designMat, yVec}
+        ]
+    ];
+    Plus[
+        logLikelihood,
+        Subtract @@ Apply[
+            Plus[
+                LogLikelihood[
+                    InverseGammaDistribution[#4/2, #3/2],
+                    {sampledVar}
+                ],
+                LogLikelihood[
+                    MultinormalDistribution[
+                        #1,
+                        symmetrizeMatrix[sampledVar * LinearSolve[#2, IdentityMatrix[dimIn]]]
+                    ],
+                    {sampledB}
+                ]
+            ]&,
+            {prior, posteriorParameters},
+            {1}
+        ]
+    ]
+];
+
+logEvidence[___] := Undefined;
 
 regressionDataNormalForm[
     correctFormat : (in : {{__} ..}?MatrixQ -> out : {{__} ..}?MatrixQ)
