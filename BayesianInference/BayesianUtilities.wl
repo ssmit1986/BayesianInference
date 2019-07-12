@@ -114,7 +114,7 @@ Format[inferenceObject[assoc_?AssociationQ]] := With[{
 
 inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
 inferenceObject /: Append[inferenceObject[assoc_?AssociationQ], elem_] :=  inferenceObject @ Append[assoc, elem];
-inferenceObject /: Prepend[inferenceObject[assoc_?AssociationQ], elem_] := inferenceObject @ Prepend[assoc, elem]
+inferenceObject /: Prepend[inferenceObject[assoc_?AssociationQ], elem_] := inferenceObject @ Prepend[assoc, elem];
 inferenceObject /: FailureQ[inferenceObject[$Failed]] := True;
 
 inferenceObject[inferenceObject[assoc_?AssociationQ]] := inferenceObject[assoc];
