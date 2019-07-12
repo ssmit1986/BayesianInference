@@ -10,7 +10,8 @@ BayesianLinearRegression::designMat =  "Failed to construct the design matrix. `
 BayesianLinearRegression::prior = "Prior parameters `1` do not have the right dimensions";
 Options[BayesianLinearRegression] = {
     IncludeConstantBasis -> True,
-    "PriorParameters" -> Automatic
+    "PriorParameters" -> Automatic,
+    "IncludeFunctions" -> False
 };
 
 BayesianLinearRegression[data_, basis : Except[_List], rest___] := BayesianLinearRegression[data, {basis}, rest];
@@ -83,7 +84,7 @@ BayesianLinearRegression[data_, basis_List, independentVars_List, opts : Options
             ]
         ];
         Join[
-            result,
+            KeyDrop[result, "Functions"],
             <|
                 "Posterior" -> Map[
                     # @ result["PosteriorParameters"]&,
@@ -93,7 +94,11 @@ BayesianLinearRegression[data_, basis_List, independentVars_List, opts : Options
                     # @ result["PriorParameters"]&,
                     result["Functions"]
                 ]
-            |>
+            |>,
+            If[ TrueQ @ OptionValue["IncludeFunctions"],
+                result[[{"Functions"}]],
+                <||>
+            ]
         ],
         $Failed
     ]
