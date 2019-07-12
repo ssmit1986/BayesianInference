@@ -3508,7 +3508,7 @@ Cell[BoxData[
     RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], "\[IndentingNewLine]",
     "]"}]}]], "Input",
  CellLabel->"In[19]:=",ExpressionUUID->"c78ef708-4632-484a-877f-6c0f6f70726d"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
