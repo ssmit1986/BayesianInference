@@ -3364,8 +3364,8 @@ Cell[BoxData[{
        RowBox[{"0", ",", 
         RowBox[{
          RowBox[{"Length", "[", "data", "]"}], "-", "1"}]}], "}"}]}], 
-     "]"}]}]}], 
-  ";"}]}], "Input",ExpressionUUID->"b64e336b-3258-4367-9558-72ea9d31dacc"],
+     "]"}]}]}], ";"}]}], "Input",
+ CellLabel->"In[3]:=",ExpressionUUID->"b64e336b-3258-4367-9558-72ea9d31dacc"],
 
 Cell[BoxData[{
  RowBox[{
@@ -3409,8 +3409,8 @@ Cell[BoxData[{
       "\[IndentingNewLine]", "]"}], ",", "\[IndentingNewLine]", 
      RowBox[{"{", 
       RowBox[{"mu", ",", "logsigma"}], "}"}]}], "\[IndentingNewLine]", "]"}], 
-   "\[IndentingNewLine]", 
-   "]"}]}]}], "Input",ExpressionUUID->"ee0d5ec7-8d6b-4aa5-b883-abb26b9dcb53"],
+   "\[IndentingNewLine]", "]"}]}]}], "Input",
+ CellLabel->"In[5]:=",ExpressionUUID->"ee0d5ec7-8d6b-4aa5-b883-abb26b9dcb53"],
 
 Cell[TextData[{
  "Note the use of ",
@@ -3429,6 +3429,20 @@ where the loglikelihood may not be well-defined. The function ",
   FontWeight->"Bold"],
  " automates this step for you:"
 }], "Text",ExpressionUUID->"d1103b9f-5d45-4c06-a693-3b24b9e44af6"],
+
+Cell[BoxData[{
+ RowBox[{"?", "directLogLikelihoodFunction"}], "\[IndentingNewLine]", 
+ RowBox[{"logLikeGBMProcess", "=", 
+  RowBox[{"directLogLikelihoodFunction", "[", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"GeometricBrownianMotionProcess", "[", 
+     RowBox[{"mu", ",", 
+      RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], "]"}], ",", 
+    "\[IndentingNewLine]", "ts", ",", "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{"mu", ",", " ", "logsigma"}], "}"}]}], "\[IndentingNewLine]", 
+   "]"}]}]}], "Input",
+ CellLabel->"In[16]:=",ExpressionUUID->"9e1e01c3-19de-4307-b8e3-40c4c7c9ad09"],
 
 Cell["\<\
 Define the inference problem with the pre-defined loglikelihood function:\
@@ -3473,7 +3487,8 @@ Cell[BoxData[
         RowBox[{"0", ",", "10"}], "]"}], ",", 
        RowBox[{"NormalDistribution", "[", 
         RowBox[{"0", ",", "10"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
-   "]"}]}]], "Input",ExpressionUUID->"03fd6b5f-c647-4c58-96fb-b20d5b5ceeea"],
+   "]"}]}]], "Input",
+ CellLabel->"In[18]:=",ExpressionUUID->"03fd6b5f-c647-4c58-96fb-b20d5b5ceeea"],
 
 Cell["\<\
 Run the sampler (this will take a while because the code runs without \
@@ -3491,8 +3506,9 @@ Cell[BoxData[
     RowBox[{"\"\<TerminationFraction\>\"", " ", "\[Rule]", " ", "0.01"}], ",",
      "\[IndentingNewLine]", 
     RowBox[{"\"\<ParallelRuns\>\"", "\[Rule]", "4"}]}], "\[IndentingNewLine]",
-    "]"}]}]], "Input",ExpressionUUID->"c78ef708-4632-484a-877f-6c0f6f70726d"]
-}, Closed]],
+    "]"}]}]], "Input",
+ CellLabel->"In[19]:=",ExpressionUUID->"c78ef708-4632-484a-877f-6c0f6f70726d"]
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -3593,7 +3609,7 @@ Cell[BoxData[
      RowBox[{"i", ",", " ", "2", ",", 
       RowBox[{"Length", "[", "data", "]"}]}], "}"}]}], "\[IndentingNewLine]", 
    "]"}]}]], "Input",
- CellLabel->"In[77]:=",ExpressionUUID->"3563e0cc-7249-457c-b352-34792b7965c9"],
+ CellLabel->"In[20]:=",ExpressionUUID->"3563e0cc-7249-457c-b352-34792b7965c9"],
 
 Cell["The inference problem can now be defined like this:", \
 "Text",ExpressionUUID->"2c55f640-7a66-4a47-936e-edda9ef298fd"],
@@ -3632,7 +3648,7 @@ Cell[BoxData[
        RowBox[{"NormalDistribution", "[", 
         RowBox[{"0", ",", "10"}], "]"}]}], "}"}]}]}], "\[IndentingNewLine]", 
    "]"}]}]], "Input",
- CellLabel->"In[79]:=",ExpressionUUID->"88d8915a-1fab-424f-93d2-99cd9354ba09"],
+ CellLabel->"In[21]:=",ExpressionUUID->"88d8915a-1fab-424f-93d2-99cd9354ba09"],
 
 Cell["\<\
 Compare the constructed loglikelihood function with the built-in version to \
@@ -3661,12 +3677,12 @@ Cell[BoxData[
         RowBox[{"mu", ",", " ", 
          RowBox[{"Exp", "[", "logsigma", "]"}], ",", " ", "start"}], "]"}], 
        ",", "ts"}], "]"}]}]}]}], "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->"In[94]:=",ExpressionUUID->"b7d25a44-4cb4-4d83-89e0-a10835a524b7"],
+ CellLabel->"In[22]:=",ExpressionUUID->"b7d25a44-4cb4-4d83-89e0-a10835a524b7"],
 
 Cell["\<\
 For the purpose of plotting the data later, we can restore the original data \
 to the inference object since it will not be used after the definition step \
-anymore (except for visualisation purposes)\
+anymore (except for visualisation purposes):\
 \>", "Text",ExpressionUUID->"5f858a07-edf2-4275-bd8a-301666164755"],
 
 Cell[BoxData[
@@ -3676,7 +3692,7 @@ Cell[BoxData[
     RowBox[{"obj", ",", " ", 
      RowBox[{"\"\<Data\>\"", "\[Rule]", " ", 
       RowBox[{"TimeSeries", "[", "data", "]"}]}]}], "]"}]}], ";"}]], "Input",
- CellLabel->"In[81]:=",ExpressionUUID->"a7862a70-e08c-4330-8b96-24262909d76d"],
+ CellLabel->"In[33]:=",ExpressionUUID->"a7862a70-e08c-4330-8b96-24262909d76d"],
 
 Cell["Run the nested sampling algorithm:", \
 "Text",ExpressionUUID->"fade880b-e3ed-4e37-8a3b-18cb31bfca1d"],
@@ -3701,8 +3717,7 @@ Cell[BoxData[{
     RowBox[{"result", ",", "0.99"}], "]"}], ",", 
    RowBox[{"{", 
     RowBox[{"mu", ",", "logsigma"}], "}"}]}], "]"}]}], "Input",
- CellLabel->
-  "In[132]:=",ExpressionUUID->"98bdcad8-4abc-47dc-ab76-bc02dffafef8"],
+ CellLabel->"In[23]:=",ExpressionUUID->"98bdcad8-4abc-47dc-ab76-bc02dffafef8"],
 
 Cell[TextData[{
  "The first thing we can do is visualise the prediction errors at each data \
@@ -3731,9 +3746,8 @@ Cell[BoxData[{
         RowBox[{"2", ";;"}], ",", "1"}], "]"}], "]"}]}], "]"}]}], ";"}], "\n", 
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"result", ",", "predictions", ",", 
-   RowBox[{"PlotRange", "\[Rule]", "All"}]}], "]"}]}], "Input",
- CellLabel->
-  "In[134]:=",ExpressionUUID->"a18ca735-ef4d-4a2a-9db8-9c23d1a87ef2"],
+   RowBox[{"PlotRange", "\[Rule]", "All"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"a18ca735-ef4d-4a2a-9db8-9c23d1a87ef2"],
 
 Cell["\<\
 We can also visualise how well our posterior knowledge could predict the \
@@ -3823,7 +3837,7 @@ Cell[BoxData[{
  RowBox[{"regressionPlot1D", "[", 
   RowBox[{"result", ",", "extrapolations", ",", 
    RowBox[{"PlotRange", "\[Rule]", "All"}]}], "]"}]}], "Input",
- CellLabel->"In[128]:=",ExpressionUUID->"0be111c6-dd1a-415d-ab4d-ee0d72769c9f"]
+ CellLabel->"In[43]:=",ExpressionUUID->"0be111c6-dd1a-415d-ab4d-ee0d72769c9f"]
 }, Closed]]
 }, Open  ]],
 
@@ -4635,8 +4649,7 @@ function ",
  Cell[BoxData[
   FormBox[
    StyleBox["batchnormToChain",
-    FontWeight->"Bold"], TraditionalForm]],
-  FormatType->"TraditionalForm",ExpressionUUID->
+    FontWeight->"Bold"], TraditionalForm]],ExpressionUUID->
   "ed029532-7657-415d-830d-b996a69e396f"],
  " does this) because ",
  Cell[BoxData[
