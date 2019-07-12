@@ -93,7 +93,9 @@ BayesianLinearRegression[data_, basis_List, independentVars_List, opts : Options
                 "Prior" -> Map[
                     # @ result["PriorParameters"]&,
                     result["Functions"]
-                ]
+                ],
+                "Basis" -> basis,
+                "IndependentVariables" -> independentVars
             |>,
             If[ TrueQ @ OptionValue["IncludeFunctions"],
                 result[[{"Functions"}]],
