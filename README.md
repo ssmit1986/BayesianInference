@@ -29,31 +29,29 @@ See the `example_code.nb` notebook for a general explanation of the code and sev
 
 ### Version 2.0
 * 23 November 2018
-
-The package has been overhauled significantly and now relies largely on the MCMC sampler hidden in the Statistics\`MCMC\` context. This means that this version may not be compatible with older versions of Mathematica, so please check out the `release1` tag of this package if you prefer/need the old code. I will probably continue to find small bugs to fix and improvements to make in the near future, so there will most likely be more updates to come.
+    * The package has been overhauled significantly and now relies largely on the MCMC sampler hidden in the Statistics\`MCMC\` context. This means that this version may not be compatible with older versions of Mathematica, so please check out the `release1` tag of this package if you prefer/need the old code. I will probably continue to find small bugs to fix and improvements to make in the near future, so there will most likely be more updates to come.
 
 * 24 November 2018
+    * Add an example section that shows how to use nested sampling for timeseries regression with a `GeometricBrownianMotionProcess`.
+    * Improve the numerical stability of the evidence computation.
 
-	* Add an example section that shows how to use nested sampling for timeseries regression with a `GeometricBrownianMotionProcess`.
-	* Improve the numerical stability of the evidence computation.
-
-* 25 Novermber 2018
-
-	* Expand the section on time series process regression. Now contains explanation of how to compile the loglikelihood function of a geometric Brownian motion process.
+* 25 November 2018
+    * Expand the section on time series process regression. Now contains explanation of how to compile the loglikelihood function of a geometric Brownian motion process.
 
 * 26 November 2018
-
-	* Make sure that parellel runs in `parallelNestedSampling` always generate their own starting points.
+    * Make sure that parellel runs in `parallelNestedSampling` always generate their own starting points.
 
 * 28 Novermber 2018
-
-	* Add a new section to the example notebook that explains the goals of the package in broader terms. Also features an animated visualisation of the nested sampling algorithm. Check it out!
-	* Add example of classification using logistic regression.
+    * Add a new section to the example notebook that explains the goals of the package in broader terms. Also features an animated visualisation of the nested sampling algorithm. Check it out!
+    * Add example of classification using logistic regression.
 
 * 30 November 2018
-
-	* Add an example of Bayesian logistic classification for the Fisher Iris dataset.
+    * Add an example of Bayesian logistic classification for the Fisher Iris dataset.
 
 * 18 December 2018
-	* Add a new usecase for `predictiveDistribution` where you can specify different keys in the 3rd argument to populate the output association with. This is useful when the inputs contain duplicates (such as can happen in the timeseries regression example in the last section) or when you need to undo a transformation you applied to the independent coordinates.
-	* Some small updates to the example notebook.
+    * Add a new usecase for `predictiveDistribution` where you can specify different keys in the 3rd argument to populate the output association with. This is useful when the inputs contain duplicates (such as can happen in the timeseries regression example in the last section) or when you need to undo a transformation you applied to the independent coordinates.
+    * Some small updates to the example notebook.
+
+* 12 July 2019
+    * Add code for Bayesian linear regression. See the appropriate section in the example notebook.
+    * Add code for (pseudo) Bayesian regression methods using neural networks. See the appropriate section in the example notebook.
