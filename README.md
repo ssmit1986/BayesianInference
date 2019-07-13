@@ -5,9 +5,12 @@ This is a package that implements the nested sampling algorithm in pretty much t
 
 It also provides some functionality for Markov Chain Monte Carlo sampling (MCMC) based on built-in (but undocumented) functions in the Statistics\`MCMC\` context.
 
+A new recently added function called `BayesianLinearRegression` provides the Bayesian alternative to Mathematica's `LinearModelFit`.
+
 Finally, there is also some code that helps to construct neural networks for quasi-Baysian regression as explained on the following pages:
 * http://mlg.eng.cam.ac.uk/yarin/blog_3d801aa532c1ce.html
 * http://blog.wolfram.com/2018/05/31/how-optimistic-do-you-want-to-be-bayesian-neural-network-regression-with-prediction-errors/
+
 
 ## Installation:
 - Open your user base directory (e.g., evaluate `SystemOpen[$UserBaseDirectory]` in a notebook)

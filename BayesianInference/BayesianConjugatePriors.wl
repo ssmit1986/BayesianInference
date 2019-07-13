@@ -3,6 +3,8 @@ BeginPackage["BayesianConjugatePriors`", {"BayesianUtilities`", "GeneralUtilitie
 conjugatePriorModel::usage = "posterior = conjugatePriorModel[data, model, conjugate prior] updates the distribution of the parameters of a model";
 normalInverseGammaDistribution;
 normalInverseWishartDistribution;
+normalInverseWishartPredictiveDistribution;
+(*
 linearModelDistribution;
 linearModel;
 linearModelPredictiveDistribution;
@@ -10,7 +12,7 @@ multiLinearModel;
 multiLinearModelDistribution;
 multiLinearModelPredictiveDistribution;
 makeDesignMatrix;
-normalInverseWishartPredictiveDistribution;
+*)
 
 Begin["`Private`"]
 
