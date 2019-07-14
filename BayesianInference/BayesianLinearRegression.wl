@@ -70,28 +70,36 @@ BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_Li
     If[ AssociationQ[result],
         AppendTo[
             result["Functions"],
-            "PredictiveDistribution" -> With[{
-                inVec = First @ DesignMatrix[
-                    {Append[independentVars, 0]},
-                    basis,
-                    independentVars,
-                    Sequence @@ FilterRules[{opts}, Options[DesignMatrix]]
-                ]
-            },
-                If[ dimOut > 1,
-                    Function[
-                        With[{dim = #Nu - dimOut + 1},
-                            Simplify @ MultivariateTDistribution[
-                                inVec . #B,
-                                (#V/dim) * (inVec.LinearSolve[#Lambda][inVec] + 1),
-                                dim
+            Map[
+                Function[{zeroOrOne}, (* the "PredictiveDistribution" and "UnderlyingValueDistribution" are the same, save for a single "+ 1" *)
+                    With[{
+                        inVec = First @ DesignMatrix[
+                            {Append[independentVars, 0]},
+                            basis,
+                            independentVars,
+                            Sequence @@ FilterRules[{opts}, Options[DesignMatrix]]
+                        ]
+                    },
+                        If[ dimOut > 1,
+                            Function[
+                                With[{dim = #Nu - dimOut + 1},
+                                    Simplify @ MultivariateTDistribution[
+                                        inVec . #B,
+                                        (#V/dim) * (inVec.LinearSolve[#Lambda][inVec] + zeroOrOne),
+                                        dim
+                                    ]
+                                ]
+                            ],
+                            Function[
+                                Simplify @ StudentTDistribution[inVec.#B, Sqrt[(#V/#Nu)*(inVec.LinearSolve[#Lambda][inVec] + zeroOrOne)], #Nu]
                             ]
                         ]
-                    ],
-                    Function[
-                        Simplify @ StudentTDistribution[inVec.#B, Sqrt[(#V/#Nu)*(inVec.LinearSolve[#Lambda][inVec] + 1)], #Nu]
                     ]
-                ]
+                ],
+                <|
+                    "PredictiveDistribution" -> 1,
+                    "UnderlyingValueDistribution" -> 0
+                |>
             ]
         ];
         Join[
