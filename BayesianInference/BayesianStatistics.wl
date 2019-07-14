@@ -35,7 +35,7 @@ ignorancePrior[
             Join[
                 Thread[
                     positionsLoc -> (
-                        UniformDistribution[{#[[{2, 3}]]}]& /@ Extract[variables, positionsLoc]
+                        UniformDistribution[#[[{2, 3}]]]& /@ Extract[variables, positionsLoc]
                     )
                 ],
                 Thread[
@@ -144,7 +144,7 @@ defineInferenceProblem[] := {
     "LogPriorPDFFunction",
     "GeneratingDistribution",
     "PriorDistribution",
-    "PriorPDF"
+    "LogPriorPDF"
 };
 defineInferenceProblem[rules : __Rule] := defineInferenceProblem[Association[{rules}]];
 defineInferenceProblem[inferenceObject[assoc_?AssociationQ]] := defineInferenceProblem[assoc];
@@ -241,7 +241,7 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
                     assoc,
                     "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[[tempKeys]]]
                 ],
-            SubsetQ[keys, tempKeys = {"PriorPDF", "Parameters"}],
+            SubsetQ[keys, tempKeys = {"LogPriorPDF", "Parameters"}],
                 AppendTo[
                     assoc,
                     "LogPriorPDFFunction" -> logPDFFunction @@ Values[assoc[[tempKeys]]]
@@ -352,10 +352,10 @@ logPDFFunction[
     logPDFFunction[
         Replace[
             If[ Head[DistributionDomain[dist]] === List,
-                PDF[dist, parameters[[All, 1]]],
-                PDF[dist, parameters[[1, 1]]]
+                LogLikelihood[dist, {parameters[[All, 1]]}],
+                LogLikelihood[dist, {parameters[[1, 1]]}]
             ],
-            _PDF :> (
+            _LogLikelihood :> (
                 Message[defineInferenceProblem::prior, dist];
                 Throw[$Failed, "problemDef"]
             )
@@ -365,7 +365,7 @@ logPDFFunction[
 );
 
 logPDFFunction[
-    pdf_,
+    lpdf_,
     parameters : {paramSpecPattern..}
 ] := Block[{
     constraints = parametersToConstraints[parameters],
@@ -374,7 +374,7 @@ logPDFFunction[
 },
     logPDF = expressionToFunction[
         simplifyLogPDF[
-            N @ Log[pdf],
+            N @ lpdf,
             And[
                 constraints,
                 Element[

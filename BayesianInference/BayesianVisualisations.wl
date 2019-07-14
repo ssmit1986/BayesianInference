@@ -351,6 +351,20 @@ regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] 
     ],
     {General::munfl}
 ];
+
+regressionPlot1D[
+    dist_?DistributionParameterQ,
+    {x_, min_, max_},
+    bands : {__?NumericQ} : {95, 50, 5},
+    opts___Rule
+] := Plot[
+    Evaluate @ InverseCDF[dist, bands / 100],
+    {x, min, max},
+    opts,
+    Filling -> {1 -> {2}, 3 -> {2}}, 
+    PlotLegends -> Map[Quantity[#, "Percent"]&, bands]
+];
+
 Options[regressionPlot1D] = Join[
     {
         "DistributionPercentiles" -> {0.95, 0.5, 0.05}
