@@ -1,4 +1,4 @@
-BeginPackage["BayesianConjugatePriors`", {"BayesianUtilities`", "GeneralUtilities`"}]
+BeginPackage["BayesianConjugatePriors`", {"GeneralUtilities`"}]
 
 BayesianLinearRegression::usage = "BayesianLinearRegression[{x1, x2, ...} -> {y1, y2, ...}, {f1, f2, ...}, {var1, var2, ...}] performs a Bayesion linear fit.";
 
