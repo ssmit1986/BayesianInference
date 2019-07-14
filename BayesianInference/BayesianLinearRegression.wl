@@ -18,7 +18,18 @@ BayesianLinearRegression[data_, basis : Except[_List], rest___] := BayesianLinea
 BayesianLinearRegression[data_, basis_, independentVar : Except[_List], rest___] := 
     BayesianLinearRegression[data, basis, {independentVar}, rest];
 
-BayesianLinearRegression[data_, basis_List, independentVars_List, opts : OptionsPattern[]] := Module[{
+BayesianLinearRegression[data_?MatrixQ, basis_, independentVars_List, rest___] := With[{
+    nvars = Length[independentVars]
+},
+    BayesianLinearRegression[
+        Take[data, All, nvars] -> Drop[data, None, nvars],
+        basis,
+        independentVars,
+        rest
+    ] /; nvars < Dimensions[data][[2]]
+];
+
+BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_List, opts : OptionsPattern[]] := Module[{
     formattedData = regressionDataNormalForm[data],
     dimIn1 = Length[independentVars],
     dimIn2,
