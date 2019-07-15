@@ -35,7 +35,8 @@ BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_Li
     dimIn2,
     dimOut,
     designMat,
-    result
+    result,
+    fullBasis
 },
     If[ formattedData === $Failed,  
         Message[BayesianLinearRegression::dataFormat, Short[data]];
@@ -67,18 +68,19 @@ BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_Li
         Return[$Failed]
     ];
     result = bayesianLinearRegressionInternal[designMat, formattedData[[2]], OptionValue["PriorParameters"]];
+    fullBasis = First @ DesignMatrix[
+        {Append[independentVars, 0]},
+        basis,
+        independentVars,
+        Sequence @@ FilterRules[{opts}, Options[DesignMatrix]]
+    ];
     If[ AssociationQ[result],
         AppendTo[
             result["Functions"],
             Map[
                 Function[{zeroOrOne}, (* the "PredictiveDistribution" and "UnderlyingValueDistribution" are the same, save for a single "+ 1" *)
                     With[{
-                        inVec = First @ DesignMatrix[
-                            {Append[independentVars, 0]},
-                            basis,
-                            independentVars,
-                            Sequence @@ FilterRules[{opts}, Options[DesignMatrix]]
-                        ]
+                        inVec = fullBasis
                     },
                         If[ dimOut > 1,
                             Function[
@@ -113,7 +115,7 @@ BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_Li
                     # @ result["PriorParameters"]&,
                     result["Functions"]
                 ],
-                "Basis" -> basis,
+                "Basis" -> fullBasis,
                 "IndependentVariables" -> independentVars
             |>,
             If[ TrueQ @ OptionValue["IncludeFunctions"],
