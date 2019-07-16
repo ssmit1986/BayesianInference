@@ -29,6 +29,7 @@ $BayesianContexts;
 directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood";
 logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y - x]. Threads over lists";
 logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
+vectorRandomVariate;
 conditionalProductDistribution::usage = "conditionalProductDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
 
 
@@ -461,42 +462,114 @@ directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
     ]
 ];
 
-conditionalProductDistribution /: RandomVariate[dist_conditionalProductDistribution,spec : _Integer] := RandomVariate[dist, {spec}];
+conditionalProductDistribution /: RandomVariate[cpd_conditionalProductDistribution] := MapAt[
+    First,
+    RandomVariate[cpd, 1],
+    {All, 2}
+];
 
 conditionalProductDistribution /: RandomVariate[
-    conditionalProductDistribution[dist_, distributed_],
-    integers : {__Integer}
-] := Module[{
-    spec = If[ Length[integers] > 1,
-        {Most[integers], Last[integers]},
-        {First[integers], 1}
-    ],
-    distributions,
-    reshape
-},
-    reshape = If[ Length[spec[[1]]] > 1,
-        Flatten[#, Length[spec[[1]]] - 1]&,
-        Identity
-    ];
-    distributions = Flatten @ Last @  Reap[
-        ReplaceAll[
-            distributed,
-            Distributed[sym_Symbol, d_] :> Sow[
-                sym -> If[ Head[d] =!= conditionalProductDistribution, reshape, Identity] @ RandomVariate[d, spec[[1]]]
-            ]
-        ]
-    ];
-    Transpose @ Prepend[ (* Need to reshape back to format specified by integers *)
-        distributions[[All, 2]],
-        MapThread[
-            Function[
-                Evaluate[distributions[[All, 1]]],
-                RandomVariate[dist, spec[[2]]]
-            ],
-            distributions[[All, 2]]
-        ]
-    ]
+    cpd_conditionalProductDistribution,
+    int_Integer | {int_Integer} 
+] := Flatten @ vectorRandomVariate[cpd, int];
+
+conditionalProductDistribution /: RandomVariate[
+    cpd_conditionalProductDistribution,
+    intArray : {_Integer, __Integer}
+] := MapAt[
+    First @ Fold[Partition, #, Reverse[intArray]]&,
+    RandomVariate[cpd, Times @@ intArray],
+    {All, 2}
 ];
+
+vectorRandomVariate[conditionalProductDistribution[], _] := {};
+
+vectorRandomVariate[conditionalProductDistribution[first___, last_], n_Integer] := With[{
+    rules = Cases[
+        last,
+        Distributed[sym_, dist_] :> Rule[sym, vectorRandomVariate[dist, n]],
+        {0, 1}
+    ]
+},
+    {
+        vectorRandomVariate[conditionalProductDistribution[first] /. rules, n],
+        rules
+    }
+];
+
+vectorRandomVariate[NormalDistribution[m_, s_], n_Integer] := Abs[s] * RandomVariate[NormalDistribution[], n] + m;
+
+vectorRandomVariate[StudentTDistribution[nu_], n_Integer] := vectorRandomVariate[StudentTDistribution[0, 1, nu], n];
+vectorRandomVariate[StudentTDistribution[m_, s_, nu_?NumericQ], n_Integer] := Abs[s] * RandomVariate[StudentTDistribution[nu], n] + m;
+vectorRandomVariate[StudentTDistribution[m_, s_, nu : {__?NumericQ}], n_Integer] := 
+    Abs[s] * RandomVariate /@ Thread[StudentTDistribution[nu]] + m
+
+vectorRandomVariate[ExponentialDistribution[l_], n_Integer] := Divide[RandomVariate[ExponentialDistribution[1], n], l];
+
+vectorRandomVariate[
+    (d : GammaDistribution | InverseGammaDistribution)[a_?NumericQ, b_List],
+    n_Integer
+] := b * RandomVariate[d[a, 1], n];
+
+vectorRandomVariate[
+    MultivariateTDistribution[mu_, sigma_, nu_List],
+    n_Integer
+] := Plus[
+    MapThread[
+        Dot,
+        {
+            RandomVariate[#, n]& /@ Thread[StudentTDistribution[nu]],
+            Replace[
+                sigma,
+                {
+                    mat_?MatrixQ :> ConstantArray[CholeskyDecomposition[mat], n],
+                    matArray_ :> CholeskyDecomposition /@ matArray
+                } 
+            ]
+        }
+    ],
+    Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
+];
+
+vectorRandomVariate[
+    (dist : MultinormalDistribution | MultivariateTDistribution)[mu_, sigma_?MatrixQ, rest___],
+    n_Integer
+] := Plus[
+    RandomVariate[dist[sigma, rest], n],
+    Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
+];
+vectorRandomVariate[
+    (dist : MultinormalDistribution | MultivariateTDistribution)[mu_, sigma_List, rest___],
+    n_Integer
+] /; Length[sigma] === n := Plus[
+    Developer`ToPackedArray @ MapThread[
+        Dot,
+        {
+            RandomVariate[dist[IdentityMatrix[Length @ sigma[[1]]], rest], n],
+            CholeskyDecomposition /@ sigma
+        }
+    ],
+    Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
+];
+
+vectorRandomVariate[
+    (dist : InverseWishartMatrixDistribution | WishartMatrixDistribution)[nu_?NumericQ, sigma_?MatrixQ],
+    n_Integer
+] := RandomVariate[dist[nu, sigma], n];
+
+vectorRandomVariate[
+    (dist : InverseWishartMatrixDistribution | WishartMatrixDistribution)[nu_, sigma_],
+    n_Integer
+] := Developer`ToPackedArray @ MapThread[
+    RandomVariate[dist[##]]&,
+    {
+        nu,
+        Replace[sigma, mat_?MatrixQ :> ConstantArray[mat, n]]
+    }
+]; 
+
+vectorRandomVariate[d_ /; MemberQ[d, _List], n_Integer] := RandomVariate /@ Thread[d];
+vectorRandomVariate[d_?(Quiet[DistributionParameterQ[#]]&), n_Integer] := RandomVariate[d, n];
 
 End[] (* End Private Context *)
 
