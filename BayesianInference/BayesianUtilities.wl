@@ -462,6 +462,28 @@ directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
     ]
 ];
 
+conditionalProductDistribution /: LogLikelihood[
+    cpd_conditionalProductDistribution,
+    vals : {__Rule}
+] := With[{
+    symbols = vals[[All, 1]]
+},
+    Catch[
+        Total @ Cases[
+            cpd,
+            Distributed[sym_, dist_] :> If[ MemberQ[symbols, sym],
+                LogLikelihood[
+                    dist /. vals,
+                    {sym /. vals}
+                ],
+                Throw[Undefined, "underspecified"]
+            ],
+            DirectedInfinity[1]
+        ],
+        "underspecified"
+    ]
+];
+
 conditionalProductDistribution /: RandomVariate[cpd_conditionalProductDistribution] := MapAt[
     First,
     RandomVariate[cpd, 1],
