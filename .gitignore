@@ -1,4 +1,5 @@
-
+.idea/
 /.project
 /testing.nb
 *.mx
+*.paclet
