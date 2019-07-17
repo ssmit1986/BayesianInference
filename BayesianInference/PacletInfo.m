@@ -17,7 +17,7 @@ Paclet[
             },
             {
                 "Kernel",
-                "Context" -> "BayesianInference`"(*{
+                "Context" -> {
                     "BayesianUtilities`",
                     "BayesianStatistics`",
                     "BayesianGaussianProcess`",
@@ -26,7 +26,7 @@ Paclet[
                     "ExponentialFamilyDefinitions`",
                     "BayesianConjugatePriors`",
                     "BayesianLinearRegression`"
-                }*)
+                }
             }
         }
 ]
