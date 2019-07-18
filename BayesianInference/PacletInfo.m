@@ -6,7 +6,7 @@
 
 Paclet[
     Name -> "BayesianInference",
-    Version -> "0.0.1",
+    Version -> "1.1",
     MathematicaVersion -> "11.3+",
     Creator -> "Sjoerd Smit",
     Extensions -> 
@@ -18,6 +18,7 @@ Paclet[
             {
                 "Kernel",
                 "Context" -> {
+                    "BayesianInference`",
                     "BayesianUtilities`",
                     "BayesianStatistics`",
                     "BayesianGaussianProcess`",
