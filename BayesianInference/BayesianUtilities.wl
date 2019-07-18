@@ -524,7 +524,7 @@ vectorRandomVariate[NormalDistribution[m_, s_], n_Integer] := Abs[s] * RandomVar
 vectorRandomVariate[StudentTDistribution[nu_], n_Integer] := vectorRandomVariate[StudentTDistribution[0, 1, nu], n];
 vectorRandomVariate[StudentTDistribution[m_, s_, nu_?NumericQ], n_Integer] := Abs[s] * RandomVariate[StudentTDistribution[nu], n] + m;
 vectorRandomVariate[StudentTDistribution[m_, s_, nu : {__?NumericQ}], n_Integer] := 
-    Abs[s] * RandomVariate /@ Thread[StudentTDistribution[nu]] + m
+    Abs[s] * RandomVariate /@ Thread[StudentTDistribution[nu]] + m;
 
 vectorRandomVariate[ExponentialDistribution[l_], n_Integer] := Divide[RandomVariate[ExponentialDistribution[1], n], l];
 
