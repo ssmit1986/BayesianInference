@@ -4,8 +4,12 @@ laplacePosteriorFit;
 
 Begin["`Private`"]
 
-matrixD[expr_, vars_List, n_Integer] := Nest[Refine @ Grad[#, vars]&, expr, n];
-hessianMatrix = Function[matrixD[#1, #2, 2]];
+matrixD[expr_, vars_List, n_Integer, rules : _ : {}] := Normal @ SymmetrizedArray[
+    {i__} :> Refine[D[expr, Sequence @@ vars[[{i}]]] /. rules],
+    ConstantArray[Length[vars], n],
+    Symmetric[Range[n]]
+];
+hessianMatrix[expr_, vars_, rules : _ : {}] := matrixD[expr, vars, 2, rules];
 
 modelAssumptions[model : {__Distributed}] := Apply[And, DistributionParameterAssumptions /@ model[[All, 2]]];
 
@@ -38,19 +42,6 @@ modelLogLikelihood[model : {__Distributed}] := Assuming[
             {1}
         ],
         "DistParamQ"
-    ]
-];
-
-dataToReplacementRules[data_, vars_] := With[{
-},
-    Join @@ Append[
-        MapThread[
-            Function[{v, d},
-                MapThread[Rule, {ConstantArray[v, n], d}, 2]
-            ],
-            {vars, data}
-        ],
-        2
     ]
 ];
 
@@ -110,7 +101,7 @@ laplacePosteriorFit[
     ];
     
     hess = -Total @ ReplaceAll[
-        hessianMatrix[logPost, modelParams] /. Last[maxVals],
+        hessianMatrix[logPost, modelParams, Association @ Last[maxVals]],
         replacementRules
     ];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
