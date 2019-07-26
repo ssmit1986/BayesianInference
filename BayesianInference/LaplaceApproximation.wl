@@ -67,7 +67,7 @@ laplacePosteriorFit[
     priorAssum,
     maxVals,
     replacementRules,
-    hess, cov
+    hess, cov, mean
 },
     If[ FailureQ[logPost] || logPost === Undefined,
         Return[logPost]
@@ -99,32 +99,32 @@ laplacePosteriorFit[
         Message[laplacePosteriorFit::nmaximize, Short[maxVals]];
         Return[$Failed]
     ];
-    
+    mean = Values[Last[maxVals]];
     hess = -Total @ ReplaceAll[
         hessianMatrix[logPost, modelParams, Association @ Last[maxVals]],
         replacementRules
     ];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
     <|
-        "Parameters" -> Keys[Last[maxVals]],
-        "Mean" -> Values[Last[maxVals]],
-        "PrecisionMatrix" -> hess,
-        "CovarianceMatrix" -> cov,
-        "MaxVal" -> First[maxVals],
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
-        "PredictiveDistribution" -> ParameterMixtureDistribution[
-            Replace[
-                outDists,
-                {
-                    {Distributed[_, dist_]} :> dist,
-                    dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
-                }
-            ],
-            Distributed[
-                Keys[Last[maxVals]],
-                MultinormalDistribution[Values[Last[maxVals]], cov]
+        "Parameters" -> Keys[Last[maxVals]],
+        "Posterior" -> <|
+            "RegressionCoefficientDistribution" -> MultinormalDistribution[mean, cov],
+            "PrecisionMatrix" -> hess,
+            "PredictiveDistribution" -> ParameterMixtureDistribution[
+                Replace[
+                    outDists,
+                    {
+                        {Distributed[_, dist_]} :> dist,
+                        dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
+                    }
+                ],
+                Distributed[
+                    Keys[Last[maxVals]],
+                    MultinormalDistribution[mean, cov]
+                ]
             ]
-        ]
+        |>
     |>
 ];
 
