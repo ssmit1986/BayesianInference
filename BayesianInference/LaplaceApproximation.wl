@@ -11,11 +11,13 @@ matrixD[expr_, vars_List, n_Integer, rules : _ : {}] := Normal @ SymmetrizedArra
 ];
 hessianMatrix[expr_, vars_, rules : _ : {}] := matrixD[expr, vars, 2, rules];
 
-modelAssumptions[model : {__Distributed}] := Reduce[
-    FullSimplify @ And[
-        Apply[And, DistributionParameterAssumptions /@ model[[All, 2]]],
-        Element[Flatten[model[[All, 1]]], Reals]
-    ]
+modelAssumptions[model : {__Distributed}] := And @@ MapThread[
+    BayesianStatistics`Private`distributionDomainToConstraints,
+    {
+        DistributionDomain /@ model[[All, 2]],
+        model[[All, 1]] 
+    }
+    
 ];
 
 (* Assumes all rules are such that the LogLikelihoods evaluate to numbers *)
@@ -73,79 +75,75 @@ laplacePosteriorFit[
 ] /; And[
     Length[varsIn] === Dimensions[datIn][[2]],
     Length[varsOut] === Dimensions[datOut][[2]]
-] := Assuming[ OptionValue[Assumptions],
-    Module[{
-        loglike = modelLogLikelihood[model],
-        logprior = modelLogLikelihood[prior],
-        logPostAtData,
-        nDat = Length[datIn],
-        nParam, modelParams,
-        assumptions, maxVals,
-        replacementRules,
-        hess, cov, mean
-    },
-        If[ FailureQ[loglike] || loglike === Undefined || FailureQ[logprior] || logprior === Undefined,
-            Return[$Failed]
-        ];
-        modelParams = Union @ Flatten @ prior[[All, 1]];
-        nParam = Length[modelParams];
-        assumptions = Assuming[Element[Join[varsIn, varsOut], Reals],
-            modelAssumptions[Join[model, prior]]
-        ];
-        If[ !FreeQ[assumptions, Alternatives @@ Join[varsIn, varsOut]],
-            Message[laplacePosteriorFit::assum, assumptions];
-            Return[$Failed]
-        ];
-        replacementRules = MapThread[
-            AssociationThread,
-            {
-                ConstantArray[Join[varsIn, varsOut], nDat],
-                Join[datIn, datOut, 2]
-            }
-        ];
-        logPostAtData = Simplify @ ConditionalExpression[
-            Plus[
-                Total @ ReplaceAll[
-                    loglike,
-                    replacementRules
-                ],
-                logprior
+] := Module[{
+    loglike = modelLogLikelihood[model],
+    logprior = modelLogLikelihood[prior],
+    logPostAtData,
+    nDat = Length[datIn],
+    nParam, modelParams,
+    assumptions, maxVals,
+    replacementRules,
+    hess, cov, mean
+},
+    If[ FailureQ[loglike] || loglike === Undefined || FailureQ[logprior] || logprior === Undefined,
+        Return[$Failed]
+    ];
+    modelParams = Union @ Flatten @ prior[[All, 1]];
+    nParam = Length[modelParams];
+    assumptions = Simplify[modelAssumptions[prior] && OptionValue[Assumptions]];
+    If[ !FreeQ[assumptions, Alternatives @@ Join[varsIn, varsOut]],
+        Message[laplacePosteriorFit::assum, assumptions];
+        Return[$Failed]
+    ];
+    replacementRules = MapThread[
+        AssociationThread,
+        {
+            ConstantArray[Join[varsIn, varsOut], nDat],
+            Join[datIn, datOut, 2]
+        }
+    ];
+    logPostAtData = Simplify @ ConditionalExpression[
+        Plus[
+            Total @ ReplaceAll[
+                loglike,
+                replacementRules
             ],
-            assumptions
-        ];
-        maxVals = NMaximize[logPostAtData, modelParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
-        If[ !MatchQ[maxVals, {_?NumericQ, {__Rule}}],
-            Message[laplacePosteriorFit::nmaximize, Short[maxVals]];
-            Return[$Failed]
-        ];
-        mean = Values[Last[maxVals]];
-        hess = - hessianMatrix[logPostAtData, modelParams, Association @ Last[maxVals]];
-        cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
-        <|
-            "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
-            "Parameters" -> Keys[Last[maxVals]],
-            "Posterior" -> <|
-                "RegressionCoefficientDistribution" -> MultinormalDistribution[mean, cov],
-                "PrecisionMatrix" -> hess,
-                "PredictiveDistribution" -> ParameterMixtureDistribution[
-                    Replace[
-                        model,
-                        {
-                            {Distributed[_, dist_]} :> dist,
-                            dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
-                        }
-                    ],
-                    Distributed[
-                        Keys[Last[maxVals]],
-                        MultinormalDistribution[mean, cov]
-                    ]
+            logprior
+        ],
+        assumptions
+    ];
+    maxVals = NMaximize[logPostAtData, modelParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
+    If[ !MatchQ[maxVals, {_?NumericQ, {__Rule}}],
+        Message[laplacePosteriorFit::nmaximize, Short[maxVals]];
+        Return[$Failed]
+    ];
+    mean = Values[Last[maxVals]];
+    hess = - hessianMatrix[logPostAtData, modelParams, Association @ Last[maxVals]];
+    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
+    <|
+        "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
+        "Parameters" -> Keys[Last[maxVals]],
+        "Posterior" -> <|
+            "RegressionCoefficientDistribution" -> MultinormalDistribution[mean, cov],
+            "PrecisionMatrix" -> hess,
+            "PredictiveDistribution" -> ParameterMixtureDistribution[
+                Replace[
+                    model,
+                    {
+                        {Distributed[_, dist_]} :> dist,
+                        dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
+                    }
+                ],
+                Distributed[
+                    Keys[Last[maxVals]],
+                    MultinormalDistribution[mean, cov]
                 ]
-            |>,
-            "Model" -> model,
-            "IndependentVariables" -> varsIn,
-            "DependentVariables" -> varsOut
-        |>
-    ]
+            ]
+        |>,
+        "Model" -> model,
+        "IndependentVariables" -> varsIn,
+        "DependentVariables" -> varsOut
+    |>
 ];
 
 End[]
