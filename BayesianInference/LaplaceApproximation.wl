@@ -47,6 +47,11 @@ modelLogLikelihood[model : {__Distributed}] := Assuming[
 
 laplacePosteriorFit::nmaximize = "Failed to find the posterior maximum. `1` Was returned";
 Options[laplacePosteriorFit] = Options[NMaximize];
+SetOptions[laplacePosteriorFit,
+    {
+        MaxIterations -> 10000
+    }
+];
 
 laplacePosteriorFit[
     data : (datIn_?MatrixQ -> datOut_?MatrixQ) /; Length[datIn] === Length[datOut],
@@ -100,10 +105,7 @@ laplacePosteriorFit[
         Return[$Failed]
     ];
     mean = Values[Last[maxVals]];
-    hess = -Total @ ReplaceAll[
-        hessianMatrix[logPost, modelParams, Association @ Last[maxVals]],
-        replacementRules
-    ];
+    hess = - hessianMatrix[logPostAtData, modelParams, Association @ Last[maxVals]];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
     <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
