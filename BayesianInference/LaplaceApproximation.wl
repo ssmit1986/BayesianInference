@@ -67,6 +67,7 @@ SetOptions[laplacePosteriorFit,
 laplacePosteriorFit[
     data : (datIn_?MatrixQ -> datOut_?MatrixQ) /; Length[datIn] === Length[datOut],
     model : {__Distributed},
+    prior : {__Distributed},
     varsIn_?VectorQ -> varsOut_?VectorQ,
     opts : OptionsPattern[]
 ] /; And[
@@ -74,27 +75,22 @@ laplacePosteriorFit[
     Length[varsOut] === Dimensions[datOut][[2]]
 ] := Assuming[ OptionValue[Assumptions],
     Module[{
-        logPost = modelLogLikelihood[model],
+        loglike = modelLogLikelihood[model],
+        logprior = modelLogLikelihood[prior],
         logPostAtData,
         nDat = Length[datIn],
         nParam, modelParams,
-        outDists, priorDists,
         assumptions, maxVals,
         replacementRules,
         hess, cov, mean
     },
-        If[ FailureQ[logPost] || logPost === Undefined,
-            Return[logPost]
+        If[ FailureQ[loglike] || loglike === Undefined || FailureQ[logprior] || logprior === Undefined,
+            Return[$Failed]
         ];
-        modelParams = Complement[Union @ Flatten[model[[All, 1]]], varsOut];
+        modelParams = Union @ Flatten @ prior[[All, 1]];
         nParam = Length[modelParams];
-        outDists = Cases[
-            model,
-            Distributed[sym_, _] /; MemberQ[sym, Alternatives @@ varsOut, {0, Infinity}]
-        ];
-        priorDists = Complement[model, outDists];
         assumptions = Assuming[Element[Join[varsIn, varsOut], Reals],
-            modelAssumptions[model]
+            modelAssumptions[Join[model, prior]]
         ];
         If[ !FreeQ[assumptions, Alternatives @@ Join[varsIn, varsOut]],
             Message[laplacePosteriorFit::assum, assumptions];
@@ -108,9 +104,12 @@ laplacePosteriorFit[
             }
         ];
         logPostAtData = Simplify @ ConditionalExpression[
-            Total @ ReplaceAll[
-                logPost,
-                replacementRules
+            Plus[
+                Total @ ReplaceAll[
+                    loglike,
+                    replacementRules
+                ],
+                logprior
             ],
             assumptions
         ];
@@ -130,7 +129,7 @@ laplacePosteriorFit[
                 "PrecisionMatrix" -> hess,
                 "PredictiveDistribution" -> ParameterMixtureDistribution[
                     Replace[
-                        outDists,
+                        model,
                         {
                             {Distributed[_, dist_]} :> dist,
                             dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
