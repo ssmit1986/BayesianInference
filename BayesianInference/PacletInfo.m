@@ -26,7 +26,8 @@ Paclet[
                     "BayesianNeuralNetworks`",
                     "ExponentialFamilyDefinitions`",
                     "BayesianConjugatePriors`",
-                    "BayesianLinearRegression`"
+                    "BayesianLinearRegression`",
+                    "LaplaceApproximation`"
                 }
             }
         }
