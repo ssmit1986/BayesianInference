@@ -179,7 +179,7 @@ laplacePosteriorFit[
                 ]
             ],
             "UnnormalizedLogDensity" -> logPost,
-            "MAP" -> maxVals
+            "MAPEstimate" -> maxVals
         |>,
         "Model" -> <|
             "Likelihood" -> likelihood,
