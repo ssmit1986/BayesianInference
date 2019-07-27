@@ -52,8 +52,30 @@ modelLogLikelihood[model : {__Distributed}] := Assuming[
     ]
 ];
 
+modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ] := Module[{
+    allSymbols = Union @ Join[
+        varsIn, varsOut,
+        Flatten @ fullModel[[All, 1]]
+    ],
+    edges
+},
+    edges = DeleteDuplicates @ Flatten @ Map[
+        Function[dist,
+            Thread @ DirectedEdge[
+                #,
+                Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}]
+            ]& /@ Flatten[{dist[[1]]}]
+        ],
+        fullModel
+    ];
+    Graph[edges, VertexLabels -> "Name"]
+];
+
 laplacePosteriorFit::nmaximize = "Failed to find the posterior maximum. `1` Was returned.";
 laplacePosteriorFit::assum = "Obtained assumptions `1` contain dependent or independent parameters. Please specify additional assumptions.";
+laplacePosteriorFit::acyclic = "Cyclic models are not supported";
+laplacePosteriorFit::dependency = "Independent variables cannot depend on others and model parameters cannot depend on dependent variables.";
+
 Options[laplacePosteriorFit] = Join[
     Options[NMaximize],
     {
@@ -68,7 +90,7 @@ SetOptions[laplacePosteriorFit,
 
 laplacePosteriorFit[
     data : (datIn_?MatrixQ -> datOut_?MatrixQ) /; Length[datIn] === Length[datOut],
-    model : {__Distributed},
+    likelihood : {__Distributed},
     prior : {__Distributed},
     varsIn_?VectorQ -> varsOut_?VectorQ,
     opts : OptionsPattern[]
@@ -76,20 +98,37 @@ laplacePosteriorFit[
     Length[varsIn] === Dimensions[datIn][[2]],
     Length[varsOut] === Dimensions[datOut][[2]]
 ] := Module[{
-    loglike = modelLogLikelihood[model],
+    loglike = modelLogLikelihood[likelihood],
     logprior = modelLogLikelihood[prior],
-    logPostAtData,
+    logPost,
     nDat = Length[datIn],
     nParam, modelParams,
     assumptions, maxVals,
     replacementRules,
-    hess, cov, mean
+    hess, cov, mean,
+    graph
 },
     If[ FailureQ[loglike] || loglike === Undefined || FailureQ[logprior] || logprior === Undefined,
         Return[$Failed]
     ];
+    graph = modelGraph[Join[likelihood, prior], varsIn -> varsOut];
+    If[ !AcyclicGraphQ[graph],
+        Message[laplacePosteriorFit::acyclic];
+        Return[$Failed]
+    ];
     modelParams = Union @ Flatten @ prior[[All, 1]];
     nParam = Length[modelParams];
+    If[ AnyTrue[
+            EdgeList[graph],
+            MatchQ @ Alternatives[
+                DirectedEdge[Alternatives @@ varsIn, _],
+                DirectedEdge[Alternatives @@ modelParams, Alternatives @@ varsOut]
+            ]
+        ],
+        Message[laplacePosteriorFit::dependency];
+        Return[$Failed]
+    ];
+    
     assumptions = Simplify[modelAssumptions[prior] && OptionValue[Assumptions]];
     If[ !FreeQ[assumptions, Alternatives @@ Join[varsIn, varsOut]],
         Message[laplacePosteriorFit::assum, assumptions];
@@ -102,7 +141,7 @@ laplacePosteriorFit[
             Join[datIn, datOut, 2]
         }
     ];
-    logPostAtData = Simplify @ ConditionalExpression[
+    logPost = Simplify @ ConditionalExpression[
         Plus[
             Total @ ReplaceAll[
                 loglike,
@@ -112,13 +151,13 @@ laplacePosteriorFit[
         ],
         assumptions
     ];
-    maxVals = NMaximize[logPostAtData, modelParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
+    maxVals = NMaximize[logPost, modelParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
     If[ !MatchQ[maxVals, {_?NumericQ, {__Rule}}],
         Message[laplacePosteriorFit::nmaximize, Short[maxVals]];
         Return[$Failed]
     ];
     mean = Values[Last[maxVals]];
-    hess = - hessianMatrix[logPostAtData, modelParams, Association @ Last[maxVals]];
+    hess = - hessianMatrix[logPost, modelParams, Association @ Last[maxVals]];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
     <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
@@ -128,7 +167,7 @@ laplacePosteriorFit[
             "PrecisionMatrix" -> hess,
             "PredictiveDistribution" -> ParameterMixtureDistribution[
                 Replace[
-                    model,
+                    likelihood,
                     {
                         {Distributed[_, dist_]} :> dist,
                         dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
@@ -138,9 +177,15 @@ laplacePosteriorFit[
                     Keys[Last[maxVals]],
                     MultinormalDistribution[mean, cov]
                 ]
-            ]
+            ],
+            "UnnormalizedLogDensity" -> logPost,
+            "MAP" -> maxVals
         |>,
-        "Model" -> model,
+        "Model" -> <|
+            "Likelihood" -> likelihood,
+            "Prior" -> prior
+        |>,
+        "ModelGraph" -> graph,
         "IndependentVariables" -> varsIn,
         "DependentVariables" -> varsOut
     |>
