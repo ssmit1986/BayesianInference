@@ -400,7 +400,7 @@ logPDFFunction[
         },
         RuntimeAttributes -> {Listable},
         RuntimeOptions -> {
-            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "RuntimeErrorHandler" -> Function[Evaluate @ $MachineLogZero],
             "WarningMessages" -> False
         }
     ]
@@ -458,7 +458,7 @@ logLikelihoodFunction[
             "InlineCompiledFunctions" -> True
         },
         RuntimeOptions -> {
-            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "RuntimeErrorHandler" -> Function[Evaluate @ $MachineLogZero],
             "WarningMessages" -> False
         }
     ];
@@ -478,7 +478,7 @@ logLikelihoodFunction[
         },
         RuntimeAttributes -> {Listable},
         RuntimeOptions -> {
-            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "RuntimeErrorHandler" -> Function[Evaluate @ $MachineLogZero],
             "WarningMessages" -> False
         }
     ]
@@ -548,7 +548,7 @@ regressionLogLikelihoodFunction[
             "InlineCompiledFunctions" -> True
         },
         RuntimeOptions -> {
-            "RuntimeErrorHandler" -> Function[$MachineLogZero],
+            "RuntimeErrorHandler" -> Function[Evaluate @ $MachineLogZero],
             "WarningMessages" -> False
         }
     ];
@@ -567,7 +567,7 @@ regressionLogLikelihoodFunction[
             },
             RuntimeAttributes -> {Listable},
             RuntimeOptions -> {
-                "RuntimeErrorHandler" -> Function[$MachineLogZero],
+                "RuntimeErrorHandler" -> Function[Evaluate @ $MachineLogZero],
                 "WarningMessages" -> False
             }
         ]
@@ -591,7 +591,7 @@ nsDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunction, logT
         "InlineCompiledFunctions" -> True
     },
     RuntimeOptions -> {
-        "RuntimeErrorHandler" -> Function[$MachineLogZero],
+        "RuntimeErrorHandler" -> Function[Evaluate @ $MachineLogZero],
         "WarningMessages" -> False
     }
 ];
@@ -615,7 +615,7 @@ posteriorDensity[logPriorDensity_CompiledFunction, logLikelihood_CompiledFunctio
         $MachineLogZero
     ],
     CompilationOptions -> {"InlineExternalDefinitions" -> True, "InlineCompiledFunctions" -> True},
-    RuntimeOptions -> {"RuntimeErrorHandler" -> Function[$MachineLogZero], "WarningMessages" -> False},
+    RuntimeOptions -> {"RuntimeErrorHandler" -> Function[Evaluate @ $MachineLogZero], "WarningMessages" -> False},
     RuntimeAttributes -> {Listable}
 ];
 
