@@ -31,7 +31,7 @@ logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y -
 logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
 vectorRandomVariate;
 conditionalProductDistribution::usage = "conditionalProductDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
-
+modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -592,6 +592,38 @@ vectorRandomVariate[
 
 vectorRandomVariate[d_ /; MemberQ[d, _List], n_Integer] := RandomVariate /@ Thread[d];
 vectorRandomVariate[d_?(Quiet[DistributionParameterQ[#]]&), n_Integer] := RandomVariate[d, n];
+
+modelGraph[dist_Distributed, rest___] := modelGraph[{dist}, rest];
+modelGraph[dist_, rule : Except[_?VectorQ  -> _?VectorQ , _Rule], rest___] := modelGraph[dist, Flatten @* List /@ rule, rest];
+modelGraph[dist_, other : Except[_Rule], rest___] := modelGraph[dist, {} -> other, rest];
+modelGraph[dist_, opts : OptionsPattern[Graph]] := modelGraph[dist, {} -> {}, opts];
+
+modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ, opts : OptionsPattern[Graph]] := Module[{
+    allSymbols = Union @ Join[
+        varsIn, varsOut,
+        Flatten @ fullModel[[All, 1]]
+    ],
+    edges
+},
+    edges = DeleteDuplicates @ Flatten @ Map[
+        Function[dist,
+            Thread @ DirectedEdge[
+                #,
+                Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}]
+            ]& /@ Flatten[{dist[[1]]}]
+        ],
+        fullModel
+    ];
+    Graph[edges,
+        opts,
+        VertexLabels -> "Name",
+        VertexStyle -> Flatten[Thread /@ {
+            varsIn -> Red,
+            varsOut -> Green
+        }],
+        VertexSize -> Medium
+    ]
+];
 
 End[] (* End Private Context *)
 

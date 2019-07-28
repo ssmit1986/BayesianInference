@@ -1,4 +1,4 @@
-BeginPackage["LaplaceApproximation`", {"GeneralUtilities`", "BayesianConjugatePriors`"}]
+BeginPackage["LaplaceApproximation`", {"GeneralUtilities`", "BayesianConjugatePriors`", "BayesianUtilities`"}]
 
 laplacePosteriorFit;
 
@@ -50,25 +50,6 @@ modelLogLikelihood[model : {__Distributed}] := Assuming[
         ],
         "DistParamQ"
     ]
-];
-
-modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ] := Module[{
-    allSymbols = Union @ Join[
-        varsIn, varsOut,
-        Flatten @ fullModel[[All, 1]]
-    ],
-    edges
-},
-    edges = DeleteDuplicates @ Flatten @ Map[
-        Function[dist,
-            Thread @ DirectedEdge[
-                #,
-                Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}]
-            ]& /@ Flatten[{dist[[1]]}]
-        ],
-        fullModel
-    ];
-    Graph[edges, VertexLabels -> "Name"]
 ];
 
 laplacePosteriorFit::nmaximize = "Failed to find the posterior maximum. `1` Was returned.";
