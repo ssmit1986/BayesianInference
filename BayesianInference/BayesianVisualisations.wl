@@ -289,6 +289,24 @@ Options[posteriorBubbleChart] = Join[
     ]
 ];
 
+automaticFilling[n_Integer?OddQ] /; Positive[n] := With[{
+    middleBand = Ceiling[n/2]
+},
+    Map[
+        # -> {If[TrueQ[middleBand > #], # + 1, # - 1]}&,
+        DeleteCases[Range[n], middleBand]
+    ]
+];
+automaticFilling[n_Integer?Positive] := # -> {# + 1}& /@ Range[n - 1];
+automaticFilling[_] := {};
+
+Options[regressionPlot1D] = Join[
+    {
+        "DistributionPercentiles" -> {0.95, 0.5, 0.05}
+    },
+    Options[ListPlot]
+];
+
 regressionPlot1D[
     inferenceObject[result_?(AssociationQ[#] && KeyExistsQ[#, "Data"]&)],
     predictedDistributions_?AssociationQ,
@@ -314,7 +332,7 @@ regressionPlot1D[
         PlotRange -> OptionValue[PlotRange]
     ];
 
-regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] := Quiet[
+regressionPlot1D[predictedDistributions_?AssociationQ /; Length[predictedDistributions] > 0, opts : OptionsPattern[]] := Quiet[
     With[{
         distributionPercentiles = Replace[
             OptionValue["DistributionPercentiles"],
@@ -339,13 +357,16 @@ regressionPlot1D[predictedDistributions_?AssociationQ, opts : OptionsPattern[]] 
             plotPoints = Map[
                 distributionPercentiles,
                 KeySort[predictedDistributions]
-            ]
+            ],
+            n
         },
+            n = Length[First[plotPoints, {}]];
             ListPlot[
-                plotPoints[[All, #]]& /@ Range[Length[First @ plotPoints]],
+                plotPoints[[All, #]]& /@ Range[n],
                 Sequence @@ FilterRules[{opts}, Options[ListPlot]],
                 Joined -> True,
-                PlotLegends -> Quiet[Thread @ distributionPercentiles["y[x]"]]
+                PlotLegends -> Quiet[Thread @ distributionPercentiles["y[x]"]],
+                Filling -> automaticFilling[n]
             ]
         ]
     ],
@@ -361,16 +382,10 @@ regressionPlot1D[
     Evaluate @ InverseCDF[dist, bands / 100],
     {x, min, max},
     opts,
-    Filling -> {1 -> {2}, 3 -> {2}}, 
+    Filling -> automaticFilling[Length[bands]], 
     PlotLegends -> Map[Quantity[#, "Percent"]&, bands]
 ];
-
-Options[regressionPlot1D] = Join[
-    {
-        "DistributionPercentiles" -> {0.95, 0.5, 0.05}
-    },
-    Options[ListPlot]
-];
+regressionPlot1D[___] := Graphics[];
 
 End[] (* End Private Context *)
 
