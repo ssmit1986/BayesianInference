@@ -79,7 +79,8 @@ laplacePosteriorFit::dependency = "Independent variables cannot depend on others
 Options[laplacePosteriorFit] = Join[
     Options[NMaximize],
     {
-        Assumptions -> True
+        Assumptions -> True,
+        "IncludeDensity" -> False
     }
 ];
 SetOptions[laplacePosteriorFit,
@@ -141,7 +142,7 @@ laplacePosteriorFit[
             Join[datIn, datOut, 2]
         }
     ];
-    logPost = Simplify @ ConditionalExpression[
+    logPost = Refine @ ConditionalExpression[
         Plus[
             Total @ ReplaceAll[
                 loglike,
@@ -161,8 +162,11 @@ laplacePosteriorFit[
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
     <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
+        "ModelGraph" -> graph,
+        "IndependentVariables" -> varsIn,
+        "DependentVariables" -> varsOut,
         "Parameters" -> Keys[Last[maxVals]],
-        "Posterior" -> <|
+        "Posterior" -> DeleteMissing @ <|
             "RegressionCoefficientDistribution" -> MultinormalDistribution[mean, cov],
             "PrecisionMatrix" -> hess,
             "PredictiveDistribution" -> ParameterMixtureDistribution[
@@ -178,16 +182,13 @@ laplacePosteriorFit[
                     MultinormalDistribution[mean, cov]
                 ]
             ],
-            "UnnormalizedLogDensity" -> logPost,
+            "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], logPost, Missing[]],
             "MAPEstimate" -> maxVals
         |>,
         "Model" -> <|
             "Likelihood" -> likelihood,
             "Prior" -> prior
-        |>,
-        "ModelGraph" -> graph,
-        "IndependentVariables" -> varsIn,
-        "DependentVariables" -> varsOut
+        |>
     |>
 ];
 
