@@ -6,6 +6,7 @@ approximateEvidence;
 
 Begin["`Private`"]
 
+wrapArgsInList[matrixD, 2];
 matrixD[expr_, vars_List, n_Integer, rules : _ : {}] := Normal @ SymmetrizedArray[
     {i__} :> Refine[D[expr, Sequence @@ vars[[{i}]]] /. rules],
     ConstantArray[Length[vars], n],
@@ -13,6 +14,7 @@ matrixD[expr_, vars_List, n_Integer, rules : _ : {}] := Normal @ SymmetrizedArra
 ];
 hessianMatrix[expr_, vars_, rules : _ : {}] := matrixD[expr, vars, 2, rules];
 
+wrapArgsInList[{modelLogLikelihood, modelAssumptions}, 1];
 modelAssumptions[model : {__Distributed}] := And @@ MapThread[
     BayesianStatistics`Private`distributionDomainToConstraints,
     {
@@ -51,6 +53,8 @@ Options[numericalLogPosterior] = Join[
         "ReturnNumericalFunction" -> True
     }
 ];
+
+wrapArgsInList[approximateEvidence, {2, 3}];
 
 numericalLogPosterior[
     data : _List | _Rule,
@@ -154,6 +158,8 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
         "HyperParamSearchRadius" -> 0.25
     }
 ];
+
+wrapArgsInList[approximateEvidence, 2];
 
 approximateEvidence[
     logPostDens_,
@@ -287,6 +293,8 @@ SetOptions[laplacePosteriorFit,
         MaxIterations -> 10000
     }
 ];
+
+wrapArgsInList[laplacePosteriorFit, {2, 3}];
 
 laplacePosteriorFit[
     data : _List | _Rule,

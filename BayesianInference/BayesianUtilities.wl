@@ -32,6 +32,7 @@ logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
 vectorRandomVariate;
 conditionalProductDistribution::usage = "conditionalProductDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
 modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
+wrapArgsInList::usage = "wrapArgsInList[function, i] sets a downvalue to function to automatically wrap argument i in a list.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -624,6 +625,20 @@ modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ, opt
         VertexSize -> Medium
     ]
 ];
+
+wrapArgsInList[funs_List, rest___] := (
+    Scan[wrapArgsInList[#, rest]&, funs];
+    Flatten @ funs
+);
+wrapArgsInList[fun : Except[_List], slot_Integer?Positive] := (
+    fun[first : Repeated[_, {slot - 1}], arg : Except[_List], rest___] := fun[first, {arg}, rest];
+    fun
+);
+wrapArgsInList[fun : Except[_List], slots : {__Integer}] := (
+    Scan[wrapArgsInList[fun, #]&, slots];
+    fun
+);
+
 
 End[] (* End Private Context *)
 
