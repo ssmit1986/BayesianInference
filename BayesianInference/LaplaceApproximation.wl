@@ -271,7 +271,10 @@ approximateEvidence[
                         LogLikelihood[#1, {#2}]&,
                         {hyperParamsDists, hyperParams2 /. Last[maxHyper]}
                     ],
-                    "Distribution" -> MultinormalDistribution[mean, LinearSolve[hess, IdentityMatrix[nHyper]]]
+                    "Distribution" -> MultinormalDistribution[
+                        mean,
+                        BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nHyper]]
+                    ]
                 |>
             |>
         ]
