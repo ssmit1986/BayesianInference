@@ -47,7 +47,7 @@ Options[numericalLogPosterior] = Join[
     Options[Experimental`CreateNumericalFunction],
     {
         "ParameterDimensions" -> Automatic,
-        "ActivateQ" -> False,
+        "ActivateQ" -> True,
         "ReturnNumericalFunction" -> True
     }
 ];
@@ -147,11 +147,14 @@ laplacePosteriorFit::dependency = "Independent variables cannot depend on others
 
 Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
     Options[NMaximize],
-    Options[FindMaximum]
+    Options[FindMaximum],
+    {
+        "InitialGuess" -> Automatic
+    }
 ];
 
 approximateEvidence[
-    nFun_,
+    logPostDens_,
     modelParams_List,
     assumptions_,
     opts : OptionsPattern[]
@@ -164,7 +167,7 @@ approximateEvidence[
     nParam = Length @ modelParams;
     maxVals = If[ TrueQ[MatchQ[guess, KeyValuePattern[{}]] && Length[guess] >= nParam],
         FindMaximum[
-            {nFun, assumptions},
+            {logPostDens, assumptions},
             Evaluate @ Map[
                 {#, Lookup[guess, #, Nothing]}&,
                 modelParams
@@ -172,7 +175,7 @@ approximateEvidence[
             Evaluate[Sequence @@ FilterRules[{opts}, Options[FindMaximum]]]
         ],
         NMaximize[
-            {nFun[modelParams], assumptions},
+            {logPostDens, assumptions},
             modelParams,
             Sequence @@ FilterRules[{opts}, Options[NMaximize]]
         ]
@@ -182,7 +185,13 @@ approximateEvidence[
         Return[$Failed]
     ];
     mean = Values[Last[maxVals]];
-    hess = - nFun["Hessian"[mean]];
+    hess = - Replace[
+        logPostDens,
+        {
+            fun_NumericalFunction[___] :> fun["Hessian"[mean]],
+            other_ :> hessianMatrix[other, modelParams, Last[maxVals]]
+        }
+    ];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
     <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
@@ -196,12 +205,10 @@ approximateEvidence[
 Options[laplacePosteriorFit] = DeleteDuplicatesBy[First] @ Join[
     Options[approximateEvidence],
     Options[Experimental`CreateNumericalFunction],
+    DeleteCases[Options[numericalLogPosterior], "ReturnNumericalFunction" -> _],
     {
         Assumptions -> True,
         "IncludeDensity" -> False,
-        "InitialGuess" -> Automatic,
-        "ActivateQ" -> True,
-        "ParameterDimensions" -> Automatic,
         "HyperParameters" -> {}
     }
 ];
@@ -260,7 +267,9 @@ laplacePosteriorFit[
         "ReturnNumericalFunction" -> hyperParams === {},
         Sequence @@ FilterRules[{opts}, Options[numericalLogPosterior]]
     ];
-    result = approximateEvidence[logPost, modelParams, assumptions, opts];
+    result = approximateEvidence[logPost, modelParams, assumptions,
+        Sequence @@ FilterRules[{opts}, Options[approximateEvidence]] 
+    ];
     If[ !AssociationQ[result], Return[$Failed]];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[
         result["PrecisionMatrix"],
