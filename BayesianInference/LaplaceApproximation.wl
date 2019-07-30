@@ -1,6 +1,7 @@
-BeginPackage["LaplaceApproximation`", {"GeneralUtilities`", "BayesianConjugatePriors`", "BayesianUtilities`"}]
+BeginPackage["LaplaceApproximation`", {"GeneralUtilities`", "BayesianConjugatePriors`", "BayesianUtilities`", "Experimental`"}]
 
 laplacePosteriorFit;
+numericalLogPosterior;
 
 Begin["`Private`"]
 
@@ -17,7 +18,6 @@ modelAssumptions[model : {__Distributed}] := And @@ MapThread[
         DistributionDomain /@ model[[All, 2]],
         model[[All, 1]] 
     }
-    
 ];
 
 (* Assumes all rules are such that the LogLikelihoods evaluate to numbers *)
@@ -52,16 +52,71 @@ modelLogLikelihood[model : {__Distributed}] := Assuming[
     ]
 ];
 
+Options[numericalLogPosterior] = Join[
+    Options[Experimental`CreateNumericalFunction],
+    {
+        "ParameterDimensions" -> Automatic,
+        "ActivateQ" -> False
+    }
+];
+
+numericalLogPosterior[
+    likelihood : {__Distributed},
+    prior : {__Distributed},
+    varsOut_List -> data_?MatrixQ,
+    opts : OptionsPattern[]
+] := Catch[
+    Module[{
+        modelParams = DeleteDuplicates @ Flatten @ prior[[All, 1]],
+        posIndexOut = PositionIndex[varsOut][[All, 1]],
+        paramSpec,
+        paramDims = Replace[OptionValue["ParameterDimensions"], Except[KeyValuePattern[{}]] -> {}]
+    },
+        paramSpec = {#, Lookup[paramDims, #, Nothing]}& /@ modelParams;
+        Experimental`CreateNumericalFunction[
+            paramSpec,
+            Replace[OptionValue["ActivateQ"], {True -> Activate, _ -> Identity}] @ Plus[
+                Total @ Cases[
+                    likelihood,
+                    Distributed[vars_, dist_] :> With[{
+                        dat = Part[data, All,
+                            Lookup[
+                                posIndexOut,
+                                Replace[Flatten[{vars}], {i_} :> i],
+                                (Message[laplacePosteriorFit::depVar]; Throw[$Failed, "var"])
+                            ]
+                        ]
+                    },
+                        Inactive[LogLikelihood][dist, dat]
+                    ],
+                    {1}
+                ],
+                Total @ Cases[
+                    prior,
+                    Distributed[vars_, dist_] :> Inactive[LogLikelihood][dist, {vars}]
+                ]
+            ],
+            {},
+            Sequence @@ FilterRules[{opts}, Options[Experimental`CreateNumericalFunction]]
+        ]
+    ],
+    "var"
+];
+
+laplacePosteriorFit::depVar = "Only dependent variables can be defined in the likelihood specification";
 laplacePosteriorFit::nmaximize = "Failed to find the posterior maximum. `1` Was returned.";
 laplacePosteriorFit::assum = "Obtained assumptions `1` contain dependent or independent parameters. Please specify additional assumptions.";
 laplacePosteriorFit::acyclic = "Cyclic models are not supported";
 laplacePosteriorFit::dependency = "Independent variables cannot depend on others and model parameters cannot depend on dependent variables.";
 
-Options[laplacePosteriorFit] = Join[
+Options[laplacePosteriorFit] = DeleteDuplicatesBy[First] @ Join[
     Options[NMaximize],
+    Options[FindMaximum],
+    Options[Experimental`CreateNumericalFunction],
     {
         Assumptions -> True,
-        "IncludeDensity" -> False
+        "IncludeDensity" -> False,
+        "InitialGuess" -> Automatic
     }
 ];
 SetOptions[laplacePosteriorFit,
@@ -69,6 +124,53 @@ SetOptions[laplacePosteriorFit,
         MaxIterations -> 10000
     }
 ];
+
+laplacePosteriorFit[
+    nFun_Experimental`NumericalFunction[modelParams__],
+    assumptions_,
+    opts : OptionsPattern[]
+] := Module[{
+    maxVals, mean, hess,
+    cov,
+    flatParams = Flatten @ {modelParams},
+    nParam,
+    guess = OptionValue["InitialGuess"]
+},
+    nParam = Length @ flatParams;
+    nFun[modelParams];
+    maxVals = If[ TrueQ[MatchQ[guess, KeyValuePattern[{}]] && Length[guess] >= nParam],
+        FindMaximum[
+            {nFun[modelParams], assumptions},
+            Evaluate @ Map[
+                {#, Lookup[guess, #, Nothing]}&,
+                flatParams
+            ],
+            Evaluate[Sequence @@ FilterRules[{opts}, Options[FindMaximum]]]
+        ],
+        NMaximize[
+            {nFun[modelParams], assumptions},
+            flatParams,
+            Sequence @@ FilterRules[{opts}, Options[NMaximize]]
+        ]
+    ];
+    If[ !MatchQ[maxVals, {_?NumericQ, {__Rule}}],
+        Message[laplacePosteriorFit::nmaximize, Short[maxVals]];
+        Return[$Failed]
+    ];
+    mean = Values[Last[maxVals]];
+    hess = - nFun["Hessian"[mean]];
+    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
+    <|
+        "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
+        "Parameters" -> Keys[Last[maxVals]],
+        "Posterior" -> DeleteMissing @ <|
+            "RegressionCoefficientDistribution" -> MultinormalDistribution[mean, cov],
+            "PrecisionMatrix" -> hess,
+            "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], nFun[modelParams], Missing[]],
+            "MAPEstimate" -> maxVals
+        |>
+    |>
+]
 
 laplacePosteriorFit[
     data : (datIn_?MatrixQ -> datOut_?MatrixQ) /; Length[datIn] === Length[datOut],
@@ -85,10 +187,9 @@ laplacePosteriorFit[
     logPost,
     nDat = Length[datIn],
     nParam, modelParams,
-    assumptions, maxVals,
+    assumptions, 
     replacementRules,
-    hess, cov, mean,
-    graph
+    graph, result
 },
     If[ FailureQ[loglike] || loglike === Undefined || FailureQ[logprior] || logprior === Undefined,
         Return[$Failed]
@@ -123,54 +224,42 @@ laplacePosteriorFit[
             Join[datIn, datOut, 2]
         }
     ];
-    logPost = Refine @ ConditionalExpression[
-        Plus[
-            Total @ ReplaceAll[
-                loglike,
-                replacementRules
-            ],
+    logPost = Experimental`CreateNumericalFunction[
+        modelParams,
+        Refine @ Plus[
+            Total @ ReplaceAll[loglike, replacementRules],
             logprior
         ],
-        assumptions
+        {},
+        Sequence @@ FilterRules[{opts}, Options[Experimental`CreateNumericalFunction]]
     ];
-    maxVals = NMaximize[logPost, modelParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
-    If[ !MatchQ[maxVals, {_?NumericQ, {__Rule}}],
-        Message[laplacePosteriorFit::nmaximize, Short[maxVals]];
-        Return[$Failed]
+    result = laplacePosteriorFit[logPost[modelParams], assumptions, opts];
+    If[ !AssociationQ[result], Return[$Failed]];
+    result["Posterior", "PredictiveDistribution"] = ParameterMixtureDistribution[
+        Replace[
+            likelihood,
+            {
+                {Distributed[_, dist_]} :> dist,
+                dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
+            }
+        ],
+        Distributed[
+            modelParams,
+            result["Posterior", "RegressionCoefficientDistribution"]
+        ]
     ];
-    mean = Values[Last[maxVals]];
-    hess = - hessianMatrix[logPost, modelParams, Association @ Last[maxVals]];
-    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
-    <|
-        "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
-        "ModelGraph" -> graph,
-        "IndependentVariables" -> varsIn,
-        "DependentVariables" -> varsOut,
-        "Parameters" -> Keys[Last[maxVals]],
-        "Posterior" -> DeleteMissing @ <|
-            "RegressionCoefficientDistribution" -> MultinormalDistribution[mean, cov],
-            "PrecisionMatrix" -> hess,
-            "PredictiveDistribution" -> ParameterMixtureDistribution[
-                Replace[
-                    likelihood,
-                    {
-                        {Distributed[_, dist_]} :> dist,
-                        dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
-                    }
-                ],
-                Distributed[
-                    Keys[Last[maxVals]],
-                    MultinormalDistribution[mean, cov]
-                ]
-            ],
-            "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], logPost, Missing[]],
-            "MAPEstimate" -> maxVals
-        |>,
-        "Model" -> <|
-            "Likelihood" -> likelihood,
-            "Prior" -> prior
+    Join[
+        result,
+        <|
+            "ModelGraph" -> graph,
+            "IndependentVariables" -> varsIn,
+            "DependentVariables" -> varsOut,
+            "Model" -> <|
+                "Likelihood" -> likelihood,
+                "Prior" -> prior
+            |>
         |>
-    |>
+    ]
 ];
 
 End[]
