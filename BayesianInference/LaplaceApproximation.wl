@@ -139,8 +139,8 @@ numericalLogPosterior[
     "var"
 ];
 
+approximateEvidence::nmaximize = "Failed to find the posterior maximum. `1` Was returned.";
 laplacePosteriorFit::depVar = "Only dependent variables can be defined in the likelihood specification";
-laplacePosteriorFit::nmaximize = "Failed to find the posterior maximum. `1` Was returned.";
 laplacePosteriorFit::assum = "Obtained assumptions `1` contain dependent or independent parameters. Please specify additional assumptions.";
 laplacePosteriorFit::acyclic = "Cyclic models are not supported";
 laplacePosteriorFit::dependency = "Independent variables cannot depend on others and model parameters cannot depend on dependent variables.";
@@ -148,8 +148,10 @@ laplacePosteriorFit::dependency = "Independent variables cannot depend on others
 Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
     Options[NMaximize],
     Options[FindMaximum],
+    Options[CreateNumericalFunction],
     {
-        "InitialGuess" -> Automatic
+        "InitialGuess" -> Automatic,
+        "HyperParamSearchRadius" -> 0.25
     }
 ];
 
@@ -181,7 +183,7 @@ approximateEvidence[
         ]
     ];
     If[ !MatchQ[maxVals, {_?NumericQ, {__Rule}}],
-        Message[laplacePosteriorFit::nmaximize, Short[maxVals]];
+        Message[approximateEvidence::nmaximize, Short[maxVals]];
         Return[$Failed]
     ];
     mean = Values[Last[maxVals]];
@@ -195,16 +197,84 @@ approximateEvidence[
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
     <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
-        "MAPEstimate" -> maxVals,
+        "Maximum" -> maxVals,
         "Mean" -> mean,
         "PrecisionMatrix" -> hess,
         "Parameters" -> Keys[Last[maxVals]]
     |>
 ];
 
+(* implements the hyperparameter optimization scheme described in the PhD thesis of David MacKay *)
+approximateEvidence[
+    logPostDens : Except[_NumericalFunction],
+    modelParams_List,
+    assumptions_,
+    dists : {__Distributed}, (* distributions of hyperparameters *)
+    opts : OptionsPattern[]
+] := With[{
+    hyperParams = Flatten @ dists[[All, 1]],
+    hyperParams2 = dists[[All, 1]],
+    hyperParamsDists = dists[[All, 2]]
+},
+    Module[{
+        radius = OptionValue["HyperParamSearchRadius"],
+        storedVals = <||>,
+        numFunInternal, numFun,
+        fit, maxHyper,
+        mean, hess,
+        nHyper = Length[hyperParams],
+        assum2 = modelAssumptions[dists]
+    },
+        numFunInternal[PatternTest[Pattern[#, Blank[]], NumericQ]& /@ hyperParams] := numFunInternal[hyperParams] = With[{
+            priorDens = Total @ MapThread[
+                LogLikelihood[#1, {#2}]&,
+                {hyperParamsDists, hyperParams2}
+            ]
+        },
+            fit[hyperParams] = approximateEvidence[
+                logPostDens, modelParams, assumptions,
+                "InitialGuess" -> If[ Length[storedVals] > 0,
+                    First[Nearest[Normal[storedVals], hyperParams, {1, radius}], Automatic]
+                ],
+                opts
+            ];
+            AppendTo[storedVals, hyperParams -> Last @ fit["Maximum"]];
+            fit[hyperParams]["LogEvidence"] + priorDens
+        ];
+        numFun = CreateNumericalFunction[hyperParams, numFunInternal[hyperParams], {},
+            Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
+        ];
+        
+        maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
+        If[ !MatchQ[maxHyper, {_?NumericQ, {__Rule}}],
+            Message[approximateEvidence::nmaximize, Short[maxHyper]];
+            Return[$Failed]
+        ];
+        mean = Values[Last[maxHyper]];
+        hess = -numFun["Hessian"[mean]];
+        Prepend[
+            "LogEvidence" -> First[maxHyper] + (nHyper * Log[2 * Pi] - Log[Det[hess]])/2
+        ] @ Join[
+            fit[mean],
+            <|
+                "HyperParameters" -> <|
+                    "Maximum" -> maxHyper,
+                    "Mean" -> mean,
+                    "PrecisionMatrix" -> hess,
+                    "PriorDensity" -> Total @ MapThread[
+                        LogLikelihood[#1, {#2}]&,
+                        {hyperParamsDists, hyperParams2 /. Last[maxHyper]}
+                    ],
+                    "Distribution" -> MultinormalDistribution[mean, LinearSolve[hess, IdentityMatrix[nHyper]]]
+                |>
+            |>
+        ]
+        
+    ]
+];
+
 Options[laplacePosteriorFit] = DeleteDuplicatesBy[First] @ Join[
     Options[approximateEvidence],
-    Options[Experimental`CreateNumericalFunction],
     DeleteCases[Options[numericalLogPosterior], "ReturnNumericalFunction" -> _],
     {
         Assumptions -> True,
@@ -231,7 +301,17 @@ laplacePosteriorFit[
     graph, result,
     varsIn, varsOut,
     cov,
-    hyperParams = Replace[OptionValue["HyperParameters"], Except[_List] :> {}]
+    hyperParams = Replace[
+        OptionValue["HyperParameters"],
+        {
+            d_Distributed :> {d},
+            Except[_List] :> {},
+            list_List :> Map[
+                Replace[el : Except[_Distributed] :> Distributed[el, CauchyDistribution[]]],
+                Flatten[list]
+            ]
+        }
+    ]
 },
     {varsIn, varsOut} = Replace[vars,
         {
@@ -240,7 +320,10 @@ laplacePosteriorFit[
             other_ :> {other}
         }
     ];
-    graph = modelGraph[Join[likelihood, prior], varsIn -> varsOut];
+    graph = Graph[
+        modelGraph[Join[likelihood, prior, hyperParams], varsIn -> varsOut],
+        VertexStyle -> Thread[Flatten[First /@ hyperParams] -> Blue]
+    ];
     If[ !AcyclicGraphQ[graph],
         Message[laplacePosteriorFit::acyclic];
         Return[$Failed]
@@ -267,7 +350,9 @@ laplacePosteriorFit[
         "ReturnNumericalFunction" -> hyperParams === {},
         Sequence @@ FilterRules[{opts}, Options[numericalLogPosterior]]
     ];
-    result = approximateEvidence[logPost, modelParams, assumptions,
+    result = approximateEvidence[logPost,
+        modelParams, assumptions,
+        Replace[hyperParams, {} :> Unevaluated[Sequence[]]],
         Sequence @@ FilterRules[{opts}, Options[approximateEvidence]] 
     ];
     If[ !AssociationQ[result], Return[$Failed]];
@@ -283,7 +368,8 @@ laplacePosteriorFit[
             "DependentVariables" -> varsOut,
             "Model" -> <|
                 "Likelihood" -> likelihood,
-                "Prior" -> prior
+                "Prior" -> prior,
+                "HyperParameters" -> hyperParams
             |>,
             "Posterior" -> DeleteMissing @ <|
                 "RegressionCoefficientDistribution" -> MultinormalDistribution[result["Mean"], cov],
@@ -295,8 +381,8 @@ laplacePosteriorFit[
                             {Distributed[_, dist_]} :> dist,
                             dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
                         }
-                    ],
-                    Distributed[modelParams, MultinormalDistribution[mean, cov]]
+                    ] /. Replace[result[["HyperParameters", "Maximum", 2]], _Missing -> {}],
+                    Distributed[modelParams, MultinormalDistribution[result["Mean"], cov]]
                 ]
             |>
         |>
