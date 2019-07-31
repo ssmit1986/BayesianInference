@@ -233,16 +233,17 @@ approximateEvidence[
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists]
     },
-        numFun[PatternTest[Pattern[#, Blank[]], NumericQ]& /@ hyperParams] := numFun[hyperParams] = (
-            fit[hyperParams] = approximateEvidence[
-                logPostDens, modelParams, assumptions,
+        numFun[numVals : {__?NumericQ}] := numFun[numVals] = (
+            fit[numVals] = approximateEvidence[
+                Refine[logPostDens /. Thread[hyperParams -> numVals]], 
+                modelParams, assumptions,
                 "InitialGuess" -> If[ Length[storedVals] > 0,
-                    First[Nearest[Normal[storedVals], hyperParams, {1, radius}], Automatic]
+                    First[Nearest[Normal[storedVals], numVals, {1, radius}], Automatic]
                 ],
                 opts
             ];
-            AppendTo[storedVals, hyperParams -> Last @ fit["Maximum"]];
-            fit[hyperParams]["LogEvidence"] + prior
+            AppendTo[storedVals, numVals -> Last @ fit["Maximum"]];
+            fit[numVals]["LogEvidence"] + prior
         );
         
         maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
