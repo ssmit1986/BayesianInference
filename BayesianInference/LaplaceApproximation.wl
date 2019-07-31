@@ -228,7 +228,11 @@ approximateEvidence[
 ] := With[{
     hyperParams = Flatten @ dists[[All, 1]],
     hyperParams2 = dists[[All, 1]],
-    hyperParamsDists = dists[[All, 2]]
+    hyperParamsDists = dists[[All, 2]],
+    prior = Total @ MapThread[
+        LogLikelihood[#1, {#2}]&,
+        {dists[[All, 2]], dists[[All, 1]]}
+    ]
 },
     Module[{
         radius = OptionValue["HyperParamSearchRadius"],
@@ -239,12 +243,7 @@ approximateEvidence[
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists]
     },
-        numFunInternal[PatternTest[Pattern[#, Blank[]], NumericQ]& /@ hyperParams] := numFunInternal[hyperParams] = With[{
-            priorDens = Total @ MapThread[
-                LogLikelihood[#1, {#2}]&,
-                {hyperParamsDists, hyperParams2}
-            ]
-        },
+        numFunInternal[PatternTest[Pattern[#, Blank[]], NumericQ]& /@ hyperParams] := numFunInternal[hyperParams] = (
             fit[hyperParams] = approximateEvidence[
                 logPostDens, modelParams, assumptions,
                 "InitialGuess" -> If[ Length[storedVals] > 0,
@@ -253,8 +252,8 @@ approximateEvidence[
                 opts
             ];
             AppendTo[storedVals, hyperParams -> Last @ fit["Maximum"]];
-            fit[hyperParams]["LogEvidence"] + priorDens
-        ];
+            fit[hyperParams]["LogEvidence"] + prior
+        );
         numFun = CreateNumericalFunction[hyperParams, numFunInternal[hyperParams], {},
             Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
         ];
