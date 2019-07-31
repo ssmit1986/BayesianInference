@@ -210,7 +210,7 @@ approximateEvidence[
 
 (* implements the hyperparameter optimization scheme described in the PhD thesis of David MacKay *)
 approximateEvidence[
-    logPostDens_,
+    dens_,
     modelParams_List,
     assumptions_,
     dists : {__Distributed}, (* distributions of hyperparameters *)
@@ -231,8 +231,10 @@ approximateEvidence[
         fit, maxHyper,
         mean, hess,
         nHyper = Length[hyperParams],
-        assum2 = modelAssumptions[dists]
+        assum2 = modelAssumptions[dists],
+        logPostDens
     },
+        logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = (
             fit[numVals] = approximateEvidence[
                 Refine[logPostDens /. Thread[hyperParams -> numVals]], 
