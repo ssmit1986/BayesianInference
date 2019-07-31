@@ -13,6 +13,8 @@ matrixD[expr_, vars_List, n_Integer, rules : _ : {}] := Normal @ SymmetrizedArra
     Symmetric[Range[n]]
 ];
 hessianMatrix[expr_, vars_, rules : _ : {}] := matrixD[expr, vars, 2, rules];
+numericD[expr_, vars_List -> pt_List, deriv_String, opts : OptionsPattern[]] :=
+    CreateNumericalFunction[vars, expr, {}, opts][deriv[pt]];
 
 wrapArgsInList[{modelLogLikelihood, modelAssumptions}, 1];
 modelAssumptions[model : {__Distributed}] := And @@ MapThread[
@@ -163,21 +165,7 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
 wrapArgsInList[approximateEvidence, 2];
 
 approximateEvidence[
-    logPostDens : Except[_NumericalFunction[_]],
-    modelParams_List,
-    assumptions_,
-    opts : OptionsPattern[]
-] := approximateEvidence[
-    CreateNumericalFunction[modelParams, logPostDens, {},
-        Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
-    ] @ modelParams,
-    modelParams,
-    assumptions,
-    opts
-];
-
-approximateEvidence[
-    logPostDens : _NumericalFunction[_List],
+    logPostDens_,
     modelParams_List,
     assumptions_,
     opts : OptionsPattern[]
@@ -208,8 +196,10 @@ approximateEvidence[
         Return[$Failed]
     ];
     mean = Values[Last[maxVals]];
-    hess = - Head[logPostDens]["Hessian"[mean]];
-    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
+    hess = - numericD[logPostDens, modelParams -> mean, "Hessian",
+        Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
+    ];
+    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess];
     DeleteMissing @ <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
         "Maximum" -> maxVals,
@@ -222,7 +212,7 @@ approximateEvidence[
 
 (* implements the hyperparameter optimization scheme described in the PhD thesis of David MacKay *)
 approximateEvidence[
-    logPostDens : Except[_NumericalFunction[_]],
+    logPostDens_,
     modelParams_List,
     assumptions_,
     dists : {__Distributed}, (* distributions of hyperparameters *)
@@ -239,13 +229,13 @@ approximateEvidence[
     Module[{
         radius = OptionValue["HyperParamSearchRadius"],
         storedVals = <||>,
-        numFunInternal, numFun,
+        numFun,
         fit, maxHyper,
         mean, hess,
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists]
     },
-        numFunInternal[PatternTest[Pattern[#, Blank[]], NumericQ]& /@ hyperParams] := numFunInternal[hyperParams] = (
+        numFun[PatternTest[Pattern[#, Blank[]], NumericQ]& /@ hyperParams] := numFun[hyperParams] = (
             fit[hyperParams] = approximateEvidence[
                 logPostDens, modelParams, assumptions,
                 "InitialGuess" -> If[ Length[storedVals] > 0,
@@ -256,9 +246,6 @@ approximateEvidence[
             AppendTo[storedVals, hyperParams -> Last @ fit["Maximum"]];
             fit[hyperParams]["LogEvidence"] + prior
         );
-        numFun = CreateNumericalFunction[hyperParams, numFunInternal[hyperParams], {},
-            Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
-        ];
         
         maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
         If[ !MatchQ[maxHyper, {_?NumericQ, {__Rule}}],
@@ -266,7 +253,9 @@ approximateEvidence[
             Return[$Failed]
         ];
         mean = Values[Last[maxHyper]];
-        hess = -numFun["Hessian"[mean]];
+        hess = - numericD[numFun[hyperParams], hyperParams -> mean, "Hessian",
+            Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
+        ];
         Prepend[
             "LogEvidence" -> First[maxHyper] + (nHyper * Log[2 * Pi] - Log[Det[hess]])/2
         ] @ Join[
@@ -367,7 +356,7 @@ laplacePosteriorFit[
         Return[$Failed]
     ];
     logPost = numericalLogPosterior[data, likelihood, prior, varsIn -> varsOut,
-        "ReturnNumericalFunction" -> hyperParams === {},
+        "ReturnNumericalFunction" -> False,
         Sequence @@ FilterRules[{opts}, Options[numericalLogPosterior]]
     ];
     result = approximateEvidence[logPost,
