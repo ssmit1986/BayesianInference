@@ -228,7 +228,7 @@ approximateEvidence[
         radius = OptionValue["HyperParamSearchRadius"],
         storedVals = <||>,
         numFun,
-        fit, maxHyper,
+        fit, bestfit = <||>, maxHyper,
         mean, hess,
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists],
@@ -236,7 +236,7 @@ approximateEvidence[
     },
         logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = (
-            fit[numVals] = approximateEvidence[
+            fit = approximateEvidence[
                 Refine[logPostDens /. Thread[hyperParams -> numVals]], 
                 modelParams, assumptions,
                 "InitialGuess" -> If[ Length[storedVals] > 0,
@@ -244,8 +244,11 @@ approximateEvidence[
                 ],
                 opts
             ];
-            AppendTo[storedVals, numVals -> Last @ fit["Maximum"]];
-            fit[numVals]["LogEvidence"] + prior
+            If[ TrueQ[fit["LogEvidence"] >= Lookup[bestfit, "LogEvidence", DirectedInfinity[-1]]],
+                bestfit = fit
+            ];
+            storedVals[numVals] = Last @ fit["Maximum"];
+            fit["LogEvidence"] + prior
         );
         
         maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
@@ -260,7 +263,7 @@ approximateEvidence[
         Prepend[
             "LogEvidence" -> First[maxHyper] + (nHyper * Log[2 * Pi] - Log[Det[hess]])/2
         ] @ Join[
-            fit[mean],
+            bestfit,
             <|
                 "HyperParameters" -> DeleteMissing @ <|
                     "Maximum" -> maxHyper,
