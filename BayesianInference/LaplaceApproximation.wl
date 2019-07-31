@@ -155,7 +155,8 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
     Options[CreateNumericalFunction],
     {
         "InitialGuess" -> Automatic,
-        "HyperParamSearchRadius" -> 0.25
+        "HyperParamSearchRadius" -> 0.25,
+        "IncludeDensity" -> False
     }
 ];
 
@@ -209,12 +210,13 @@ approximateEvidence[
     mean = Values[Last[maxVals]];
     hess = - Head[logPostDens]["Hessian"[mean]];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
-    <|
+    DeleteMissing @ <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
         "Maximum" -> maxVals,
         "Mean" -> mean,
         "PrecisionMatrix" -> hess,
-        "Parameters" -> Keys[Last[maxVals]]
+        "Parameters" -> Keys[Last[maxVals]],
+        "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], logPostDens, Missing[]]
     |>
 ];
 
@@ -270,7 +272,7 @@ approximateEvidence[
         ] @ Join[
             fit[mean],
             <|
-                "HyperParameters" -> <|
+                "HyperParameters" -> DeleteMissing @ <|
                     "Maximum" -> maxHyper,
                     "Mean" -> mean,
                     "PrecisionMatrix" -> hess,
@@ -278,6 +280,7 @@ approximateEvidence[
                         LogLikelihood[#1, {#2}]&,
                         {hyperParamsDists, hyperParams2 /. Last[maxHyper]}
                     ],
+                    "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], numFun[hyperParams], Missing[]],
                     "Distribution" -> MultinormalDistribution[
                         mean,
                         BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nHyper]]
@@ -294,7 +297,6 @@ Options[laplacePosteriorFit] = DeleteDuplicatesBy[First] @ Join[
     DeleteCases[Options[numericalLogPosterior], "ReturnNumericalFunction" -> _],
     {
         Assumptions -> True,
-        "IncludeDensity" -> False,
         "HyperParameters" -> {}
     }
 ];
@@ -391,7 +393,6 @@ laplacePosteriorFit[
             |>,
             "Posterior" -> DeleteMissing @ <|
                 "RegressionCoefficientDistribution" -> MultinormalDistribution[result["Mean"], cov],
-                "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], logPost, Missing[]],
                 "PredictiveDistribution" -> ParameterMixtureDistribution[
                     Replace[
                         likelihood,
