@@ -235,9 +235,12 @@ approximateEvidence[
         logPostDens
     },
         logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
-        numFun[numVals : {__?NumericQ}] := numFun[numVals] = (
+        numFun[numVals : {__?NumericQ}] := numFun[numVals] = With[{
+            (* NMaximize will block the hyperparams, so rules are only necessary outside of NMaximize *)
+            rules = If[ VectorQ[hyperParams, NumericQ], {}, AssociationThread[hyperParams, numVals]]
+        },
             fit = approximateEvidence[
-                Refine[logPostDens /. Thread[hyperParams -> numVals]], 
+                Refine[logPostDens /. rules], 
                 modelParams, assumptions,
                 "InitialGuess" -> If[ Length[storedVals] > 0,
                     First[Nearest[Normal[storedVals], numVals, {1, radius}], Automatic]
@@ -248,8 +251,8 @@ approximateEvidence[
                 bestfit = fit
             ];
             storedVals[numVals] = Last @ fit["Maximum"];
-            fit["LogEvidence"] + prior
-        );
+            fit["LogEvidence"] + (prior /. rules)
+        ];
         
         maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
         If[ !MatchQ[maxHyper, {_?NumericQ, {__Rule}}],
