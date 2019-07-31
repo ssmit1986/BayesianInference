@@ -171,7 +171,6 @@ approximateEvidence[
     opts : OptionsPattern[]
 ] := Module[{
     maxVals, mean, hess,
-    cov,
     nParam,
     guess = OptionValue["InitialGuess"]
 },
@@ -199,7 +198,6 @@ approximateEvidence[
     hess = - numericD[logPostDens, modelParams -> mean, "Hessian",
         Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
     ];
-    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess];
     DeleteMissing @ <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
         "Maximum" -> maxVals,
@@ -272,7 +270,7 @@ approximateEvidence[
                     "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], numFun[hyperParams], Missing[]],
                     "Distribution" -> MultinormalDistribution[
                         mean,
-                        BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nHyper]]
+                        BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess]
                     ]
                 |>
             |>
@@ -365,10 +363,7 @@ laplacePosteriorFit[
         Sequence @@ FilterRules[{opts}, Options[approximateEvidence]] 
     ];
     If[ !AssociationQ[result], Return[$Failed]];
-    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[
-        result["PrecisionMatrix"],
-        IdentityMatrix[nParam]
-    ];
+    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[result["PrecisionMatrix"]];
     Join[
         result,
         <|
