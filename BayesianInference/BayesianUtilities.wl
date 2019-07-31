@@ -33,6 +33,7 @@ vectorRandomVariate;
 conditionalProductDistribution::usage = "conditionalProductDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
 modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
 wrapArgsInList::usage = "wrapArgsInList[function, i] sets a downvalue to function to automatically wrap argument i in a list.";
+improperUniformDistribution::usage = "improperUniformDistribution[n] is an improper distribution with a constant PDF over all points in nD. It can be used for defining improper priors";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -639,6 +640,9 @@ wrapArgsInList[fun : Except[_List], slots : {__Integer}] := (
     fun
 );
 
+improperUniformDistribution[n : _Integer?Positive : 1] := ProbabilityDistribution[1,
+    Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
+];
 
 End[] (* End Private Context *)
 
