@@ -3,6 +3,7 @@ BeginPackage["LaplaceApproximation`", {"GeneralUtilities`", "BayesianConjugatePr
 laplacePosteriorFit;
 numericalLogPosterior;
 approximateEvidence;
+computePrecisionFromPath;
 
 Begin["`Private`"]
 
@@ -233,7 +234,8 @@ approximateEvidence[
         mean, hess,
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists],
-        logPostDens
+        logPostDens,
+        evidence
     },
         logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = With[{
@@ -252,8 +254,9 @@ approximateEvidence[
             If[ TrueQ[fit["LogEvidence"] >= Lookup[bestfit, "LogEvidence", DirectedInfinity[-1]]],
                 bestfit = fit
             ];
-            storedVals[numVals] = fit["Maximum"];
-            fit["LogEvidence"] + (prior /. rules)
+            evidence = fit["LogEvidence"] + (prior /. rules);
+            storedVals[numVals] = {evidence, Last @ fit["Maximum"]};
+            evidence
         ];
         
         maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
@@ -405,6 +408,46 @@ laplacePosteriorFit[
             |>
         |>
     ]
+];
+
+computePrecisionFromPath::insuf = "`1` points is insufficient for computing the precision matrix. Requires at least `2` points.";
+computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ[#[[1]]]&]] := Module[{
+    max = TakeLargestBy[path, First, 1],
+    deltaPoints,
+    deltaEvidence,
+    npts = Length[path],
+    dim = Length @ First @ Keys[path],
+    fun, keys,
+    symCov
+},
+    If[ !TrueQ[npts > dim * (dim + 1) / 2 + 1],
+        Message[computePrecisionFromPath::insuf, npts, dim * (dim + 1) / 2 + 2];
+        Return[$Failed]
+    ];
+    symCov = Normal @ SymmetrizedArray[{i_, j_} :> \[FormalC][i, j], dim * {1, 1}, Symmetric[{1, 2}]];
+    deltaPoints = Keys[path] - ConstantArray[First[Keys[max]], npts];
+    deltaEvidence = Values[path[[All, 1]]] - max[[1, 1]];
+    {fun, keys} = With[{
+        body = KeySort @ GroupBy[
+            Thread @ Rule[
+                Flatten @ symCov,
+                Flatten @ Apply[
+                    KroneckerProduct,
+                    ConstantArray[Table[Indexed[Slot[1], i], {i, dim}], 2]
+                ]
+            ],
+            First -> Last,
+            Total
+        ]
+    },
+        {Function[Evaluate @ Values @ body], Keys[body]}
+    ];
+    symCov /. Thread[ (* Fit a parabola to the residuals around the maximum *)
+        keys -> -2 * LeastSquares[fun /@ deltaPoints, deltaEvidence]
+    ]
+];
+computePrecisionFromPath[path_?AssociationQ /; !AllTrue[path, NumericQ[#[[1]]]&]] := computePrecisionFromPath[
+    Select[path, NumericQ[#[[1]]]&]
 ];
 
 End[]
