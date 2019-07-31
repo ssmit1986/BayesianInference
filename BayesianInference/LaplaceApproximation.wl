@@ -46,7 +46,7 @@ modelLogLikelihood[model : {__Distributed}] := Assuming[
 ];
 
 Options[numericalLogPosterior] = Join[
-    Options[Experimental`CreateNumericalFunction],
+    Options[CreateNumericalFunction],
     {
         "ParameterDimensions" -> Automatic,
         "ActivateQ" -> True,
@@ -132,9 +132,9 @@ numericalLogPosterior[
             ,
             paramDims = Replace[OptionValue["ParameterDimensions"], Except[KeyValuePattern[{}]] -> {}];
             paramSpec = {#, Lookup[paramDims, #, Nothing]}& /@ modelParams;
-            Experimental`CreateNumericalFunction[
+            CreateNumericalFunction[
                 paramSpec, logPost, {},
-                Sequence @@ FilterRules[{opts}, Options[Experimental`CreateNumericalFunction]]
+                Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
             ] @ modelParams
             ,
             logPost
@@ -162,7 +162,21 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
 wrapArgsInList[approximateEvidence, 2];
 
 approximateEvidence[
-    logPostDens_,
+    logPostDens : Except[_NumericalFunction[_]],
+    modelParams_List,
+    assumptions_,
+    opts : OptionsPattern[]
+] := approximateEvidence[
+    CreateNumericalFunction[modelParams, logPostDens, {},
+        Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
+    ] @ modelParams,
+    modelParams,
+    assumptions,
+    opts
+];
+
+approximateEvidence[
+    logPostDens : _NumericalFunction[_List],
     modelParams_List,
     assumptions_,
     opts : OptionsPattern[]
@@ -193,13 +207,7 @@ approximateEvidence[
         Return[$Failed]
     ];
     mean = Values[Last[maxVals]];
-    hess = - Replace[
-        logPostDens,
-        {
-            fun_NumericalFunction[___] :> fun["Hessian"[mean]],
-            other_ :> hessianMatrix[other, modelParams, Last[maxVals]]
-        }
-    ];
+    hess = - Head[logPostDens]["Hessian"[mean]];
     cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ LinearSolve[hess, IdentityMatrix[nParam]];
     <|
         "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
@@ -212,7 +220,7 @@ approximateEvidence[
 
 (* implements the hyperparameter optimization scheme described in the PhD thesis of David MacKay *)
 approximateEvidence[
-    logPostDens : Except[_NumericalFunction],
+    logPostDens : Except[_NumericalFunction[_]],
     modelParams_List,
     assumptions_,
     dists : {__Distributed}, (* distributions of hyperparameters *)
