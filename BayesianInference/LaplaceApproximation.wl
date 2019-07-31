@@ -158,7 +158,8 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
     {
         "InitialGuess" -> Automatic,
         "HyperParamSearchRadius" -> 0.25,
-        "IncludeDensity" -> False
+        "IncludeDensity" -> False,
+        "IncludeHyperParmeterPath" -> False
     }
 ];
 
@@ -243,14 +244,15 @@ approximateEvidence[
                 Refine[logPostDens /. rules], 
                 modelParams, assumptions,
                 "InitialGuess" -> If[ Length[storedVals] > 0,
-                    First[Nearest[Normal[storedVals], numVals, {1, radius}], Automatic]
+                    First[Nearest[Normal[storedVals[[All, 2]]], numVals, {1, radius}], Automatic],
+                    Automatic
                 ],
                 opts
             ];
             If[ TrueQ[fit["LogEvidence"] >= Lookup[bestfit, "LogEvidence", DirectedInfinity[-1]]],
                 bestfit = fit
             ];
-            storedVals[numVals] = Last @ fit["Maximum"];
+            storedVals[numVals] = fit["Maximum"];
             fit["LogEvidence"] + (prior /. rules)
         ];
         
@@ -280,6 +282,10 @@ approximateEvidence[
                     "Distribution" -> MultinormalDistribution[
                         mean,
                         BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess]
+                    ],
+                    "HyperParmeterPath" -> If[ TrueQ @ OptionValue["IncludeHyperParmeterPath"],
+                        storedVals,
+                        Missing[]
                     ]
                 |>
             |>
