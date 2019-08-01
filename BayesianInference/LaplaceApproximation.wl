@@ -410,15 +410,34 @@ laplacePosteriorFit[
     ]
 ];
 
+computePrecisionFromPath::noDat = "No data provided";
 computePrecisionFromPath::insuf = "`1` points is insufficient for computing the precision matrix. Requires at least `2` points.";
-computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ[#[[1]]]&]] := Module[{
-    max = TakeLargestBy[path, First, 1],
+computePrecisionFromPath::poorfit1 = "Waring: test points are highly correlated (`1`). Expect poor fit of precision matrix";
+computePrecisionFromPath::poorfit2 = "Waring: log-evidence range in data is `1`. Expect poor fit of precision matrix";
+
+computePrecisionFromPath[<||>] := (Message[computePrecisionFromPath::noDat]; $Failed);
+computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, MatchQ[{_, {__Rule}}]]] := computePrecisionFromPath[path[[All, 1]]];
+computePrecisionFromPath[path_?numericMatrixQ] := With[{
+    dim2 = Dimensions[path][[2]]
+},
+    computePrecisionFromPath[
+        AssociationThread[path[[All, Range[dim2 - 1]]], path[[All, dim2]]]
+    ] /; dim2 > 1
+];
+
+
+(* ::Subsubsection:: *)
+(* Region Title *)
+computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
+    max = TakeLargest[path, 1],
     deltaPoints,
     deltaEvidence,
     npts = Length[path],
     dim = Length @ First @ Keys[path],
     fun, keys,
-    symCov
+    test,
+    symCov,
+    mat, mattr, ls
 },
     If[ !TrueQ[npts > dim * (dim + 1) / 2 + 1],
         Message[computePrecisionFromPath::insuf, npts, dim * (dim + 1) / 2 + 2];
@@ -426,7 +445,16 @@ computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ[#[[1]]]&]]
     ];
     symCov = Normal @ SymmetrizedArray[{i_, j_} :> \[FormalC][i, j], dim * {1, 1}, Symmetric[{1, 2}]];
     deltaPoints = Keys[path] - ConstantArray[First[Keys[max]], npts];
-    deltaEvidence = Values[path[[All, 1]]] - max[[1, 1]];
+    test = SingularValueList[Correlation[deltaPoints]];
+    If[ Min[Abs @ test] < 1*^-6,
+        Message[computePrecisionFromPath::poorfit1, test]
+    ];
+    
+    deltaEvidence = Values[path] - First[max];
+    test = Max @ Abs[deltaEvidence];
+    If[ test < 1*^-6,
+        Message[computePrecisionFromPath::poorfit2, test]
+    ];
     {fun, keys} = With[{
         body = KeySort @ GroupBy[
             Thread @ Rule[
@@ -442,14 +470,18 @@ computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ[#[[1]]]&]]
     },
         {Function[Evaluate @ Values @ body], Keys[body]}
     ];
+    mat = fun /@ deltaPoints;
+    mattr = Transpose[mat];
+    ls = LinearSolve[mattr . mat];
+    (* Print[ls["ConditionNumber"]]; *)
     symCov /. Thread[ (* Fit a parabola to the residuals around the maximum *)
-        keys -> -2 * LeastSquares[fun /@ deltaPoints, deltaEvidence]
+        keys -> -2 * ls[mattr . deltaEvidence]
     ]
 ];
-computePrecisionFromPath[path_?AssociationQ /; !AllTrue[path, NumericQ[#[[1]]]&]] := computePrecisionFromPath[
+computePrecisionFromPath[path_?AssociationQ /; !AllTrue[path, NumericQ]] := computePrecisionFromPath[
     Select[path, NumericQ[#[[1]]]&]
 ];
-
+computePrecisionFromPath[___] := (Message[computePrecisionFromPath::noDat]; $Failed);
 End[]
 
 EndPackage[(* "BayesianConjugatePriors`" *)]
