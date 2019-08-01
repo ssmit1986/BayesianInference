@@ -412,7 +412,7 @@ laplacePosteriorFit[
 
 computePrecisionFromPath::noDat = "No data provided";
 computePrecisionFromPath::insuf = "`1` points is insufficient for computing the precision matrix. Requires at least `2` points.";
-computePrecisionFromPath::poorfit1 = "Waring: test points are highly correlated (`1`). Expect poor fit of precision matrix";
+computePrecisionFromPath::poorfit1 = "Waring: test points are highly correlated or highly localized (`1`). Expect poor fit of precision matrix";
 computePrecisionFromPath::poorfit2 = "Waring: log-evidence range in data is `1`. Expect poor fit of precision matrix";
 
 computePrecisionFromPath[<||>] := (Message[computePrecisionFromPath::noDat]; $Failed);
@@ -425,9 +425,6 @@ computePrecisionFromPath[path_?numericMatrixQ] := With[{
     ] /; dim2 > 1
 ];
 
-
-(* ::Subsubsection:: *)
-(* Region Title *)
 computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
     max = TakeLargest[path, 1],
     deltaPoints,
@@ -445,14 +442,14 @@ computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ]] := Modul
     ];
     symCov = Normal @ SymmetrizedArray[{i_, j_} :> \[FormalC][i, j], dim * {1, 1}, Symmetric[{1, 2}]];
     deltaPoints = Keys[path] - ConstantArray[First[Keys[max]], npts];
-    test = SingularValueList[Correlation[deltaPoints]];
-    If[ Min[Abs @ test] < 1*^-6,
+    test = Abs @ SingularValueList[Covariance[deltaPoints]];
+    If[ Divide @@ MinMax[test] < 1*^-4 || Max[test] < 1*^-10,
         Message[computePrecisionFromPath::poorfit1, test]
     ];
     
     deltaEvidence = Values[path] - First[max];
     test = Max @ Abs[deltaEvidence];
-    If[ test < 1*^-6,
+    If[ test < 1*^-3,
         Message[computePrecisionFromPath::poorfit2, test]
     ];
     {fun, keys} = With[{
@@ -473,7 +470,7 @@ computePrecisionFromPath[path_?AssociationQ /; AllTrue[path, NumericQ]] := Modul
     mat = fun /@ deltaPoints;
     mattr = Transpose[mat];
     ls = LinearSolve[mattr . mat];
-    (* Print[ls["ConditionNumber"]]; *)
+    (* Echo[ls["ConditionNumber"]]; *)
     symCov /. Thread[ (* Fit a parabola to the residuals around the maximum *)
         keys -> -2 * ls[mattr . deltaEvidence]
     ]
