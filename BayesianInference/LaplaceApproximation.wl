@@ -57,7 +57,7 @@ Options[numericalLogPosterior] = Join[
     }
 ];
 
-wrapArgsInList[approximateEvidence, {2, 3}];
+wrapArgsInList[numericalLogPosterior, {2, 3}];
 
 numericalLogPosterior[
     data : _List | _Rule,
@@ -146,11 +146,13 @@ numericalLogPosterior[
     "var"
 ];
 
-approximateEvidence::nmaximize = "Failed to find the posterior maximum. `1` Was returned.";
+approximateEvidence::nmaximize = "Failed to find the posterior maximum. `1` Was returned";
+approximateEvidence::nonposdef = "Precision matrix at `1` == `2` calculated to be nonpositive matrix. Log-evidence will not be returned";
+
 laplacePosteriorFit::depVar = "Only dependent variables can be defined in the likelihood specification";
-laplacePosteriorFit::assum = "Obtained assumptions `1` contain dependent or independent parameters. Please specify additional assumptions.";
+laplacePosteriorFit::assum = "Obtained assumptions `1` contain dependent or independent parameters. Please specify additional assumptions";
 laplacePosteriorFit::acyclic = "Cyclic models are not supported";
-laplacePosteriorFit::dependency = "Independent variables cannot depend on others and model parameters cannot depend on dependent variables.";
+laplacePosteriorFit::dependency = "Independent variables cannot depend on others and model parameters cannot depend on dependent variables";
 
 Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
     Options[NMaximize],
@@ -200,8 +202,14 @@ approximateEvidence[
     hess = - numericD[logPostDens, modelParams -> mean, "Hessian",
         Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
     ];
+    If[ !PositiveDefiniteMatrixQ[hess],
+        Message[approximateEvidence::nonposdef, modelParams, mean]
+    ];
     DeleteMissing @ <|
-        "LogEvidence" -> First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
+        "LogEvidence" -> If[ !MissingQ[hess],
+            First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
+            Missing[]
+        ],
         "Maximum" -> maxVals,
         "Mean" -> mean,
         "PrecisionMatrix" -> hess,
@@ -219,8 +227,6 @@ approximateEvidence[
     opts : OptionsPattern[]
 ] := With[{
     hyperParams = Flatten @ dists[[All, 1]],
-    hyperParams2 = dists[[All, 1]],
-    hyperParamsDists = dists[[All, 2]],
     prior = Total @ MapThread[
         LogLikelihood[#1, {#2}]&,
         {dists[[All, 2]], dists[[All, 1]]}
@@ -268,8 +274,15 @@ approximateEvidence[
         hess = - numericD[numFun[hyperParams], hyperParams -> mean, "Hessian",
             Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
         ];
+        If[ !PositiveDefiniteMatrixQ[hess],
+            Message[approximateEvidence::nonposdef, hyperParams, mean];
+            hess = Missing[]
+        ];
         Prepend[
-            "LogEvidence" -> First[maxHyper] + (nHyper * Log[2 * Pi] - Log[Det[hess]])/2
+            "LogEvidence" -> If[ !MissingQ[hess],
+                First[maxHyper] + (nHyper * Log[2 * Pi] - Log[Det[hess]])/2,
+                Missing[]
+            ]
         ] @ Join[
             bestfit,
             <|
@@ -277,14 +290,10 @@ approximateEvidence[
                     "Maximum" -> maxHyper,
                     "Mean" -> mean,
                     "PrecisionMatrix" -> hess,
-                    "PriorDensity" -> Total @ MapThread[
-                        LogLikelihood[#1, {#2}]&,
-                        {hyperParamsDists, hyperParams2 /. Last[maxHyper]}
-                    ],
                     "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], numFun[hyperParams], Missing[]],
-                    "Distribution" -> MultinormalDistribution[
-                        mean,
-                        BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess]
+                    "Distribution" -> If[ !MissingQ[hess],
+                        MultinormalDistribution[mean, BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess]],
+                        Missing[]
                     ],
                     "HyperParameterPath" -> If[ TrueQ @ OptionValue["IncludeHyperParameterPath"],
                         storedVals,
@@ -381,7 +390,12 @@ laplacePosteriorFit[
         Sequence @@ FilterRules[{opts}, Options[approximateEvidence]] 
     ];
     If[ !AssociationQ[result], Return[$Failed]];
-    cov = BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[result["PrecisionMatrix"]];
+    cov = With[{presMat = result["PrecisionMatrix"]},
+        If[ !MissingQ[presMat],
+            BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[presMat],
+            Missing[]
+        ]
+    ];
     Join[
         result,
         <|
@@ -393,19 +407,22 @@ laplacePosteriorFit[
                 "Prior" -> prior,
                 "HyperParameters" -> hyperParams
             |>,
-            "Posterior" -> DeleteMissing @ <|
-                "RegressionCoefficientDistribution" -> MultinormalDistribution[result["Mean"], cov],
-                "PredictiveDistribution" -> ParameterMixtureDistribution[
-                    Replace[
-                        likelihood,
-                        {
-                            {Distributed[_, dist_]} :> dist,
-                            dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
-                        }
-                    ] /. Replace[result[["HyperParameters", "Maximum", 2]], _Missing -> {}],
-                    Distributed[modelParams, MultinormalDistribution[result["Mean"], cov]]
-                ]
-            |>
+            "Posterior" -> If[ !MissingQ[cov], 
+                DeleteMissing @ <|
+                    "RegressionCoefficientDistribution" -> MultinormalDistribution[result["Mean"], cov],
+                    "PredictiveDistribution" -> ParameterMixtureDistribution[
+                        Replace[
+                            likelihood,
+                            {
+                                {Distributed[_, dist_]} :> dist,
+                                dists : {__Distributed} :> ProductDistribution @@ dists[[All, 2]]
+                            }
+                        ] /. Replace[result[["HyperParameters", "Maximum", 2]], _Missing -> {}],
+                        Distributed[modelParams, MultinormalDistribution[result["Mean"], cov]]
+                    ]
+                |>,
+                Missing[]
+            ]
         |>
     ]
 ];
