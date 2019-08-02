@@ -4,6 +4,7 @@ laplacePosteriorFit;
 numericalLogPosterior;
 approximateEvidence;
 fitPrecisionAtMax;
+laplaceLogEvidence;
 
 Begin["`Private`"]
 
@@ -16,6 +17,16 @@ matrixD[expr_, vars_List, n_Integer, rules : _ : {}] := Normal @ SymmetrizedArra
 hessianMatrix[expr_, vars_, rules : _ : {}] := matrixD[expr, vars, 2, rules];
 numericD[expr_, vars_List -> pt_List, deriv_String, opts : OptionsPattern[]] :=
     CreateNumericalFunction[vars, expr, {}, opts][deriv[pt]];
+
+laplaceLogEvidence[{max_?NumericQ, {__Rule}}, rest___] := laplaceLogEvidence[max, rest];
+laplaceLogEvidence[max_?NumericQ, precisionMatrix_?numericMatrixQ] := With[{
+    nParam = Length[precisionMatrix],
+    det = Det[precisionMatrix]
+},
+    max + (nParam * Log[2 * Pi] - Log[det])/2 /; TrueQ[det > 0]
+];
+laplaceLogEvidence[max_?NumericQ, var_?Positive] := laplaceLogEvidence[max, {{var}}];
+laplaceLogEvidence[__] := Missing[];
 
 wrapArgsInList[{modelLogLikelihood, modelAssumptions}, 1];
 modelAssumptions[model : {__Distributed}] := And @@ MapThread[
@@ -147,7 +158,8 @@ numericalLogPosterior[
 ];
 
 approximateEvidence::nmaximize = "Failed to find the posterior maximum. `1` Was returned";
-approximateEvidence::nonposdef = "Precision matrix at `1` == `2` calculated to be nonpositive matrix. Log-evidence will not be returned";
+approximateEvidence::nonposdef = "Precision matrix at `1` == `2` calculated to be nonpositive matrix. Log-evidence will not be returned" <>
+", but the unnormalized density will be appended for manual fitting";
 
 laplacePosteriorFit::depVar = "Only dependent variables can be defined in the likelihood specification";
 laplacePosteriorFit::assum = "Obtained assumptions `1` contain dependent or independent parameters. Please specify additional assumptions";
@@ -174,7 +186,7 @@ approximateEvidence[
     assumptions_,
     opts : OptionsPattern[]
 ] := Module[{
-    maxVals, mean, hess,
+    maxVals, mean, precisionMat,
     nParam,
     guess = OptionValue["InitialGuess"]
 },
@@ -199,22 +211,22 @@ approximateEvidence[
         Return[$Failed]
     ];
     mean = Values[Last[maxVals]];
-    hess = - numericD[logPostDens, modelParams -> mean, "Hessian",
+    precisionMat = - numericD[logPostDens, modelParams -> mean, "Hessian",
         Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
     ];
-    If[ !PositiveDefiniteMatrixQ[hess],
+    If[ !PositiveDefiniteMatrixQ[precisionMat],
         Message[approximateEvidence::nonposdef, modelParams, mean]
     ];
     DeleteMissing @ <|
-        "LogEvidence" -> If[ !MissingQ[hess],
-            First[maxVals] + (nParam * Log[2 * Pi] - Log[Det[hess]])/2,
+        "LogEvidence" -> If[ !MissingQ[precisionMat],
+            laplaceLogEvidence[First[maxVals], precisionMat],
             Missing[]
         ],
         "Maximum" -> maxVals,
         "Mean" -> mean,
-        "PrecisionMatrix" -> hess,
+        "PrecisionMatrix" -> precisionMat,
         "Parameters" -> Keys[Last[maxVals]],
-        "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], logPostDens, Missing[]]
+        "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"] || MissingQ[precisionMat], logPostDens, Missing[]]
     |>
 ];
 
@@ -237,7 +249,7 @@ approximateEvidence[
         storedVals = <||>,
         numFun,
         fit, bestfit = <||>, maxHyper,
-        mean, hess,
+        mean, precisionMat,
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists],
         logPostDens,
@@ -271,16 +283,16 @@ approximateEvidence[
             Return[$Failed]
         ];
         mean = Values[Last[maxHyper]];
-        hess = - numericD[numFun[hyperParams], hyperParams -> mean, "Hessian",
+        precisionMat = - numericD[numFun[hyperParams], hyperParams -> mean, "Hessian",
             Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
         ];
-        If[ !PositiveDefiniteMatrixQ[hess],
+        If[ !PositiveDefiniteMatrixQ[precisionMat],
             Message[approximateEvidence::nonposdef, hyperParams, mean];
-            hess = Missing[]
+            precisionMat = Missing[]
         ];
         Prepend[
-            "LogEvidence" -> If[ !MissingQ[hess],
-                First[maxHyper] + (nHyper * Log[2 * Pi] - Log[Det[hess]])/2,
+            "LogEvidence" -> If[ !MissingQ[precisionMat],
+                laplaceLogEvidence[First[maxHyper], precisionMat],
                 Missing[]
             ]
         ] @ Join[
@@ -289,13 +301,16 @@ approximateEvidence[
                 "HyperParameters" -> DeleteMissing @ <|
                     "Maximum" -> maxHyper,
                     "Mean" -> mean,
-                    "PrecisionMatrix" -> hess,
-                    "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"], numFun[hyperParams], Missing[]],
-                    "Distribution" -> If[ !MissingQ[hess],
-                        MultinormalDistribution[mean, BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess]],
+                    "PrecisionMatrix" -> precisionMat,
+                    "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"] || MissingQ[precisionMat],
+                        numFun[hyperParams],
                         Missing[]
                     ],
-                    "HyperParameterPath" -> If[ TrueQ @ OptionValue["IncludeHyperParameterPath"],
+                    "Distribution" -> If[ !MissingQ[precisionMat],
+                        MultinormalDistribution[mean, BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[precisionMat]],
+                        Missing[]
+                    ],
+                    "HyperParameterPath" -> If[ TrueQ @ OptionValue["IncludeHyperParameterPath"] || MissingQ[precisionMat],
                         storedVals,
                         Missing[]
                     ]
@@ -467,7 +482,7 @@ fitPrecisionAtMax[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
     
     deltaEvidence = Values[path] - First[max];
     test = Max @ Abs[deltaEvidence];
-    If[ test < 1*^-3,
+    If[ test < 1*^-5,
         Message[fitPrecisionAtMax::poorfit2, test]
     ];
     fun = With[{
