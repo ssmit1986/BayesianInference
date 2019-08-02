@@ -431,7 +431,7 @@ fitPrecisionAtMax[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
     deltaEvidence,
     npts = Length[path],
     dim = Length @ First @ Keys[path],
-    fun, keys,
+    fun, covElements,
     test,
     symCov,
     mat, mattr, ls
@@ -441,6 +441,7 @@ fitPrecisionAtMax[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
         Return[$Failed]
     ];
     symCov = Normal @ SymmetrizedArray[{i_, j_} :> \[FormalC][i, j], dim * {1, 1}, Symmetric[{1, 2}]];
+    covElements = Union @@ symCov;
     deltaPoints = Keys[path] - ConstantArray[First[Keys[max]], npts];
     test = Abs @ SingularValueList[Covariance[deltaPoints]];
     If[ Divide @@ MinMax[test] < 1*^-4 || Max[test] < 1*^-10,
@@ -452,27 +453,21 @@ fitPrecisionAtMax[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
     If[ test < 1*^-3,
         Message[fitPrecisionAtMax::poorfit2, test]
     ];
-    {fun, keys} = With[{
-        body = KeySort @ GroupBy[
-            Thread @ Rule[
-                Flatten @ symCov,
-                Flatten @ Apply[
-                    KroneckerProduct,
-                    ConstantArray[Table[Indexed[Slot[1], i], {i, dim}], 2]
-                ]
-            ],
-            First -> Last,
-            Total
-        ]
+    fun = With[{
+        vec = Table[Indexed[Slot[1], i], {i, dim}]
     },
-        {Function[Evaluate @ Values @ body], Keys[body]}
+        Function[
+            Evaluate @ Last @ Normal[
+                CoefficientArrays[vec . symCov . vec, covElements]
+            ]
+        ]
     ];
     mat = fun /@ deltaPoints;
     mattr = Transpose[mat];
     ls = LinearSolve[mattr . mat];
     (* Echo[ls["ConditionNumber"]]; *)
     symCov /. AssociationThread[ (* Fit a parabola to the residuals around the maximum *)
-        keys,
+        covElements,
         -2 * ls[mattr . deltaEvidence]
     ]
 ];
