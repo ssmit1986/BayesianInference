@@ -160,7 +160,7 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
         "InitialGuess" -> Automatic,
         "HyperParamSearchRadius" -> 0.25,
         "IncludeDensity" -> False,
-        "IncludeHyperParmeterPath" -> False
+        "IncludeHyperParameterPath" -> False
     }
 ];
 
@@ -286,7 +286,7 @@ approximateEvidence[
                         mean,
                         BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[hess]
                     ],
-                    "HyperParmeterPath" -> If[ TrueQ @ OptionValue["IncludeHyperParmeterPath"],
+                    "HyperParameterPath" -> If[ TrueQ @ OptionValue["IncludeHyperParameterPath"],
                         storedVals,
                         Missing[]
                     ]
