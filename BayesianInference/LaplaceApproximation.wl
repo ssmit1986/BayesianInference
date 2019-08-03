@@ -290,12 +290,13 @@ approximateEvidence[
             Message[approximateEvidence::nonposdef, hyperParams, mean];
             precisionMat = Missing[]
         ];
-        Prepend[
+        Prepend[<|
             "LogEvidence" -> If[ !MissingQ[precisionMat],
                 laplaceLogEvidence[First[maxHyper], precisionMat],
                 Missing[]
-            ]
-        ] @ Join[
+            ],
+            "ConditionalLogEvidence" -> bestfit["LogEvidence"]
+        |>] @ Join[
             bestfit,
             <|
                 "HyperParameters" -> DeleteMissing @ <|
