@@ -356,7 +356,7 @@ laplacePosteriorFit[
             d_Distributed :> {d},
             Except[_List] :> {},
             list_List :> Map[
-                Replace[el : Except[_Distributed] :> Distributed[el, CauchyDistribution[]]],
+                Replace[el : Except[_Distributed] :> Distributed[el, CauchyDistribution[0, 2]]],
                 Flatten[list]
             ]
         }
