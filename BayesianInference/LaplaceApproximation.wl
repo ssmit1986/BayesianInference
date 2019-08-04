@@ -5,6 +5,7 @@ numericalLogPosterior;
 approximateEvidence;
 fitPrecisionAtMax;
 laplaceLogEvidence;
+macKayUpdateMethod;
 
 Begin["`Private`"]
 
@@ -158,6 +159,8 @@ numericalLogPosterior[
 ];
 
 approximateEvidence::nmaximize = "Failed to find the posterior maximum. `1` Was returned";
+approximateEvidence::fixedpoint1 = "Update function did not evaluate to numerical hyper parameters at `1` == `2`. `3` was returned";
+approximateEvidence::fixedpoint2 = "Could not evaluate log-evidence at hyper parameters `1` == `2`";
 approximateEvidence::nonposdef = "Precision matrix at `1` == `2` calculated to be nonpositive matrix. Log-evidence will not be returned" <>
 ", but the unnormalized density will be appended for manual fitting";
 
@@ -174,7 +177,8 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
         "InitialGuess" -> Automatic,
         "HyperParamSearchRadius" -> 0.25,
         "IncludeDensity" -> False,
-        "IncludeHyperParameterPath" -> False
+        "IncludeHyperParameterPath" -> False,
+        "HyperParameterOptimizationMethod" -> NMaximize
     }
 ];
 
@@ -253,7 +257,15 @@ approximateEvidence[
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists],
         logPostDens,
-        hyperPost, hyperPostMax = DirectedInfinity[-1]
+        hyperPost, hyperPostMax = DirectedInfinity[-1],
+        hyperParamMethod = Replace[
+            OptionValue["HyperParameterOptimizationMethod"],
+            {
+                {FixedPoint, spec___} /; MatchQ[{spec}, KeyValuePattern[{}]] :> {spec},
+                FixedPoint -> {},
+                _ -> NMaximize
+            }
+        ]
     },
         logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = With[{
@@ -277,7 +289,54 @@ approximateEvidence[
             hyperPost
         ];
         
-        maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
+        maxHyper = If[ hyperParamMethod === NMaximize,
+            NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]],
+            With[{
+                initialGuess = Lookup[hyperParamMethod, "InitialGuess", ConstantArray[0.1, nHyper]],
+                updateFun = Lookup[hyperParamMethod, "UpdateFunction", macKayUpdateMethod],
+                maxIterations = Lookup[hyperParamMethod, MaxIterations, 1000],
+                sameTest = Lookup[hyperParamMethod, SameTest, 
+                    With[{tol = Abs @ Lookup[hyperParamMethod, Tolerance, 1*^-6]},
+                        Function[Max @ Abs[First @ #1 - First @ #2] < tol]
+                    ]
+                ]
+            },
+                numFun[initialGuess];
+                Replace[
+                    {params_List, result_?AssociationQ} :> {
+                        hyperPostMax,
+                        Thread[hyperParams -> params]
+                    } 
+                ] @ Catch[
+                    FixedPoint[
+                        Apply @ Function[{prevGuess, prevFit},
+                            With[{
+                                updateGuess = Replace[
+                                    updateFun[prevGuess, prevFit],
+                                    fail : Except[{__?NumericQ}] :> (
+                                        Message[approximateEvidence::fixedpoint1, hyperParams, prevGuess, fail];
+                                        Throw[$Failed, "FixedPoint"]
+                                    )
+                                ]
+                            },
+                                Replace[
+                                    numFun[updateFun[updateGuess, prevFit]],
+                                    Except[_?NumericQ] :> (
+                                        Message[approximateEvidence::fixedpoint2, hyperParams, updateGuess];
+                                        Throw[$Failed, "FixedPoint"]
+                                    )
+                                ];
+                                {updateGuess, fit (*numFun updates fit as a side effect *)}
+                            ]
+                        ],
+                        {initialGuess, fit},
+                        maxIterations,
+                        SameTest -> sameTest
+                    ],
+                    "FixedPoint"
+                ]
+            ]
+        ];
         If[ !MatchQ[maxHyper, {_?NumericQ, {__Rule}}],
             Message[approximateEvidence::nmaximize, Short[maxHyper]];
             Return[$Failed]
@@ -320,6 +379,12 @@ approximateEvidence[
         ]
         
     ]
+];
+
+macKayUpdateMethod[{logAlpha_?NumericQ}, fit_?AssociationQ] := With[{
+    gamma = Length @ fit["Mean"] - Exp[logAlpha] * Tr[Inverse @ fit["PrecisionMatrix"]]
+},
+    Log @ {Divide[gamma, Total[fit["Mean"]^2]] (* new alpha *)}
 ];
 
 Options[laplacePosteriorFit] = DeleteDuplicatesBy[First] @ Join[
