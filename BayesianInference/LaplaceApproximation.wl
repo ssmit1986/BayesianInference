@@ -253,7 +253,7 @@ approximateEvidence[
         nHyper = Length[hyperParams],
         assum2 = modelAssumptions[dists],
         logPostDens,
-        evidence
+        hyperPost, hyperPostMax = DirectedInfinity[-1]
     },
         logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = With[{
@@ -269,12 +269,12 @@ approximateEvidence[
                 ],
                 opts
             ];
-            If[ TrueQ[fit["LogEvidence"] >= Lookup[bestfit, "LogEvidence", DirectedInfinity[-1]]],
-                bestfit = fit
+            hyperPost = fit["LogEvidence"] + (prior /. rules);
+            If[ TrueQ[hyperPost >= hyperPostMax],
+                {bestfit, hyperPostMax} = {fit, hyperPost};
             ];
-            evidence = fit["LogEvidence"] + (prior /. rules);
-            storedVals[numVals] = {evidence, Last @ fit["Maximum"]};
-            evidence
+            storedVals[numVals] = {hyperPost, Last @ fit["Maximum"]};
+            hyperPost
         ];
         
         maxHyper = NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]];
