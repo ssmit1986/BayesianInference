@@ -177,6 +177,7 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
         "InitialGuess" -> Automatic,
         "HyperParamSearchRadius" -> 0.25,
         "IncludeDensity" -> False,
+        "IncludeLogLikelihood" -> False,
         "IncludeHyperParameterPath" -> False,
         "HyperParameterOptimizationMethod" -> NMaximize
     }
@@ -238,7 +239,10 @@ approximateEvidence[
         "Maximum" -> maxVals,
         "Mean" -> mean,
         "PrecisionMatrix" -> precisionMat,
-        "LogLikelihood" -> logLikelihood /. Last[maxVals],
+        "LogLikelihood" -> If[ TrueQ @ OptionValue["IncludeLogLikelihood"],
+            Activate[logLikelihood /. Last[maxVals]],
+            Missing[]
+        ],
         "Parameters" -> Keys[Last[maxVals]],
         "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"] || MissingQ[precisionMat], logPostDens, Missing[]]
     |>
@@ -275,8 +279,10 @@ approximateEvidence[
                 FixedPoint -> {},
                 _ -> NMaximize
             }
-        ]
+        ],
+        includeLogLike
     },
+        includeLogLike = TrueQ[OptionValue["IncludeLogLikelihood"]] || hyperParamMethod =!= NMaximize;
         logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = With[{
             (* NMaximize will block the hyperparams, so rules are only necessary outside of NMaximize *)
@@ -289,6 +295,7 @@ approximateEvidence[
                     First[Nearest[Normal[storedVals[[All, 2]]], numVals, {1, radius}], Automatic],
                     Automatic
                 ],
+                "IncludeLogLikelihood" -> includeLogLike,
                 opts
             ];
             hyperPost = fit["LogEvidence"] + (prior /. rules);
@@ -515,6 +522,9 @@ laplacePosteriorFit[
     logPost = numericalLogPosterior[data, likelihood, prior, varsIn -> varsOut,
         "ReturnNumericalFunction" -> False,
         Sequence @@ FilterRules[{opts}, Options[numericalLogPosterior]]
+    ];
+    If[ !TrueQ[OptionValue["IncludeLogLikelihood"]] && OptionValue["HyperParameterOptimizationMethod"] === NMaximize,
+        logPost = Total[logPost]
     ];
     result = approximateEvidence[logPost,
         modelParams, assumptions,
