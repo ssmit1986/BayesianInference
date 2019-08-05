@@ -107,7 +107,7 @@ numericalLogPosterior[
                 True -> Refine @* Activate,
                 _ -> Identity
             }
-        ] @ Plus[
+        ] @ {
             Total @ Cases[
                 likelihood,
                 Distributed[vars_, dist_] :> If[ varsIn === None,
@@ -142,13 +142,13 @@ numericalLogPosterior[
                 prior,
                 Distributed[vars_, dist_] :> Inactive[LogLikelihood][dist, {vars}]
             ]
-        ];
+        };
         If[ TrueQ @ OptionValue["ReturnNumericalFunction"]
             ,
             paramDims = Replace[OptionValue["ParameterDimensions"], Except[KeyValuePattern[{}]] -> {}];
             paramSpec = {#, Lookup[paramDims, #, Nothing]}& /@ modelParams;
             CreateNumericalFunction[
-                paramSpec, logPost, {},
+                paramSpec, logPost, {2},
                 Sequence @@ FilterRules[{opts}, Options[CreateNumericalFunction]]
             ] @ modelParams
             ,
@@ -185,15 +185,24 @@ Options[approximateEvidence] = DeleteDuplicatesBy[First] @ Join[
 wrapArgsInList[approximateEvidence, 2];
 
 approximateEvidence[
-    logPostDens_,
+    dens_,
     modelParams_List,
     assumptions_,
     opts : OptionsPattern[]
 ] := Module[{
     maxVals, mean, precisionMat,
     nParam,
-    guess = OptionValue["InitialGuess"]
+    guess = OptionValue["InitialGuess"],
+    logLikelihood,
+    logPostDens
 },
+    {logLikelihood, logPostDens} = Replace[
+        dens,
+        {
+            {loglike_, logPrior_} :> {loglike, loglike + logPrior},
+            other_ :> {Missing[], other}
+        }
+    ];
     nParam = Length @ modelParams;
     maxVals = If[ TrueQ[MatchQ[guess, KeyValuePattern[{}]] && Length[guess] >= nParam],
         FindMaximum[
@@ -229,6 +238,7 @@ approximateEvidence[
         "Maximum" -> maxVals,
         "Mean" -> mean,
         "PrecisionMatrix" -> precisionMat,
+        "LogLikelihood" -> logLikelihood /. Last[maxVals],
         "Parameters" -> Keys[Last[maxVals]],
         "UnnormalizedLogDensity" -> If[ TrueQ @ OptionValue["IncludeDensity"] || MissingQ[precisionMat], logPostDens, Missing[]]
     |>
@@ -293,7 +303,7 @@ approximateEvidence[
             NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]],
             With[{
                 initialGuess = Lookup[hyperParamMethod, "InitialGuess", ConstantArray[0.1, nHyper]],
-                updateFun = Lookup[hyperParamMethod, "UpdateFunction", macKayUpdateMethod],
+                updateFun = Lookup[hyperParamMethod, "UpdateFunction", macKayUpdateMethod[]],
                 maxIterations = Lookup[hyperParamMethod, MaxIterations, 1000],
                 sameTest = Lookup[hyperParamMethod, SameTest, 
                     With[{tol = Abs @ Lookup[hyperParamMethod, Tolerance, 1*^-6]},
@@ -384,18 +394,49 @@ approximateEvidence[
         
     ]
 ];
+macKayUpdateMethod[] := macKayUpdateMethod[1];
 
-macKayUpdateMethod[{logAlpha_?NumericQ}, fit_?AssociationQ, {priorDeriv : _ : (0&)}] := With[{
-    trAinv = Tr[Inverse @ fit["PrecisionMatrix"]],
-    ew2 = Total[fit["Mean"]^2]
-},
-    Log @ {
-        Divide[  (* new alpha *)
-            Length[fit["Mean"]],
-            ew2 + trAinv - 2 * priorDeriv[logAlpha]
-        ]
-    }
+macKayUpdateMethod[nParam : 1, ___] := Function[{params, fit, deriv},
+    With[{
+        logAlpha = First[params],
+        priorDeriv = First[deriv],
+        trAinv = Tr[Inverse @ fit["PrecisionMatrix"]],
+        ew2 = Total[fit["Mean"]^2],
+        k = Length[fit["Mean"]]
+    },
+        Log @ {
+            Divide[ (* new alpha *)
+                k,
+                ew2 + trAinv - 2 * priorDeriv[logAlpha]
+            ]
+        }
+    ]
 ];
+
+macKayUpdateMethod[nParam : 2, ndat_Integer] := Function[{params, fit, deriv},
+    Module[{
+        logAlpha = params[[1]],
+        logBeta = params[[2]],
+        k = Length[fit["Mean"]],
+        alpha, beta,
+        trAinv = Tr[Inverse @ fit["PrecisionMatrix"]],
+        ew2 = Total[fit["Mean"]^2],
+        ed2
+    },
+        {alpha, beta} = Exp[{logAlpha, logBeta}];
+        ed2 = -(2/beta) * (fit["LogLikelihood"] + (ndat/2) * Log[(2 Pi)/beta]); (* Sum of square errors *)
+        Log @ {
+            Divide[ (* new alpha *)
+                k,
+                ew2 + trAinv - 2 * deriv[[1]][logAlpha]
+            ],
+            Divide[ (* new beta *)
+                ndat - k + alpha * trAinv,
+                ed2 - 2 * deriv[[2]][logBeta]
+            ]
+        }
+    ]
+]
 
 Options[laplacePosteriorFit] = DeleteDuplicatesBy[First] @ Join[
     Options[approximateEvidence],
