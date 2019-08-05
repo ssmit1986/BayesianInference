@@ -299,7 +299,8 @@ approximateEvidence[
                     With[{tol = Abs @ Lookup[hyperParamMethod, Tolerance, 1*^-6]},
                         Function[Max @ Abs[First @ #1 - First @ #2] < tol]
                     ]
-                ]
+                ],
+                priorDeriv = Lookup[hyperParamMethod, "LogPriorDerivatives", ConstantArray[0&, nHyper]]
             },
                 numFun[initialGuess];
                 Replace[
@@ -312,7 +313,7 @@ approximateEvidence[
                         Apply @ Function[{prevGuess, prevFit},
                             With[{
                                 updateGuess = Replace[
-                                    updateFun[prevGuess, prevFit],
+                                    updateFun[prevGuess, prevFit, priorDeriv],
                                     fail : Except[{__?NumericQ}] :> (
                                         Message[approximateEvidence::fixedpoint1, hyperParams, prevGuess, fail];
                                         Throw[$Failed, "FixedPoint"]
@@ -320,7 +321,7 @@ approximateEvidence[
                                 ]
                             },
                                 Replace[
-                                    numFun[updateFun[updateGuess, prevFit]],
+                                    numFun[updateGuess],
                                     Except[_?NumericQ] :> (
                                         Message[approximateEvidence::fixedpoint2, hyperParams, updateGuess];
                                         Throw[$Failed, "FixedPoint"]
@@ -381,10 +382,16 @@ approximateEvidence[
     ]
 ];
 
-macKayUpdateMethod[{logAlpha_?NumericQ}, fit_?AssociationQ] := With[{
-    gamma = Length @ fit["Mean"] - Exp[logAlpha] * Tr[Inverse @ fit["PrecisionMatrix"]]
+macKayUpdateMethod[{logAlpha_?NumericQ}, fit_?AssociationQ, {priorDeriv : _ : (0&)}] := With[{
+    trAinv = Tr[Inverse @ fit["PrecisionMatrix"]],
+    ew2 = Total[fit["Mean"]^2]
 },
-    Log @ {Divide[gamma, Total[fit["Mean"]^2]] (* new alpha *)}
+    Log @ {
+        Divide[  (* new alpha *)
+            Length[fit["Mean"]],
+            ew2 + trAinv - 2 * priorDeriv[logAlpha]
+        ]
+    }
 ];
 
 Options[laplacePosteriorFit] = DeleteDuplicatesBy[First] @ Join[
