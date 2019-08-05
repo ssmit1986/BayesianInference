@@ -300,7 +300,10 @@ approximateEvidence[
                         Function[Max @ Abs[First @ #1 - First @ #2] < tol]
                     ]
                 ],
-                priorDeriv = Lookup[hyperParamMethod, "LogPriorDerivatives", ConstantArray[0&, nHyper]]
+                priorDeriv = Replace[
+                    Lookup[hyperParamMethod, "LogPriorDerivatives", 0&],
+                    fun : Except[_List] :> ConstantArray[fun, nHyper] 
+                ]
             },
                 numFun[initialGuess];
                 Replace[
