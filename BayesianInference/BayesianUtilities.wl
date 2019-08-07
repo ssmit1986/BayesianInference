@@ -34,6 +34,7 @@ conditionalProductDistribution::usage = "conditionalProductDistribution works li
 modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
 wrapArgsInList::usage = "wrapArgsInList[function, i] sets a downvalue to function to automatically wrap argument i in a list.";
 improperUniformDistribution::usage = "improperUniformDistribution[n] is an improper distribution with a constant PDF over all points in nD. It can be used for defining improper priors";
+conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[dist, {i1 -> val1, ...}, {j1, j2, ...}] gives the {j1, j2, ...} marginal of dist when the indices {i1, ...} are conditioned to values {val1, ...}";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -643,6 +644,50 @@ wrapArgsInList[fun : Except[_List], slots : {__Integer}] := (
 improperUniformDistribution[n : _Integer?Positive : 1] := ProbabilityDistribution[1,
     Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
 ];
+
+conditionedMultinormalDistribution[dist_, rule_Rule, rest___] := conditionedMultinormalDistribution[dist, Flatten @ {Thread[rule]}, rest];
+
+conditionedMultinormalDistribution[
+    MultinormalDistribution[mu_, cov_]?DistributionParameterQ,
+    rules : {(_Integer -> _) ..},
+    marginals : (_Integer | {__Integer} | All) : All
+] /; DuplicateFreeQ[Flatten@{rules[[All, 1]], marginals}] := Module[{
+    dim = Length[mu],
+    indexKeep, indexDrop,
+    partitionedMu, partionedCov ,
+    rulesNoDup, conditionValues,
+    inv22, dist
+},
+    rulesNoDup = AssociationThread[Mod[rules[[All, 1]], dim, 1], rules[[All, 2]]];
+    indexDrop = Keys[rulesNoDup];
+    conditionValues = Values[rulesNoDup];
+    indexKeep = Replace[
+        marginals,
+        {
+            All :> Complement[Range[dim], indexDrop], 
+            i_Integer :> {i}
+        }
+    ];
+    partitionedMu = mu[[#]] & /@ {indexKeep, indexDrop};
+    partionedCov = {
+        {cov[[indexKeep, indexKeep]], cov[[indexKeep, indexDrop]]},
+        {cov[[indexDrop, indexKeep]], cov[[indexDrop, indexDrop]]}
+    };
+    inv22 = LinearSolve[partionedCov[[2, 2]]];
+    (*inv22=Inverse[partionedCov[[2,2]]];*)
+    dist = Quiet[
+        MultinormalDistribution[
+            partitionedMu[[1]] + partionedCov[[1, 2]] . inv22[Subtract[conditionValues, partitionedMu[[2]]]],
+            Subtract[partionedCov[[1, 1]], partionedCov[[1, 2]] . inv22[partionedCov[[2, 1]]]]
+        ],
+        LinearSolve::exanexb
+    ];
+    If[ IntegerQ[marginals],
+        MarginalDistribution[dist, 1],
+        dist
+    ]
+];
+
 
 End[] (* End Private Context *)
 
