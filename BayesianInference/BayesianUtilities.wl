@@ -645,6 +645,9 @@ improperUniformDistribution[n : _Integer?Positive : 1] := ProbabilityDistributio
     Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
 ];
 
+conditionedMultinormalDistribution[dist_, {}] := dist;
+conditionedMultinormalDistribution[dist_, {}, All] := dist;
+conditionedMultinormalDistribution[dist_, {}, marginals_] := MarginalDistribution[dist, marginals];
 conditionedMultinormalDistribution[dist_, rule_Rule, rest___] := conditionedMultinormalDistribution[dist, Flatten @ {Thread[rule]}, rest];
 
 conditionedMultinormalDistribution[
