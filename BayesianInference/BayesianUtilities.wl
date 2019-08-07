@@ -645,6 +645,7 @@ improperUniformDistribution[n : _Integer?Positive : 1] := ProbabilityDistributio
     Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
 ];
 
+conditionedMultinormalDistribution::noDim = "Distribution has no dimensions left after conditioning on indices `1`.";
 conditionedMultinormalDistribution[dist_MultinormalDistribution, {}] := dist;
 conditionedMultinormalDistribution[dist_MultinormalDistribution, {}, All] := dist;
 
@@ -674,6 +675,10 @@ conditionedMultinormalDistribution[
             All :> Complement[Range[dim], indexDrop], 
             i_Integer :> {i}
         }
+    ];
+    If[ indexKeep === {},
+        Message[conditionedMultinormalDistribution::noDim, indexDrop ];
+        Return[$Failed]
     ];
     partitionedMu = mu[[#]] & /@ {indexKeep, indexDrop};
     partionedCov = {
