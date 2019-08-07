@@ -645,16 +645,20 @@ improperUniformDistribution[n : _Integer?Positive : 1] := ProbabilityDistributio
     Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
 ];
 
-conditionedMultinormalDistribution[dist_, {}] := dist;
-conditionedMultinormalDistribution[dist_, {}, All] := dist;
-conditionedMultinormalDistribution[dist_, {}, marginals_] := MarginalDistribution[dist, marginals];
-conditionedMultinormalDistribution[dist_, rule_Rule, rest___] := conditionedMultinormalDistribution[dist, Flatten @ {Thread[rule]}, rest];
+conditionedMultinormalDistribution[dist_MultinormalDistribution, {}] := dist;
+conditionedMultinormalDistribution[dist_MultinormalDistribution, {}, All] := dist;
+
+conditionedMultinormalDistribution[dist_MultinormalDistribution, {}, marginals_] := 
+    MarginalDistribution[dist, marginals];
+
+conditionedMultinormalDistribution[dist_MultinormalDistribution, rule_Rule, rest___] :=
+    conditionedMultinormalDistribution[dist, Flatten @ {Thread[rule]}, rest];
 
 conditionedMultinormalDistribution[
-    MultinormalDistribution[mu_, cov_]?DistributionParameterQ,
+    MultinormalDistribution[mu_ /; Length[mu] > 1, cov_]?DistributionParameterQ,
     rules : {(_Integer -> _) ..},
     marginals : (_Integer | {__Integer} | All) : All
-] /; DuplicateFreeQ[Flatten@{rules[[All, 1]], marginals}] := Module[{
+] /; DuplicateFreeQ[Flatten @ {rules[[All, 1]], marginals}] := Module[{
     dim = Length[mu],
     indexKeep, indexDrop,
     partitionedMu, partionedCov ,
@@ -676,14 +680,10 @@ conditionedMultinormalDistribution[
         {cov[[indexKeep, indexKeep]], cov[[indexKeep, indexDrop]]},
         {cov[[indexDrop, indexKeep]], cov[[indexDrop, indexDrop]]}
     };
-    inv22 = LinearSolve[partionedCov[[2, 2]]];
-    (*inv22=Inverse[partionedCov[[2,2]]];*)
-    dist = Quiet[
-        MultinormalDistribution[
-            partitionedMu[[1]] + partionedCov[[1, 2]] . inv22[Subtract[conditionValues, partitionedMu[[2]]]],
-            Subtract[partionedCov[[1, 1]], partionedCov[[1, 2]] . inv22[partionedCov[[2, 1]]]]
-        ],
-        LinearSolve::exanexb
+    inv22 = Inverse[partionedCov[[2, 2]]];
+    dist = MultinormalDistribution[
+        partitionedMu[[1]] + partionedCov[[1, 2]] . inv22 . Subtract[conditionValues, partitionedMu[[2]]],
+        Subtract[partionedCov[[1, 1]], partionedCov[[1, 2]] . inv22 . partionedCov[[2, 1]]]
     ];
     If[ IntegerQ[marginals],
         MarginalDistribution[dist, 1],
