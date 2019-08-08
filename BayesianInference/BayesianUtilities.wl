@@ -694,22 +694,21 @@ conditionedMultinormalDistribution[
     rulesNoDup, conditionValues,
     inv22, dist,
     sparseQ = Head[cov] === SparseArray,
-    symmetrizedQ = Head[cov] === StructuredArray
+    symmetrizedQ = Head[cov] === StructuredArray,
+    numericQ
 },
     Condition[
         rulesNoDup = AssociationThread[Mod[rules[[All, 1]], dim, 1], rules[[All, 2]]];
         indexDrop = Keys[rulesNoDup];
         conditionValues = Values[rulesNoDup];
+        numericQ = MatrixQ[cov, NumericQ] && VectorQ[conditionValues, NumericQ];
         indexKeep = Replace[
             marginals,
             {
                 All :> Complement[Range[dim], indexDrop], 
-                i_Integer :> {i}
+                i_Integer :> {Mod[i, dim, 1]},
+                ints_List :> Mod[ints, dim, 1]
             }
-        ];
-        If[ indexKeep === {},
-            Message[conditionedMultinormalDistribution::noDim, indexDrop ];
-            Return[$Failed]
         ];
         partitionedMu = mu[[#]] & /@ {indexKeep, indexDrop};
         partionedCov = {
@@ -717,9 +716,9 @@ conditionedMultinormalDistribution[
             {cov[[indexDrop, indexKeep]], cov[[indexDrop, indexDrop]]}
         };
         inv22 = Which[
-            sparseQ,
+            numericQ && sparseQ,
                 LinearSolve[partionedCov[[2, 2]]],
-            symmetrizedQ, (* LinearSolve is better optimized for sparse arrays *)
+            numericQ && symmetrizedQ, (* LinearSolve is better optimized for sparse numerical arrays *)
                 LinearSolve[SparseArray @ partionedCov[[2, 2]]],
             True,
                 With[{inv = Inverse[partionedCov[[2, 2]]]},
@@ -738,9 +737,13 @@ conditionedMultinormalDistribution[
         ];
         If[ IntegerQ[marginals],
             Flatten[dist],
-            If[ symmetrizedQ,
-                MapAt[SymmetrizedArray[#, Automatic, Symmetric[{1, 2}]]&, dist, 2],
-                dist
+            Which[
+                symmetrizedQ,
+                    MapAt[SymmetrizedArray[#, Automatic, Symmetric[{1, 2}]]&, dist, 2],
+                sparseQ,
+                    MapAt[SparseArray, dist, 2],
+                True,
+                    dist
             ]
         ]
         ,
