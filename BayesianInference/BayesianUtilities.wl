@@ -664,24 +664,28 @@ conditionedMultinormalDistribution[Inactive[MultinormalDistribution][cov_?Square
 
 conditionedMultinormalDistribution[
     Alternatives[
-        (head : MultinormalDistribution)[mu_ /; Length[mu] > 1, cov_]?DistributionParameterQ,
-        (head : Inactive[MultinormalDistribution])[mu_?VectorQ , cov_?SquareMatrixQ] /; With[
+        (head : MultinormalDistribution)[mu_, cov_]?DistributionParameterQ,
+        (head : Inactive[MultinormalDistribution])[mu_ , cov_] /; With[
             {lm = Length[mu]},
             lm === Length[cov] && lm > 1
         ]
     ],
     rules : {(_Integer -> _) ..},
     marginals : (_Integer | {__Integer} | All) : All
-] := Replace[
-    conditionedMultinormalDistribution[{mu, cov}, rules, marginals],
-    {
-        {m_?VectorQ, c_?MatrixQ} :> head[m, c],
-        {m_, var_} :> NormalDistribution[m, Sqrt[var]]
-    }
+] := With[{
+    eval = conditionedMultinormalDistribution[{mu, cov}, rules, marginals]
+},
+    Replace[
+        conditionedMultinormalDistribution[{mu, cov}, rules, marginals],
+        {
+            {m_?VectorQ, c_?MatrixQ} :> head[m, c],
+            {m_, var_} :> NormalDistribution[m, Sqrt[var]]
+        }
+    ] /; ListQ[eval]
 ];
 
 conditionedMultinormalDistribution[
-    {mu_ /; Length[mu] > 1, cov_},
+    {mu_?VectorQ, cov_?SquareMatrixQ},
     rules : {(_Integer -> _) ..},
     marginals : (_Integer | {__Integer} | All) : All
 ] /; Replace[
@@ -693,11 +697,12 @@ conditionedMultinormalDistribution[
     partitionedMu, partionedCov ,
     rulesNoDup, conditionValues,
     inv22, dist,
-    sparseQ = Head[cov] === SparseArray,
-    symmetrizedQ = Head[cov] === StructuredArray,
+    sparseQ, symmetrizedQ,
     numericQ
 },
     Condition[
+        sparseQ = Head[cov] === SparseArray;
+        symmetrizedQ = Head[cov] === StructuredArray;
         rulesNoDup = AssociationThread[Mod[rules[[All, 1]], dim, 1], rules[[All, 2]]];
         indexDrop = Keys[rulesNoDup];
         conditionValues = Values[rulesNoDup];
@@ -729,7 +734,13 @@ conditionedMultinormalDistribution[
             {
                 partitionedMu[[1]] + partionedCov[[1, 2]] . inv22[Subtract[conditionValues, partitionedMu[[2]]]],
                 Replace[
-                    Subtract[partionedCov[[1, 1]], partionedCov[[1, 2]] . inv22[partionedCov[[2, 1]]]],
+                    Subtract[
+                        partionedCov[[1, 1]], 
+                        partionedCov[[1, 2]] . If[ sparseQ,
+                            SparseArray @ inv22[partionedCov[[2, 1]]],
+                            inv22[partionedCov[[2, 1]]]
+                        ]
+                    ],
                     m_?(MatrixQ[#, NumericQ]&) :> Divide[Transpose[m] + m, 2] (* guarantees symmetry of numerical results *)
                 ]
             },
@@ -737,19 +748,18 @@ conditionedMultinormalDistribution[
         ];
         If[ IntegerQ[marginals],
             Flatten[dist],
-            Which[
-                symmetrizedQ,
-                    MapAt[SymmetrizedArray[#, Automatic, Symmetric[{1, 2}]]&, dist, 2],
-                sparseQ,
-                    MapAt[SparseArray, dist, 2],
-                True,
-                    dist
+            If[ symmetrizedQ,
+                MapAt[SymmetrizedArray[#, Automatic, Symmetric[{1, 2}]]&, dist, 2],
+                dist
             ]
         ]
         ,
-        Replace[
-            Length[rules] < dim,
-            False :> (Message[conditionedMultinormalDistribution::noDim, rules[[All, 1]]]; False)
+        And[
+            Replace[
+                Length[rules] < dim,
+                False :> (Message[conditionedMultinormalDistribution::noDim, rules[[All, 1]]]; False)
+            ],
+            Length[cov] === dim
         ]
     ]
 ];
