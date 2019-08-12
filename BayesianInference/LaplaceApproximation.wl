@@ -88,16 +88,23 @@ numericalLogPosterior[
         paramDims
     },
         {varsIn, varsOut, datIn, datOut} = Replace[
-            {varSpec, data},
+            Replace[
+                {varSpec, data},
+                thing : Except[_Rule] :> {} -> thing,
+                {1}
+            ],
             {
-                {lst1_List, lst2_List} :> {None, lst1, None, Replace[lst2, v_?VectorQ :> List /@ v]},
                 {
                     lst11_List -> lst12_List,
                     lst21_List -> lst22_List
-                } :> {
-                    lst11, lst12,
-                    Sequence @@ Replace[{lst21, lst22}, v_?VectorQ :> List /@ v, {1}]
-                },
+                } :> Replace[
+                    {
+                        lst11, lst12,
+                        Sequence @@ Replace[{lst21, lst22}, v_?VectorQ :> List /@ v, {1}]
+                    },
+                    {} -> None,
+                    {1}
+                ],
                 _ :> Throw[$Failed, "var"]
             }
         ];
@@ -490,7 +497,7 @@ laplacePosteriorFit[
         {
             l_List :> {{}, l},
             Verbatim[Rule][in_, out_] :> Flatten @* List /@ {in, out},
-            other_ :> {other}
+            other_ :> {{}, {other}}
         }
     ];
     graph = Graph[
