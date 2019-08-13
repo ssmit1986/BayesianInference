@@ -282,14 +282,14 @@ approximateEvidence[
         hyperParamMethod = Replace[
             OptionValue["HyperParameterOptimizationMethod"],
             {
-                {FixedPoint, spec___} /; MatchQ[{spec}, KeyValuePattern[{}]] :> {spec},
-                FixedPoint -> {},
-                _ -> NMaximize
+                {method : FixedPoint | NMaximize, spec___} /; MatchQ[{spec}, KeyValuePattern[{}]] :> {method, {spec}},
+                method : FixedPoint | NMaximize -> {method, {}},
+                _ -> {NMaximize, {}}
             }
         ],
         includeLogLike
     },
-        includeLogLike = TrueQ[OptionValue["IncludeLogLikelihood"]] || hyperParamMethod =!= NMaximize;
+        includeLogLike = TrueQ[OptionValue["IncludeLogLikelihood"]] || First[hyperParamMethod] =!= NMaximize;
         logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = With[{
             (* NMaximize will block the hyperparams, so rules are only necessary outside of NMaximize *)
@@ -313,20 +313,21 @@ approximateEvidence[
             hyperPost
         ];
         
-        maxHyper = If[ hyperParamMethod === NMaximize,
-            NMaximize[{numFun[hyperParams], assum2}, hyperParams, Sequence @@ FilterRules[{opts}, Options[NMaximize]]],
+        maxHyper = If[ First[hyperParamMethod] === NMaximize,
+            NMaximize[
+                {numFun[hyperParams], assum2},
+                hyperParams,
+                Sequence @@ FilterRules[Last @ hyperParamMethod, Options[NMaximize]],
+                Sequence @@ FilterRules[{opts}, Options[NMaximize]]
+            ],
             With[{
-                initialGuess = Lookup[hyperParamMethod, "InitialGuess", ConstantArray[0.1, nHyper]],
-                updateFun = Lookup[hyperParamMethod, "UpdateFunction", macKayUpdateMethod[]],
-                maxIterations = Lookup[hyperParamMethod, MaxIterations, 1000],
-                sameTest = Lookup[hyperParamMethod, SameTest, 
-                    With[{tol = Abs @ Lookup[hyperParamMethod, Tolerance, 1*^-6]},
+                initialGuess = Lookup[Last @ hyperParamMethod, "InitialGuess", ConstantArray[0.1, nHyper]],
+                updateFun = Lookup[Last @ hyperParamMethod, "UpdateFunction", macKayUpdateMethod[]],
+                maxIterations = Lookup[Last @ hyperParamMethod, MaxIterations, 1000],
+                sameTest = Lookup[Last @ hyperParamMethod, SameTest, 
+                    With[{tol = Abs @ Lookup[Last @ hyperParamMethod, Tolerance, 1*^-6]},
                         Function[Max @ Abs[First @ #1 - First @ #2] < tol]
                     ]
-                ],
-                priorDeriv = Replace[
-                    Lookup[hyperParamMethod, "LogPriorDerivatives", 0&],
-                    fun : Except[_List] :> ConstantArray[fun, nHyper] 
                 ]
             },
                 numFun[initialGuess];
@@ -340,7 +341,7 @@ approximateEvidence[
                         Apply @ Function[{prevGuess, prevFit},
                             With[{
                                 updateGuess = Replace[
-                                    updateFun[prevGuess, prevFit, priorDeriv],
+                                    updateFun[prevGuess, prevFit],
                                     fail : Except[{__?NumericQ}] :> (
                                         Message[approximateEvidence::fixedpoint1, hyperParams, prevGuess, fail];
                                         Throw[$Failed, "FixedPoint"]
@@ -410,10 +411,9 @@ approximateEvidence[
 ];
 macKayUpdateMethod[] := macKayUpdateMethod[1];
 
-macKayUpdateMethod[nParam : 1, ___] := Function[{params, fit, deriv},
+macKayUpdateMethod[nParam : 1, priorDeriv : _ : (0&)] := Function[{params, fit},
     With[{
         logAlpha = First[params],
-        priorDeriv = First[deriv],
         trAinv = Tr[Inverse @ fit["PrecisionMatrix"]],
         ew2 = Total[fit["Mean"]^2],
         k = Length[fit["Mean"]]
@@ -427,7 +427,7 @@ macKayUpdateMethod[nParam : 1, ___] := Function[{params, fit, deriv},
     ]
 ];
 
-macKayUpdateMethod[nParam : 2, ndat_Integer] := Function[{params, fit, deriv},
+macKayUpdateMethod[nParam : 2, ndat_Integer, deriv : {_, _} : {0&, 0&}] := Function[{params, fit},
     Module[{
         logAlpha = params[[1]],
         logBeta = params[[2]],
