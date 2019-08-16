@@ -95,8 +95,8 @@ numericalLogPosterior[
         ] @ {
             Total @ Cases[
                 likelihood,
-                Distributed[vars_, dist_] :> If[ varsIn === None,
-                    With[{
+                If[ varsIn === None,
+                    Distributed[vars_, dist_] :> With[{
                         dat = Part[datOut, All,
                             Lookup[
                                 posIndexOut,
@@ -107,18 +107,22 @@ numericalLogPosterior[
                     },
                         Inactive[LogLikelihood][dist, dat]
                     ],
-                    Total @ Check[
-                        ReplaceAll[
-                            Inactive[LogLikelihood][dist, Flatten[{vars}]],
-                            MapThread[
-                                AssociationThread,
-                                {
-                                    ConstantArray[Join[varsIn, varsOut], Length[datOut]],
-                                    Join[datIn, datOut, 2]
-                                }
-                            ]
-                        ],
-                        Throw[$Failed, "var"]
+                    With[{
+                        rules = MapThread[
+                            AssociationThread,
+                            {
+                                ConstantArray[Join[varsIn, varsOut], Length[datOut]],
+                                Join[datIn, datOut, 2]
+                            }
+                        ]
+                    },
+                        Distributed[vars_, dist_] :> Total @ Check[
+                            ReplaceAll[
+                                Inactive[LogLikelihood][dist, Flatten[{vars}]],
+                                rules
+                            ],
+                            Throw[$Failed, "var"]
+                        ]
                     ]
                 ],
                 {1}
