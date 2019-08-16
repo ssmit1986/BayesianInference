@@ -29,35 +29,13 @@ laplaceLogEvidence[max_?NumericQ, precisionMatrix_?numericMatrixQ] := With[{
 laplaceLogEvidence[max_?NumericQ, var_?Positive] := laplaceLogEvidence[max, {{var}}];
 laplaceLogEvidence[__] := Missing[];
 
-wrapArgsInList[{modelLogLikelihood, modelAssumptions}, 1];
+wrapArgsInList[modelAssumptions, 1];
 modelAssumptions[model : {__Distributed}] := And @@ MapThread[
     BayesianStatistics`Private`distributionDomainToConstraints,
     {
         DistributionDomain /@ model[[All, 2]],
         model[[All, 1]] 
     }
-];
-
-(* Attempts symbolic evaluation *)
-modelLogLikelihood[model : {__Distributed}] := Assuming[
-    Apply[And, DistributionParameterAssumptions /@ model[[All, 2]]],
-    Quiet @ Catch[
-        Simplify @ Total @ Replace[
-            model,
-            Distributed[sym_, dist_] :> If[ TrueQ @ DistributionParameterQ[dist],
-                Replace[
-                    LogLikelihood[dist, {sym}],
-                    {
-                        _LogLikelihood :> Throw[Undefined, "DistParamQ"],
-                        result_ :> Simplify[result]
-                    }
-                ],
-                Throw[$Failed, "DistParamQ"]
-            ],
-            {1}
-        ],
-        "DistParamQ"
-    ]
 ];
 
 Options[numericalLogPosterior] = Join[
