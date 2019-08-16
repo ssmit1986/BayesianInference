@@ -290,7 +290,7 @@ approximateEvidence[
         includeLogLike
     },
         includeLogLike = TrueQ[OptionValue["IncludeLogLikelihood"]] || First[hyperParamMethod] =!= NMaximize;
-        logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {2, 10}];
+        logPostDens = Simplify[dens, Assumptions -> assumptions && assum2, TimeConstraint -> {5, 30}];
         numFun[numVals : {__?NumericQ}] := numFun[numVals] = With[{
             (* NMaximize will block the hyperparams, so rules are only necessary outside of NMaximize *)
             rules = If[ VectorQ[hyperParams, NumericQ], {}, AssociationThread[hyperParams, numVals]]
@@ -526,9 +526,13 @@ laplacePosteriorFit[
         Message[laplacePosteriorFit::assum, assumptions];
         Return[$Failed]
     ];
-    logPost = numericalLogPosterior[data, likelihood, prior, varsIn -> varsOut,
-        "ReturnNumericalFunction" -> False,
-        Sequence @@ FilterRules[{opts}, Options[numericalLogPosterior]]
+    logPost = Simplify[
+        numericalLogPosterior[data, likelihood, prior, varsIn -> varsOut,
+            "ReturnNumericalFunction" -> False,
+            Sequence @@ FilterRules[{opts}, Options[numericalLogPosterior]]
+        ],
+        Assumptions -> assumptions,
+        TimeConstraint -> {1, 10}
     ];
     If[ !TrueQ[OptionValue["IncludeLogLikelihood"]] && OptionValue["HyperParameterOptimizationMethod"] === NMaximize,
         logPost = Total[logPost]
