@@ -611,8 +611,8 @@ modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ, opt
     edges = DeleteDuplicates @ Flatten @ Map[
         Function[dist,
             Thread @ DirectedEdge[
-                #,
-                Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}]
+                Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}],
+                #
             ]& /@ Flatten[{dist[[1]]}]
         ],
         fullModel

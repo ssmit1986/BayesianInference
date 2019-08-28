@@ -495,8 +495,8 @@ laplacePosteriorFit[
     If[ AnyTrue[
             EdgeList[graph],
             MatchQ @ Alternatives[
-                DirectedEdge[Alternatives @@ varsIn, _],
-                DirectedEdge[Alternatives @@ modelParams, Alternatives @@ varsOut]
+                DirectedEdge[_, Alternatives @@ varsIn],
+                DirectedEdge[Alternatives @@ varsOut, Alternatives @@ modelParams]
             ]
         ],
         Message[laplacePosteriorFit::dependency];
