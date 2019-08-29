@@ -628,6 +628,14 @@ modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ, opt
     ]
 ];
 
+dependencyData[gr_?DirectedGraphQ] /; AcyclicGraphQ[gr] := AssociationMap[
+    <|
+        "InfluencedBy" ->  DeleteCases[VertexInComponent[gr, {#}], #],
+        "Influences" -> DeleteCases[VertexOutComponent[gr, {#}], #]
+    |>&,
+    VertexList[gr]
+];
+
 wrapArgsInList[funs_List, rest___] := (
     Scan[wrapArgsInList[#, rest]&, funs];
     Flatten @ funs
