@@ -82,11 +82,11 @@ summaryForm[assoc_?AssociationQ] := ToString @ StringForm["Association (`` keys)
 summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[dist]},
     ToString @ Switch[dim,
         1,
-            "Distribution (1D, Real)",
+            "Distribution (1D, Scalar)",
         {_Integer},
             StringForm["Distribution (``D, Vector)", First[dim]],
         _,
-            $Failed
+            "Distribution"
     ]
 ];
 summaryForm[atom : (_?NumericQ | _String)] := ToString[Short[atom]];
@@ -364,7 +364,7 @@ distributionDimension[dist_?DistributionParameterQ] := With[{dom = DistributionD
     Switch[ dom,
         {__},
             {Length[dom]},
-        _Interval,
+        _Interval | _Span,
             1,
         _,
             $Failed

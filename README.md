@@ -58,3 +58,6 @@ See the `example_code.nb` notebook for a general explanation of the code and sev
 * 12 July 2019
     * Add code for Bayesian linear regression. See the appropriate section in the example notebook.
     * Add code for (pseudo) Bayesian regression methods using neural networks. See the appropriate section in the example notebook.
+
+* 03 September 2019
+    * Fix a bug in the tool tip of `inferenceObject` where it would show `$Failed` for the `"GeneratingDistribution"` property.
