@@ -128,10 +128,8 @@ BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_Li
 ];
 
 symmetrizeMatrix = Replace[{
-    mat_?SquareMatrixQ /; ! SymmetricMatrixQ[mat] :> Normal @ SymmetrizedArray[mat, Dimensions[mat], Symmetric[{1, 2}]]
+    mat_?SquareMatrixQ /; MatrixQ[mat, NumericQ] && !SymmetricMatrixQ[mat] :> Divide[mat + Transpose[mat], 2]
 }];
-
-linSolveInverse = Function[LinearSolve[#, IdentityMatrix[Length[#]]]];
 
 bayesianLinearRegressionInternal[dMat_, yMat_, prior : Except[KeyValuePattern[{}] | {_, _, _, _, _}]] := 
     bayesianLinearRegressionInternal[dMat, yMat, {}];
@@ -149,7 +147,7 @@ bayesianLinearRegressionInternal[dMat_, yMat_, prior : KeyValuePattern[{}]] := W
             {   (* Prior that assumes ignorance but is still normalized *)
                 Lookup[prior, "B", ConstantArray[0, {dimIn, dimOut}]],
                 priorLambda,
-                symmetrizeMatrix @ Lookup[prior, "LambdaInverse", linSolveInverse[priorLambda]],
+                symmetrizeMatrix @ Lookup[prior, "LambdaInverse", Inverse[priorLambda]],
                 Lookup[prior, "V", IdentityMatrix[dimOut]/100],
                 Lookup[prior, "Nu", 1/100 + dimOut - 1]
             }
@@ -271,7 +269,7 @@ updateParameters[
         v0 + Transpose[residuals].residuals + Transpose[bDiff].lambda0.bDiff
     ];
     nuUpdate = nu0 + nDat;
-    {bUpdate, symmetrizeMatrix @ lambdaUpdate, symmetrizeMatrix @ linSolveInverse[lambdaUpdate], vUpdate, nuUpdate}
+    {bUpdate, symmetrizeMatrix @ lambdaUpdate, symmetrizeMatrix @ Inverse[lambdaUpdate], vUpdate, nuUpdate}
 ];
 
 (* Multivariate *)

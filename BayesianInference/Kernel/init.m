@@ -6,7 +6,8 @@ ClearAll[
     "BayesianGaussianProcess`*", "BayesianGaussianProcess`Private`*",
     "BayesianVisualisations`*", "BayesianVisualisations`Private`*",
     "BayesianNeuralNetworks`*", "BayesianNeuralNetworks`Private`*",
-    "BayesianConjugatePriors`*", "BayesianConjugatePriors`Private`*"
+    "BayesianConjugatePriors`*", "BayesianConjugatePriors`Private`*",
+    "LaplaceApproximation`*", "LaplaceApproximation`Private`*"
 ];
 Needs["GeneralUtilities`"];
 Get["BayesianInference`BayesianUtilities`"];
@@ -16,4 +17,5 @@ Get["BayesianInference`BayesianVisualisations`"];
 Get["BayesianInference`BayesianNeuralNetworks`"];
 Get["BayesianInference`ExponentialFamilyDefinitions`"];
 Get["BayesianInference`BayesianConjugatePriors`"];
-Get["BayesianInference`BayesianLinearRegression`"]
+Get["BayesianInference`BayesianLinearRegression`"];
+Get["BayesianInference`LaplaceApproximation`"];

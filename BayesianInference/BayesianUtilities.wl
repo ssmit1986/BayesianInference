@@ -31,7 +31,10 @@ logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y -
 logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
 vectorRandomVariate;
 conditionalProductDistribution::usage = "conditionalProductDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
-
+modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
+wrapArgsInList::usage = "wrapArgsInList[function, i] sets a downvalue to function to automatically wrap argument i in a list.";
+improperUniformDistribution::usage = "improperUniformDistribution[n] is an improper distribution with a constant PDF over all points in nD. It can be used for defining improper priors";
+conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[dist, {i1 -> val1, ...}, {j1, j2, ...}] gives the {j1, j2, ...} marginal of dist when the indices {i1, ...} are conditioned to values {val1, ...}";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -524,7 +527,7 @@ vectorRandomVariate[NormalDistribution[m_, s_], n_Integer] := Abs[s] * RandomVar
 vectorRandomVariate[StudentTDistribution[nu_], n_Integer] := vectorRandomVariate[StudentTDistribution[0, 1, nu], n];
 vectorRandomVariate[StudentTDistribution[m_, s_, nu_?NumericQ], n_Integer] := Abs[s] * RandomVariate[StudentTDistribution[nu], n] + m;
 vectorRandomVariate[StudentTDistribution[m_, s_, nu : {__?NumericQ}], n_Integer] := 
-    Abs[s] * RandomVariate /@ Thread[StudentTDistribution[nu]] + m
+    Abs[s] * RandomVariate /@ Thread[StudentTDistribution[nu]] + m;
 
 vectorRandomVariate[ExponentialDistribution[l_], n_Integer] := Divide[RandomVariate[ExponentialDistribution[1], n], l];
 
@@ -592,6 +595,183 @@ vectorRandomVariate[
 
 vectorRandomVariate[d_ /; MemberQ[d, _List], n_Integer] := RandomVariate /@ Thread[d];
 vectorRandomVariate[d_?(Quiet[DistributionParameterQ[#]]&), n_Integer] := RandomVariate[d, n];
+
+modelGraph[dist_Distributed, rest___] := modelGraph[{dist}, rest];
+modelGraph[dist_, rule : Except[_?VectorQ  -> _?VectorQ , _Rule], rest___] := modelGraph[dist, Flatten @* List /@ rule, rest];
+modelGraph[dist_, other : Except[_Rule], rest___] := modelGraph[dist, {} -> other, rest];
+modelGraph[dist_, opts : OptionsPattern[Graph]] := modelGraph[dist, {} -> {}, opts];
+
+modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ, opts : OptionsPattern[Graph]] := Module[{
+    allSymbols = Union @ Join[
+        varsIn, varsOut,
+        Flatten @ fullModel[[All, 1]]
+    ],
+    edges
+},
+    edges = DeleteDuplicates @ Flatten @ Map[
+        Function[dist,
+            Thread @ DirectedEdge[
+                Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}],
+                #
+            ]& /@ Flatten[{dist[[1]]}]
+        ],
+        fullModel
+    ];
+    Graph[edges,
+        opts,
+        VertexLabels -> "Name",
+        VertexStyle -> Flatten[Thread /@ {
+            varsIn -> Red,
+            varsOut -> Green
+        }],
+        VertexSize -> Medium
+    ]
+];
+
+dependencyData[gr_?DirectedGraphQ] /; AcyclicGraphQ[gr] := AssociationMap[
+    <|
+        "InfluencedBy" ->  DeleteCases[VertexInComponent[gr, {#}], #],
+        "Influences" -> DeleteCases[VertexOutComponent[gr, {#}], #]
+    |>&,
+    VertexList[gr]
+];
+
+wrapArgsInList[funs_List, rest___] := (
+    Scan[wrapArgsInList[#, rest]&, funs];
+    Flatten @ funs
+);
+wrapArgsInList[fun : Except[_List], slot_Integer?Positive] := (
+    fun[first : Repeated[_, {slot - 1}], arg : Except[_List], rest___] := fun[first, {arg}, rest];
+    fun
+);
+wrapArgsInList[fun : Except[_List], slots : {__Integer}] := (
+    Scan[wrapArgsInList[fun, #]&, slots];
+    fun
+);
+
+improperUniformDistribution[n : _Integer?Positive : 1] := ProbabilityDistribution[1,
+    Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
+];
+
+conditionedMultinormalDistribution::noDim = "Distribution has no dimensions left after conditioning on indices `1`";
+conditionedMultinormalDistribution::dupIndex = "Duplicate indices found among the conditioning indices `1` and marginalization indices `2`";
+conditionedMultinormalDistribution[dist_, {}] := dist;
+conditionedMultinormalDistribution[dist_, {}, All] := dist;
+
+conditionedMultinormalDistribution[dist_, {}, marginals_] := 
+    MarginalDistribution[dist, marginals];
+
+conditionedMultinormalDistribution[dist_, rule_Rule, rest___] :=
+    conditionedMultinormalDistribution[dist, Flatten @ {Thread[rule]}, rest];
+
+conditionedMultinormalDistribution[Inactive[MultinormalDistribution][cov_?SquareMatrixQ], rest___] := 
+    conditionedMultinormalDistribution[
+        Inactive[MultinormalDistribution][ConstantArray[0, Length[cov]], cov],
+        rest
+    ];
+
+conditionedMultinormalDistribution[
+    Alternatives[
+        (head : MultinormalDistribution)[mu_, cov_]?DistributionParameterQ,
+        (head : Inactive[MultinormalDistribution])[mu_ , cov_] /; With[
+            {lm = Length[mu]},
+            lm === Length[cov] && lm > 1
+        ]
+    ],
+    rules : {(_Integer -> _) ..},
+    marginals : (_Integer | {__Integer} | All) : All
+] := With[{
+    eval = conditionedMultinormalDistribution[{mu, cov}, rules, marginals]
+},
+    Replace[
+        conditionedMultinormalDistribution[{mu, cov}, rules, marginals],
+        {
+            {m_?VectorQ, c_?MatrixQ} :> head[m, c],
+            {m_, var_} :> NormalDistribution[m, Sqrt[var]]
+        }
+    ] /; ListQ[eval]
+];
+
+conditionedMultinormalDistribution[
+    {mu_?VectorQ, cov_?SquareMatrixQ},
+    rules : {(_Integer -> _) ..},
+    marginals : (_Integer | {__Integer} | All) : All
+] /; Replace[
+    DuplicateFreeQ[Flatten @ {rules[[All, 1]], marginals}],
+    False :> (Message[conditionedMultinormalDistribution::dupIndex, rules[[All, 1]], marginals]; False)
+]:= Module[{
+    dim = Length[mu],
+    indexKeep, indexDrop,
+    partitionedMu, partionedCov ,
+    rulesNoDup, conditionValues,
+    inv22, dist,
+    sparseQ, symmetrizedQ,
+    numericQ
+},
+    Condition[
+        sparseQ = Head[cov] === SparseArray;
+        symmetrizedQ = Head[cov] === StructuredArray;
+        rulesNoDup = AssociationThread[Mod[rules[[All, 1]], dim, 1], rules[[All, 2]]];
+        indexDrop = Keys[rulesNoDup];
+        conditionValues = Values[rulesNoDup];
+        numericQ = MatrixQ[cov, NumericQ] && VectorQ[conditionValues, NumericQ];
+        indexKeep = Replace[
+            marginals,
+            {
+                All :> Complement[Range[dim], indexDrop], 
+                i_Integer :> {Mod[i, dim, 1]},
+                ints_List :> Mod[ints, dim, 1]
+            }
+        ];
+        partitionedMu = mu[[#]] & /@ {indexKeep, indexDrop};
+        partionedCov = {
+            {cov[[indexKeep, indexKeep]], cov[[indexKeep, indexDrop]]},
+            {cov[[indexDrop, indexKeep]], cov[[indexDrop, indexDrop]]}
+        };
+        inv22 = Which[
+            numericQ && sparseQ,
+                LinearSolve[partionedCov[[2, 2]]],
+            numericQ && symmetrizedQ, (* LinearSolve is better optimized for sparse numerical arrays *)
+                LinearSolve[SparseArray @ partionedCov[[2, 2]]],
+            True,
+                With[{inv = Inverse[partionedCov[[2, 2]]]},
+                    Function[inv . #]
+                ]
+        ];
+        dist = Quiet[
+            {
+                partitionedMu[[1]] + partionedCov[[1, 2]] . inv22[Subtract[conditionValues, partitionedMu[[2]]]],
+                Replace[
+                    Subtract[
+                        partionedCov[[1, 1]], 
+                        partionedCov[[1, 2]] . If[ sparseQ,
+                            SparseArray @ inv22[partionedCov[[2, 1]]],
+                            inv22[partionedCov[[2, 1]]]
+                        ]
+                    ],
+                    m_?(MatrixQ[#, NumericQ]&) :> Divide[Transpose[m] + m, 2] (* guarantees symmetry of numerical results *)
+                ]
+            },
+            LinearSolve::exanexb
+        ];
+        If[ IntegerQ[marginals],
+            Flatten[dist],
+            If[ symmetrizedQ,
+                MapAt[SymmetrizedArray[#, Automatic, Symmetric[{1, 2}]]&, dist, 2],
+                dist
+            ]
+        ]
+        ,
+        And[
+            Replace[
+                Length[rules] < dim,
+                False :> (Message[conditionedMultinormalDistribution::noDim, rules[[All, 1]]]; False)
+            ],
+            Length[cov] === dim
+        ]
+    ]
+];
+
 
 End[] (* End Private Context *)
 
