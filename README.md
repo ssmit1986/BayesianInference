@@ -59,5 +59,8 @@ See the `example_code.nb` notebook for a general explanation of the code and sev
     * Add code for Bayesian linear regression. See the appropriate section in the example notebook.
     * Add code for (pseudo) Bayesian regression methods using neural networks. See the appropriate section in the example notebook.
 
+* 03 September 2019
+    * Fix a bug in the tool tip of `inferenceObject` where it would show `$Failed` for the `"GeneratingDistribution"` property.
+
 * 02 October 2019 (version 1.2)
     * Add new Laplace approximation functionality to the package, which should provide a lightweight alternative to nested sampling for general inference problems. See the example code for documentation about using `laplacePosteriorFit`.
