@@ -1,6 +1,6 @@
 BeginPackage["LaplaceApproximation`", {"GeneralUtilities`", "BayesianConjugatePriors`", "BayesianUtilities`", "Experimental`"}]
 
-laplacePosteriorFit;
+laplacePosteriorFit::usage = "laplacePosteriorFit[data, model, prior, indepentendVars -> dependentVars] fits a model to data using the Laplace approximation.";
 numericalLogPosterior;
 approximateEvidence;
 fitPrecisionAtMax;
