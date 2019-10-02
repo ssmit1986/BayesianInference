@@ -55,6 +55,9 @@ See the `example_code.nb` notebook for a general explanation of the code and sev
     * Add a new use case for `predictiveDistribution` where you can specify different keys in the 3rd argument to populate the output association with. This is useful when the inputs contain duplicates (such as can happen in the time series regression example in the last section) or when you need to undo a transformation you applied to the independent coordinates.
     * Some small updates to the example notebook.
 
-* 12 July 2019
+* 12 July 2019 (version 1.1)
     * Add code for Bayesian linear regression. See the appropriate section in the example notebook.
     * Add code for (pseudo) Bayesian regression methods using neural networks. See the appropriate section in the example notebook.
+
+* 02 October 2019 (version 1.2)
+    * Add new Laplace approximation functionality to the package, which should provide a lightweight alternative to nested sampling for general inference problems. See the example code for documentation about using `laplacePosteriorFit`.
