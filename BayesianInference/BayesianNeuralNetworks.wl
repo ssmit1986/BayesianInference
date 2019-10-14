@@ -13,6 +13,7 @@ sampleTrainedNet;
 netRegularizationLoss;
 networkLogEvidence;
 batchnormToChain;
+crossValidateModel;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -402,6 +403,239 @@ batchnormToChain[net : _NetGraph | _NetChain] := Quiet[
     ],
     {NetReplace::norep}
 ];
+
+dataSize[data_List] := Length[data];
+dataSize[data_] := Length[First[data]];
+
+Options[crossValidateModel] = Join[
+    {
+        Method -> "KFold",
+        "TrainingFunction" -> Automatic,
+        "TestFunction" -> Automatic
+    }
+];
+crossValidateModel[data_List /; Length[data] > 1, dist_?DistributionParameterQ, opts : OptionsPattern[]] := crossValidateModel[
+    data,
+    "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
+        Automatic :> Function["Distribution" -> EstimatedDistribution[#1, dist]]
+    ],
+    "TestFunction" -> Replace[OptionValue["TestFunction"],
+        Automatic :> Function["LogLikelihood" -> Divide[LogLikelihood[#1, #2], Length[#2]]]
+    ],
+    Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
+];
+crossValidateModel[
+    data_?MatrixQ,
+    {method : LinearModelFit | NonlinearModelFit | GeneralizedLinearModelFit, args__}, 
+    opts : OptionsPattern[]
+] := crossValidateModel[
+    data,
+    "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
+        Automatic :> Function["FittedModel" -> method[#1, args]]
+    ],
+    "TestFunction" -> Replace[OptionValue["TestFunction"],
+        {
+            LogLikelihood :> Function[
+                With[{
+                    residuals = Subtract[
+                        #2[[All, -1]],
+                        Apply[#1, Drop[#2, None, -1], {1}]
+                    ]
+                },
+                    Divide[
+                        "LogLikelihood" -> LogLikelihood[
+                            EstimatedDistribution[residuals, NormalDistribution[0, \[FormalSigma]]],
+                            residuals
+                        ],
+                        Length[residuals]
+                    ]
+                ]
+            ],
+            _ :> Function[
+                "RootMeanSquare" -> RootMeanSquare @ Subtract[
+                    #2[[All, -1]],
+                    Apply[#1, Drop[#2, None, -1], {1}]
+                ]
+            ]
+        }
+    ],
+    Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
+];
+
+crossValidateModel[
+    data_,
+    {NetTrain, net_, args___}, 
+    opts : OptionsPattern[]
+] := crossValidateModel[
+    data,
+    "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
+        Automatic :> Function["TrainedNet" -> NetTrain[net, #1, args, TrainingProgressReporting -> None]]
+    ],
+    "TestFunction" -> Replace[OptionValue["TestFunction"],
+        Automatic :> With[{
+            testArgs = Replace[{args}, {All, rest___} :> {rest}]
+        },
+            Function[
+                With[{
+                    test = NetTrain[
+                        Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
+                        #2, All,
+                        ValidationSet -> #2,
+                        Method -> {"ADAM", "LearningRate" -> 0},
+                        MaxTrainingRounds -> 1,
+                        testArgs,
+                        TrainingProgressReporting -> None
+                    ]
+                },
+                    "NetTrainResultsObject" -> test
+                ]
+            ]
+        ]
+    ],
+    Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
+]
+
+crossValidateModel[data_, method : Predict | Classify, opts : OptionsPattern[]] := crossValidateModel[data, {method}, opts];
+
+crossValidateModel[data_, {method : Predict | Classify, rules___}, opts : OptionsPattern[]] := With[{
+    methodKey = Replace[method, {Predict -> "PredictorFunction", _ -> "ClassifierFunction"}],
+    testMethod = Replace[method, {Predict -> PredictorMeasurements, _ -> ClassifierMeasurements}],
+    testMethodKey = Replace[method, {Predict -> "PredictorMeasurementsObject", _ -> "ClassifierMeasurementsObject"}]
+},
+    crossValidateModel[
+        data,
+        "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
+            Automatic :> Function[methodKey -> method[#1, rules, TrainingProgressReporting -> None]]
+        ],
+        "TestFunction" -> Replace[OptionValue["TestFunction"],
+            Automatic :> Function[testMethodKey -> testMethod[#1, #2]]
+        ],
+        Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
+    ]
+];
+
+crossValidateModel[data_, opts : OptionsPattern[]] := Module[{
+    method,
+    nDat = dataSize[data],
+    rules,
+    methodFun
+},
+    method = Replace[
+        Flatten @ {OptionValue[Method]},
+        {
+            {"LeaveOneOut", rest___} :> {"KFold", "Folds" -> nDat, rest}
+        }
+    ];
+    rules = Rest[method];
+    methodFun = Replace[
+        First[method],
+        {
+            "KFold" :> kFoldValidation,
+            "RandomSubSampling" :> subSamplingValidation,
+            _ :> Return[$Failed]
+        }
+    ];
+    methodFun[
+        data,
+        OptionValue["TrainingFunction"],
+        OptionValue["TestFunction"],
+        Sequence @@ FilterRules[rules, Options[methodFun]]
+    ]
+];
+
+kFoldIndices[n_Integer, k_Integer] := kFoldIndices[n, k, Ceiling[Divide[n, k]]];
+kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partitions},
+    partitions =  Partition[
+        RandomSample[Range[n]], 
+        partitionLength, partitionLength, {1, 1}, Nothing
+    ];
+    If[ Length[partitions] > k, 
+        partitions[[k]] = Join @@ partitions[[k ;;]]
+    ];
+    Take[partitions, k]
+];
+
+joinFolds[data : {__List}] := Join @@ data;
+joinFolds[data_] := Join[##, 2] & @@ data;
+
+subSamplingIndices[n_Integer, k_Integer] := TakeDrop[RandomSample[Range[n]], k]
+
+applyIndices[data_List, indices_List] := data[[#]] & /@ indices;
+applyIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, #]] & /@ indices;
+
+Options[kFoldValidation] = {
+    "Runs" -> 1,
+    "Folds" -> 5,
+    "ParallelQ" -> False
+};
+kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
+    nRuns = OptionValue["Runs"],
+    nFolds = OptionValue["Folds"],
+    nData = dataSize[data],
+    partitionLength
+},
+    partitionLength = Ceiling[Divide[nData, nFolds]];
+    Flatten @ If[ TrueQ[OptionValue["ParallelQ"]], 
+        Function[Null, ParallelTable[##, DistributedContexts -> Automatic], HoldAll],
+        Table
+    ][
+        With[{partitionedData = applyIndices[data, kFoldIndices[nData, nFolds, partitionLength]]},
+            Table[
+                With[{
+                    estimate = estimator[joinFolds @ Delete[partitionedData, fold]]
+                },
+                    <|
+                        Replace[estimate, other : Except[_Rule] :> "FittedModel" -> other],
+                        Replace[
+                            tester[Replace[estimate, r_Rule :> Last[r]], partitionedData[[fold]]],
+                            other : Except[_Rule] :> "TestData" -> other
+                        ]
+                    |>
+                ],
+                {fold, Length[partitionedData]}
+            ]
+        ],
+        {run, nRuns}
+    ]
+];
+Options[subSamplingValidation] = {
+    "Runs" -> 10,
+    ValidationSet -> Scaled[0.2],
+    "ParallelQ" -> False
+};
+subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
+    nRuns = OptionValue["Runs"],
+    nVal,
+    nData = dataSize[data]
+},
+    nVal = Replace[
+        OptionValue[ValidationSet],
+        {
+            Scaled[n_] :> Max[1, Floor[n nData]]
+        }
+    ];
+    If[ TrueQ[OptionValue["ParallelQ"]], 
+        Function[Null, ParallelTable[##, DistributedContexts -> Automatic], HoldAll],
+        Table
+    ][
+        With[{partitionedData = applyIndices[data, subSamplingIndices[nData, nVal]]},
+            With[{
+                estimate = estimator[partitionedData[[2]]]
+            },
+                <|
+                    Replace[estimate, other : Except[_Rule] :> "FittedModel" -> other],
+                    Replace[
+                        tester[Replace[estimate, r_Rule :> Last[r]], partitionedData[[1]]],
+                        other : Except[_Rule] :> "TestData" -> other
+                    ]
+                |>
+            ]
+        ],
+        {run, nRuns}
+    ]
+];
+
+
 
 End[] (* End Private Context *)
 
