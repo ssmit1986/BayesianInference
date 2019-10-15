@@ -543,7 +543,7 @@ crossValidateModel[data_, opts : OptionsPattern[]] := Module[{
     ]
 ];
 
-kFoldIndices[n_Integer, k_Integer] := kFoldIndices[n, k, Ceiling[Divide[n, k]]];
+kFoldIndices[n_Integer, k_Integer] := kFoldIndices[n, k, Floor[Divide[n, k]]];
 kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partitions},
     partitions =  Partition[
         RandomSample[Range[n]], 
@@ -552,16 +552,13 @@ kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partition
     If[ Length[partitions] > k, 
         partitions[[k]] = Join @@ partitions[[k ;;]]
     ];
-    Take[partitions, k]
+    Developer`ToPackedArray /@ Take[partitions, k]
 ];
 
-joinFolds[data : {__List}] := Join @@ data;
-joinFolds[data_] := Join[##, 2] & @@ data;
+subSamplingIndices[n_Integer, k_Integer] := TakeDrop[RandomSample[Range[n]], k];
 
-subSamplingIndices[n_Integer, k_Integer] := TakeDrop[RandomSample[Range[n]], k]
-
-applyIndices[data_List, indices_List] := data[[#]] & /@ indices;
-applyIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, #]] & /@ indices;
+extractIndices[data_List, indices_List] := data[[indices]];
+extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
 
 Options[kFoldValidation] = {
     "Runs" -> 1,
@@ -579,23 +576,22 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
         Function[Null, ParallelTable[##, DistributedContexts -> Automatic], HoldAll],
         Table
     ][
-        With[{partitionedData = applyIndices[data, kFoldIndices[nData, nFolds, partitionLength]]},
-            Table[
-                With[{
-                    estimate = estimator[joinFolds @ Delete[partitionedData, fold]]
-                },
-                    <|
-                        Replace[estimate, other : Except[_Rule] :> "FittedModel" -> other],
-                        Replace[
-                            tester[Replace[estimate, r_Rule :> Last[r]], partitionedData[[fold]]],
-                            other : Except[_Rule] :> "TestData" -> other
-                        ]
-                    |>
-                ],
-                {fold, Length[partitionedData]}
-            ]
+        With[{
+            estimate = estimator[extractIndices[data, Join @@ Delete[partition, fold]]]
+        },
+            <|
+                Replace[estimate, other : Except[_Rule] :> "FittedModel" -> other],
+                Replace[
+                    tester[
+                        Replace[estimate, r_Rule :> Last[r]],
+                        extractIndices[data, partition[[fold]]]
+                    ],
+                    other : Except[_Rule] :> "TestData" -> other
+                ]
+            |>
         ],
-        {run, nRuns}
+        {partition, Table[kFoldIndices[nData, nFolds, partitionLength], nRuns]},
+        {fold, nFolds}
     ]
 ];
 Options[subSamplingValidation] = {
@@ -618,7 +614,7 @@ subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Mo
         Function[Null, ParallelTable[##, DistributedContexts -> Automatic], HoldAll],
         Table
     ][
-        With[{partitionedData = applyIndices[data, subSamplingIndices[nData, nVal]]},
+        With[{partitionedData = extractIndices[data, #]& /@ subSamplingIndices[nData, nVal]},
             With[{
                 estimate = estimator[partitionedData[[2]]]
             },
