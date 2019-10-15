@@ -555,7 +555,10 @@ kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partition
     Developer`ToPackedArray /@ Take[partitions, k]
 ];
 
-subSamplingIndices[n_Integer, k_Integer] := TakeDrop[RandomSample[Range[n]], k];
+subSamplingIndices[n_Integer, k_Integer] := AssociationThread[
+    {"TrainingSet", "ValidationSet"},
+    TakeDrop[RandomSample[Range[n]], Subtract[n, k]]
+];
 
 extractIndices[data_List, indices_List] := data[[indices]];
 extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
@@ -597,32 +600,57 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
 Options[subSamplingValidation] = {
     "Runs" -> 10,
     ValidationSet -> Scaled[0.2],
-    "ParallelQ" -> False
+    "ParallelQ" -> False,
+    "SamplingFunction" -> Automatic
 };
 subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     nRuns = OptionValue["Runs"],
     nVal,
-    nData = dataSize[data]
+    nData = dataSize[data],
+    samplingFunction
 },
     nVal = Replace[
         OptionValue[ValidationSet],
         {
-            Scaled[n_] :> Max[1, Floor[n nData]]
+            Scaled[f_] :> Max[1, Floor[f nData]]
+        }
+    ];
+    samplingFunction = Replace[
+        OptionValue["SamplingFunction"],
+        {
+            Automatic :> Function[subSamplingIndices[nData, nVal]],
+            "BootStrap" :> Function[RandomChoice[Range[nData], nData]],
+            {"BootStrap", n_Integer} :> Function[RandomChoice[Range[nData], n]],
+            {"BootStrap", Scaled[f_]} :> With[{n = Max[1, Floor[f nData]]},
+                Function[RandomChoice[Range[nData], n]]
+            ],
+            other_ :> Function[other[nData, nVal]]
         }
     ];
     If[ TrueQ[OptionValue["ParallelQ"]], 
         Function[Null, ParallelTable[##, DistributedContexts -> Automatic], HoldAll],
         Table
     ][
-        With[{partitionedData = extractIndices[data, #]& /@ subSamplingIndices[nData, nVal]},
+        With[{
+            partitionedData = Replace[
+                samplingFunction[],
+                {
+                    assoc_?AssociationQ :> (extractIndices[data, #]& /@ assoc),
+                    other_ :> <|"TrainingSet" -> extractIndices[data, other]|>
+                }
+            ]
+        },
             With[{
-                estimate = estimator[partitionedData[[2]]]
+                estimate = estimator[partitionedData["TrainingSet"]]
             },
                 <|
                     Replace[estimate, other : Except[_Rule] :> "FittedModel" -> other],
-                    Replace[
-                        tester[Replace[estimate, r_Rule :> Last[r]], partitionedData[[1]]],
-                        other : Except[_Rule] :> "TestData" -> other
+                    If[ !MissingQ[partitionedData["ValidationSet"]],
+                        Replace[
+                            tester[Replace[estimate, r_Rule :> Last[r]], partitionedData["ValidationSet"]],
+                            other : Except[_Rule] :> "TestData" -> other
+                        ],
+                        <||>
                     ]
                 |>
             ]
