@@ -452,7 +452,7 @@ crossValidateModel[
                 ]
             ],
             _ :> Function[
-                "RootMeanSquare" -> RootMeanSquare @ Subtract[
+                "RootMeanSquareDeviation" -> RootMeanSquare @ Subtract[
                     #2[[All, -1]],
                     Apply[#1, Drop[#2, None, -1], {1}]
                 ]
