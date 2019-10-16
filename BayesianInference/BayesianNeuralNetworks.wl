@@ -410,115 +410,39 @@ dataSize[data_] := Length[First[data]];
 Options[crossValidateModel] = Join[
     {
         Method -> "KFold",
-        "TrainingFunction" -> Automatic,
-        "TestFunction" -> Automatic
+        "ValidationFunction" -> Automatic
     }
 ];
-crossValidateModel[data_List /; Length[data] > 1, dist_?DistributionParameterQ, opts : OptionsPattern[]] := crossValidateModel[
+crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]] := crossValidateModel[
     data,
-    "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
-        Automatic :> Function["Distribution" -> EstimatedDistribution[#1, dist]]
-    ],
-    "TestFunction" -> Replace[OptionValue["TestFunction"],
-        Automatic :> Function["LogLikelihood" -> Divide[LogLikelihood[#1, #2], Length[#2]]]
-    ],
-    Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
-];
-crossValidateModel[
-    data_?MatrixQ,
-    {method : LinearModelFit | NonlinearModelFit | GeneralizedLinearModelFit, args__}, 
-    opts : OptionsPattern[]
-] := crossValidateModel[
-    data,
-    "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
-        Automatic :> Function["FittedModel" -> method[#1, args]]
-    ],
-    "TestFunction" -> Replace[OptionValue["TestFunction"],
-        {
-            LogLikelihood :> Function[
-                With[{
-                    residuals = Subtract[
-                        #2[[All, -1]],
-                        Apply[#1, Drop[#2, None, -1], {1}]
-                    ]
-                },
-                    Divide[
-                        "LogLikelihood" -> LogLikelihood[
-                            EstimatedDistribution[residuals, NormalDistribution[0, \[FormalSigma]]],
-                            residuals
-                        ],
-                        Length[residuals]
-                    ]
-                ]
-            ],
-            _ :> Function[
-                "RootMeanSquareDeviation" -> RootMeanSquare @ Subtract[
-                    #2[[All, -1]],
-                    Apply[#1, Drop[#2, None, -1], {1}]
-                ]
-            ]
-        }
-    ],
-    Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
+    Function[EstimatedDistribution[#1, dist]],
+    opts
 ];
 
-crossValidateModel[
-    data_,
-    {NetTrain, net_, args___}, 
-    opts : OptionsPattern[]
-] := crossValidateModel[
+crossValidateModel[data_, dists : {__?DistributionParameterQ}, opts : OptionsPattern[]] := crossValidateModel[
     data,
-    "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
-        Automatic :> Function["TrainedNet" -> NetTrain[net, #1, args, TrainingProgressReporting -> None]]
-    ],
-    "TestFunction" -> Replace[OptionValue["TestFunction"],
-        Automatic :> With[{
-            testArgs = Replace[{args}, {All, rest___} :> {rest}]
-        },
-            Function[
-                With[{
-                    test = NetTrain[
-                        Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
-                        #2, All,
-                        ValidationSet -> #2,
-                        Method -> {"ADAM", "LearningRate" -> 0},
-                        MaxTrainingRounds -> 1,
-                        testArgs,
-                        TrainingProgressReporting -> None
-                    ]
-                },
-                    "NetTrainResultsObject" -> test
-                ]
-            ]
-        ]
-    ],
-    Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
+    Function[dist, Function[EstimatedDistribution[#1, dist]]]& /@ dists,
+    opts
+];
+
+crossValidateModel[data_, funs : {__Function}, opts : OptionsPattern[]] := crossValidateModel[
+    data,
+    #,
+    opts
+]& /@ funs;
+
+quietReporting = ReplaceAll[
+    {
+        (method : Classify | Predict | NetTrain)[args___] :> method[args, TrainingProgressReporting -> None]
+    }
 ]
 
-crossValidateModel[data_, method : Predict | Classify, opts : OptionsPattern[]] := crossValidateModel[data, {method}, opts];
-
-crossValidateModel[data_, {method : Predict | Classify, rules___}, opts : OptionsPattern[]] := With[{
-    methodKey = Replace[method, {Predict -> "PredictorFunction", _ -> "ClassifierFunction"}],
-    testMethod = Replace[method, {Predict -> PredictorMeasurements, _ -> ClassifierMeasurements}],
-    testMethodKey = Replace[method, {Predict -> "PredictorMeasurementsObject", _ -> "ClassifierMeasurementsObject"}]
-},
-    crossValidateModel[
-        data,
-        "TrainingFunction" -> Replace[OptionValue["TrainingFunction"],
-            Automatic :> Function[methodKey -> method[#1, rules, TrainingProgressReporting -> None]]
-        ],
-        "TestFunction" -> Replace[OptionValue["TestFunction"],
-            Automatic :> Function[testMethodKey -> testMethod[#1, #2]]
-        ],
-        Sequence @@ DeleteCases[{opts}, "TrainingFunction" | "TestFunction" -> _]
-    ]
-];
-
-crossValidateModel[data_, opts : OptionsPattern[]] := Module[{
+crossValidateModel[data_, trainingFun_Function, opts : OptionsPattern[]] := Module[{
     method,
     nDat = dataSize[data],
     rules,
-    methodFun
+    methodFun,
+    validationFunction
 },
     method = Replace[
         Flatten @ {OptionValue[Method]},
@@ -535,11 +459,57 @@ crossValidateModel[data_, opts : OptionsPattern[]] := Module[{
             _ :> Return[$Failed]
         }
     ];
+    validationFunction = Replace[
+        OptionValue["ValidationFunction"],
+        {
+            Automatic :> defaultValidationFunction[trainingFun],
+            {Automatic, f_} :> defaultValidationFunction[trainingFun, f]
+        }
+    ];
     methodFun[
         data,
-        OptionValue["TrainingFunction"],
-        OptionValue["TestFunction"],
+        quietReporting @ trainingFun,
+        validationFunction,
         Sequence @@ FilterRules[rules, Options[methodFun]]
+    ]
+];
+
+functionPattern = Function[head, 
+    HoldPattern[Function[head[___]] | Function[_, head[___], ___]]
+];
+
+defaultValidationFunction[functionPattern[EstimatedDistribution], ___] := Function[
+    Divide[LogLikelihood[#1, #2], Length[#2]]
+];
+
+defaultValidationFunction[
+    functionPattern[LinearModelFit | GeneralizedLinearModelFit | NonlinearModelFit],
+    f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]
+] := Function[
+    f[
+        #2[[All, -1]],
+        Apply[#1, Drop[#2, None, -1], {1}]
+    ]
+];
+
+defaultValidationFunction[functionPattern[Predict]] := PredictorMeasurements;
+defaultValidationFunction[functionPattern[Classify]] := ClassifierMeasurements;
+
+defaultValidationFunction[Function[NetTrain[_, _, args___]] | Function[_, NetTrain[_, _, args___], ___]] := Function[
+    NetTrain[
+        Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
+        Replace[#2,
+            {
+                l_List :> l[[{1}]],
+                other_ :> other[[All, {1}]]
+            }
+        ],
+        All,
+        ValidationSet -> #2,
+        Method -> {"SGD", "LearningRate" -> 0},
+        MaxTrainingRounds -> 1,
+        Sequence @@ Cases[{args}, _Rule],
+        TrainingProgressReporting -> None
     ]
 ];
 
@@ -583,13 +553,8 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
             estimate = estimator[extractIndices[data, Join @@ Delete[partition, fold]]]
         },
             <|
-                Replace[estimate, other : Except[_Rule] :> "FittedModel" -> other],
-                Replace[
-                    tester[
-                        Replace[estimate, r_Rule :> Last[r]],
-                        extractIndices[data, partition[[fold]]]
-                    ],
-                    other : Except[_Rule] :> "TestData" -> other
+                "FittedModel" -> estimate,
+                "ValidationResult" -> tester[estimate, extractIndices[data, partition[[fold]]]
                 ]
             |>
         ],
