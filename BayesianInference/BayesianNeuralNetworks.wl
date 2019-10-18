@@ -495,7 +495,7 @@ defaultValidationFunction[
 defaultValidationFunction[functionPattern[Predict]] := PredictorMeasurements;
 defaultValidationFunction[functionPattern[Classify]] := ClassifierMeasurements;
 
-defaultValidationFunction[Function[NetTrain[_, _, args___]] | Function[_, NetTrain[_, _, args___], ___]] := Function[
+defaultValidationFunction[HoldPattern[Function[NetTrain[_, _, args___]] | Function[_, NetTrain[_, _, args___], ___]]] := Function[
     NetTrain[
         Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
         Replace[#2,
