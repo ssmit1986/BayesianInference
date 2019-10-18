@@ -554,8 +554,7 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
         },
             <|
                 "FittedModel" -> estimate,
-                "ValidationResult" -> tester[estimate, extractIndices[data, partition[[fold]]]
-                ]
+                "ValidationResult" -> tester[estimate, extractIndices[data, partition[[fold]]]]
             |>
         ],
         {partition, Table[kFoldIndices[nData, nFolds, partitionLength], nRuns]},
@@ -609,12 +608,9 @@ subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Mo
                 estimate = estimator[partitionedData["TrainingSet"]]
             },
                 <|
-                    Replace[estimate, other : Except[_Rule] :> "FittedModel" -> other],
+                    "FittedModel" -> estimate,
                     If[ !MissingQ[partitionedData["ValidationSet"]],
-                        Replace[
-                            tester[Replace[estimate, r_Rule :> Last[r]], partitionedData["ValidationSet"]],
-                            other : Except[_Rule] :> "TestData" -> other
-                        ],
+                        "ValidationResult" -> tester[estimate, partitionedData["ValidationSet"]],
                         <||>
                     ]
                 |>
