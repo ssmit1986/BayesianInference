@@ -404,9 +404,6 @@ batchnormToChain[net : _NetGraph | _NetChain] := Quiet[
     {NetReplace::norep}
 ];
 
-dataSize[data_List] := Length[data];
-dataSize[data_] := Length[First[data]];
-
 Options[crossValidateModel] = Join[
     {
         Method -> "KFold",
@@ -430,12 +427,6 @@ crossValidateModel[data_, funs : {__Function}, opts : OptionsPattern[]] := cross
     #,
     opts
 ]& /@ funs;
-
-quietReporting = ReplaceAll[
-    {
-        (method : Classify | Predict | NetTrain)[args___] :> method[args, TrainingProgressReporting -> None]
-    }
-]
 
 crossValidateModel[data_, trainingFun_Function, opts : OptionsPattern[]] := Module[{
     method,
@@ -472,6 +463,15 @@ crossValidateModel[data_, trainingFun_Function, opts : OptionsPattern[]] := Modu
         validationFunction,
         Sequence @@ FilterRules[rules, Options[methodFun]]
     ]
+];
+
+dataSize[data_List] := Length[data];
+dataSize[data_] := Length[First[data]];
+
+quietReporting = ReplaceAll[
+    {
+        (method : Classify | Predict | NetTrain)[args___] :> method[args, TrainingProgressReporting -> None]
+    }
 ];
 
 functionPattern = Function[head, 
@@ -513,6 +513,9 @@ defaultValidationFunction[HoldPattern[Function[NetTrain[_, _, args___]] | Functi
     ]
 ];
 
+extractIndices[data_List, indices_List] := data[[indices]];
+extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
+
 kFoldIndices[n_Integer, k_Integer] := kFoldIndices[n, k, Floor[Divide[n, k]]];
 kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partitions},
     partitions =  Partition[
@@ -524,14 +527,6 @@ kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partition
     ];
     Developer`ToPackedArray /@ Take[partitions, k]
 ];
-
-subSamplingIndices[n_Integer, k_Integer] := AssociationThread[
-    {"TrainingSet", "ValidationSet"},
-    TakeDrop[RandomSample[Range[n]], Subtract[n, k]]
-];
-
-extractIndices[data_List, indices_List] := data[[indices]];
-extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
 
 Options[kFoldValidation] = {
     "Runs" -> 1,
@@ -561,6 +556,12 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
         {fold, nFolds}
     ]
 ];
+
+subSamplingIndices[n_Integer, k_Integer] := AssociationThread[
+    {"TrainingSet", "ValidationSet"},
+    TakeDrop[RandomSample[Range[n]], Subtract[n, k]]
+];
+
 Options[subSamplingValidation] = {
     "Runs" -> 10,
     ValidationSet -> Scaled[0.2],
