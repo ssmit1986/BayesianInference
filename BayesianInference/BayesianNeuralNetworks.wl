@@ -418,17 +418,11 @@ crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]]
 
 crossValidateModel[data_, dists : {__?DistributionParameterQ}, opts : OptionsPattern[]] := crossValidateModel[
     data,
-    Function[dist, Function[EstimatedDistribution[#1, dist]]]& /@ dists,
+    Function[dist, Function[EstimatedDistribution[#1, dist]]] /@ dists,
     opts
 ];
 
-crossValidateModel[data_, funs : {__Function}, opts : OptionsPattern[]] := crossValidateModel[
-    data,
-    #,
-    opts
-]& /@ funs;
-
-crossValidateModel[data_, trainingFun_Function, opts : OptionsPattern[]] := Module[{
+crossValidateModel[data_, trainingFun : _Function | {__Function}, opts : OptionsPattern[]] := Module[{
     method,
     nDat = dataSize[data],
     rules,
@@ -457,13 +451,29 @@ crossValidateModel[data_, trainingFun_Function, opts : OptionsPattern[]] := Modu
             {Automatic, f_} :> defaultValidationFunction[trainingFun, f]
         }
     ];
+    If[ ListQ[trainingFun],
+        Which[ 
+            !ListQ[validationFunction],
+                validationFunction = ConstantArray[validationFunction, Length[trainingFun]],
+            Length[validationFunction] =!= Length[trainingFun],
+                Return[$Failed],
+            True, Null
+        ]
+    ];
+    
     methodFun[
         data,
-        quietReporting @ trainingFun,
-        validationFunction,
+        quietReporting @ listOperator1[trainingFun],
+        listOperator2[validationFunction],
         Sequence @@ FilterRules[rules, Options[methodFun]]
     ]
 ];
+
+listOperator1[funs_List][args___] := Map[#[args]&, funs];
+listOperator1[f : Except[_List]][args___] := f[args];
+
+listOperator2[funs_List][results_List, args___] := MapThread[#1[#2, args]&, {funs, results}];
+listOperator2[f : Except[_List]][args___] := f[args];
 
 dataSize[data_List] := Length[data];
 dataSize[data_] := Length[First[data]];
@@ -478,8 +488,9 @@ functionPattern = Function[head,
     HoldPattern[Function[head[___]] | Function[_, head[___], ___]]
 ];
 
+SetAttributes[defaultValidationFunction, Listable];
 defaultValidationFunction[functionPattern[EstimatedDistribution], ___] := Function[
-    Divide[LogLikelihood[#1, #2], Length[#2]]
+    Divide[-LogLikelihood[#1, #2], Length[#2]]
 ];
 
 defaultValidationFunction[
@@ -620,8 +631,6 @@ subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Mo
         {run, nRuns}
     ]
 ];
-
-
 
 End[] (* End Private Context *)
 
