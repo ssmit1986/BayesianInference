@@ -457,8 +457,8 @@ crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
     validationFunction = Replace[
         OptionValue["ValidationFunction"],
         {
-            Automatic :> defaultValidationFunction[trainingFun],
-            {Automatic, f___} :> defaultValidationFunction[trainingFun, f]
+            Automatic :> defaultValidationFunction[],
+            {Automatic, args___} :> defaultValidationFunction[args]
         }
     ];
     If[ listOrAssociationQ[trainingFun],
@@ -503,58 +503,49 @@ quietReporting = ReplaceAll[
     }
 ];
 
-functionPattern = Function[head, 
-    HoldPattern[Function[head[___]] | Function[_, head[___], ___]]
-];
+defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
 
-defaultValidationFunction[funs_?listOrAssociationQ, rest___] := defaultValidationFunction[#, rest]& /@ funs;
-defaultValidationFunction[functionPattern[EstimatedDistribution], ___] := Function[
-    Divide[-LogLikelihood[#1, #2], Length[#2]]
-];
-
-defaultValidationFunction[
-    functionPattern[LinearModelFit | GeneralizedLinearModelFit | NonlinearModelFit],
-    f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]
-] := Function[{fit, val},
-    With[{fun = fit["Function"]},
-        f[
-            Map[fun @@ # &, Drop[val, None, -1]], (* Fitted values. This form seems most efficient *)
-            val[[All, -1]] (* True values*)
-        ]
+defaultValidationFunction[f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]][fit_FittedModel, val_] := With[{
+    fitFun = fit["Function"]
+},
+    f[
+        Map[fitFun @@ # &, Drop[val, None, -1]], (* Fitted values. This form seems most efficient *)
+        val[[All, -1]] (* True values*)
     ]
 ];
 
-defaultValidationFunction[functionPattern[Predict], args___] := PredictorMeasurements[#1, #2, args]&;
-defaultValidationFunction[functionPattern[Classify], args___] := ClassifierMeasurements[#1, #2, args]&;
+defaultValidationFunction[args___][pred_PredictorFunction, val_] := PredictorMeasurements[pred, val, args];
+defaultValidationFunction[args___][class_ClassifierFunction, val_] := ClassifierMeasurements[class, val, args];
 
-defaultValidationFunction[functionPattern[NetTrain], args__] := Function[
-    NetMeasurements[
-        Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
-        #2,
-        args
-    ]
+defaultValidationFunction[args__][net : (_NetGraph | _NetChain | _NetTrainResultsObject), val_] := NetMeasurements[
+    Replace[net, obj_NetTrainResultsObject :> obj["TrainedNet"]],
+    val,
+    args
 ];
-defaultValidationFunction[
-    HoldPattern[Function[NetTrain[_, _, args___]] | Function[_, NetTrain[_, _, args___], ___]]
-] := Function[
+defaultValidationFunction[][net : (_NetGraph | _NetChain | _NetTrainResultsObject), val_] := With[{
+    args = If[ Head[net] === NetTrainResultsObject,
+        Cases[Flatten @ Drop[List @@ net["NetTrainInputForm"], 2], _Rule],
+        {}
+    ]
+},
     NetTrain[
-        Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
-        Replace[#2,
+        Replace[net, obj_NetTrainResultsObject :> obj["TrainedNet"]],
+        Replace[val,
             {
                 l_List :> l[[{1}]],
                 other_ :> other[[All, {1}]]
             }
         ],
         "ValidationLoss",
-        ValidationSet -> #2,
+        ValidationSet -> val,
         Method -> {"SGD", "LearningRate" -> 0},
         MaxTrainingRounds -> 1,
-        Sequence @@ Cases[Flatten @ {args}, _Rule],
+        Sequence @@ args,
         TrainingProgressReporting -> None
     ]
 ];
 
-defaultValidationFunction[___] := Function[#2];
+defaultValidationFunction[___][_, val_] := val;
 
 extractIndices[data_List, indices_List] := data[[indices]];
 extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
