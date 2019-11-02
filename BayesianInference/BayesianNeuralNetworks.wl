@@ -515,17 +515,28 @@ defaultValidationFunction[functionPattern[EstimatedDistribution], ___] := Functi
 defaultValidationFunction[
     functionPattern[LinearModelFit | GeneralizedLinearModelFit | NonlinearModelFit],
     f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]
-] := Function[
-    f[
-        Apply[#1["Function"], Drop[#2, None, -1], {1}], (* Fitted values *)
-        #2[[All, -1]] (* True values*)
+] := Function[{fit, val},
+    With[{fun = fit["Function"]},
+        f[
+            Map[fun @@ # &, Drop[val, None, -1]], (* Fitted values. This form seems most efficient *)
+            val[[All, -1]] (* True values*)
+        ]
     ]
 ];
 
 defaultValidationFunction[functionPattern[Predict], args___] := PredictorMeasurements[#1, #2, args]&;
 defaultValidationFunction[functionPattern[Classify], args___] := ClassifierMeasurements[#1, #2, args]&;
 
-defaultValidationFunction[HoldPattern[Function[NetTrain[_, _, args___]] | Function[_, NetTrain[_, _, args___], ___]]] := Function[
+defaultValidationFunction[functionPattern[NetTrain], args__] := Function[
+    NetMeasurements[
+        Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
+        #2,
+        args
+    ]
+];
+defaultValidationFunction[
+    HoldPattern[Function[NetTrain[_, _, args___]] | Function[_, NetTrain[_, _, args___], ___]]
+] := Function[
     NetTrain[
         Replace[#1, obj_NetTrainResultsObject :> obj["TrainedNet"]],
         Replace[#2,
@@ -534,7 +545,7 @@ defaultValidationFunction[HoldPattern[Function[NetTrain[_, _, args___]] | Functi
                 other_ :> other[[All, {1}]]
             }
         ],
-        All,
+        "ValidationLoss",
         ValidationSet -> #2,
         Method -> {"SGD", "LearningRate" -> 0},
         MaxTrainingRounds -> 1,
@@ -542,6 +553,7 @@ defaultValidationFunction[HoldPattern[Function[NetTrain[_, _, args___]] | Functi
         TrainingProgressReporting -> None
     ]
 ];
+
 defaultValidationFunction[___] := Function[#2];
 
 extractIndices[data_List, indices_List] := data[[indices]];
