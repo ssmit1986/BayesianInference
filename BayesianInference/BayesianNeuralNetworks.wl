@@ -417,13 +417,16 @@ crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]]
 ];
 
 crossValidateModel[data_,
-    dists : _List | _?AssociationQ /; AllTrue[dists, DistributionParameterQ],
+    dists_?listOrAssociationQ /; AllTrue[dists, DistributionParameterQ],
     opts : OptionsPattern[]
 ] := crossValidateModel[
     data,
-    Function[dist, Function[EstimatedDistribution[#1, dist]]] /@ dists,
+    AssociationMap[Function[dist, Function[EstimatedDistribution[#1, dist]]], dists],
     opts
 ];
+
+crossValidateModel::unknownMethod = "Unknow method `1`";
+crossValidateModel::badValidationMethod = "Cannot use validation method `1` with training method `2`";
 
 crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
     method,
@@ -444,7 +447,10 @@ crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
         {
             "KFold" :> kFoldValidation,
             "RandomSubSampling" :> subSamplingValidation,
-            _ :> Return[$Failed]
+            other_ :> (
+                Message[crossValidateModel::unknownMethod, other];
+                Return[$Failed]
+            )
         }
     ];
     validationFunction = Replace[
@@ -458,12 +464,15 @@ crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
         Which[ 
             !listOrAssociationQ[validationFunction],
                 validationFunction = Function[validationFunction] /@ trainingFun,
-            Length[validationFunction] =!= Length[trainingFun],
-                Return[$Failed],
-            Head[trainingFun] =!= Head[validationFunction],
-                Return[$Failed],
-            AssociationQ[trainingFun] && Sort[Keys[trainingFun]] =!= Sort[Keys[validationFunction]],
-                Return[$Failed],
+            Or[
+                Length[validationFunction] =!= Length[trainingFun],
+                Head[trainingFun] =!= Head[validationFunction],
+                AssociationQ[trainingFun] && Sort[Keys[trainingFun]] =!= Sort[Keys[validationFunction]]
+            ],
+                (
+                    Message[crossValidateModel::badValidationMethod, Short[trainingFun], Short[OptionValue["ValidationFunction"]]];
+                    Return[$Failed]
+                ),
             True, Null
         ]
     ];
@@ -497,7 +506,7 @@ functionPattern = Function[head,
     HoldPattern[Function[head[___]] | Function[_, head[___], ___]]
 ];
 
-SetAttributes[defaultValidationFunction, Listable];
+defaultValidationFunction[funs_?listOrAssociationQ, rest___] := defaultValidationFunction[#, rest]& /@ funs;
 defaultValidationFunction[functionPattern[EstimatedDistribution], ___] := Function[
     Divide[-LogLikelihood[#1, #2], Length[#2]]
 ];
