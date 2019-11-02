@@ -517,8 +517,8 @@ defaultValidationFunction[
     f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]
 ] := Function[
     f[
-        #2[[All, -1]],
-        Apply[#1, Drop[#2, None, -1], {1}]
+        Apply[#1["Function"], Drop[#2, None, -1], {1}], (* Fitted values *)
+        #2[[All, -1]] (* True values*)
     ]
 ];
 
