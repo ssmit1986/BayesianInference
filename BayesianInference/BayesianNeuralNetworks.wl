@@ -416,13 +416,16 @@ crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]]
     opts
 ];
 
-crossValidateModel[data_, dists : {__?DistributionParameterQ}, opts : OptionsPattern[]] := crossValidateModel[
+crossValidateModel[data_,
+    dists : _List | _?AssociationQ /; AllTrue[dists, DistributionParameterQ],
+    opts : OptionsPattern[]
+] := crossValidateModel[
     data,
     Function[dist, Function[EstimatedDistribution[#1, dist]]] /@ dists,
     opts
 ];
 
-crossValidateModel[data_, trainingFun : _Function | {__Function}, opts : OptionsPattern[]] := Module[{
+crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
     method,
     nDat = dataSize[data],
     rules,
@@ -448,14 +451,18 @@ crossValidateModel[data_, trainingFun : _Function | {__Function}, opts : Options
         OptionValue["ValidationFunction"],
         {
             Automatic :> defaultValidationFunction[trainingFun],
-            {Automatic, f_} :> defaultValidationFunction[trainingFun, f]
+            {Automatic, f___} :> defaultValidationFunction[trainingFun, f]
         }
     ];
-    If[ ListQ[trainingFun],
+    If[ listOrAssociationQ[trainingFun],
         Which[ 
-            !ListQ[validationFunction],
-                validationFunction = ConstantArray[validationFunction, Length[trainingFun]],
+            !listOrAssociationQ[validationFunction],
+                validationFunction = Function[validationFunction] /@ trainingFun,
             Length[validationFunction] =!= Length[trainingFun],
+                Return[$Failed],
+            Head[trainingFun] =!= Head[validationFunction],
+                Return[$Failed],
+            AssociationQ[trainingFun] && Sort[Keys[trainingFun]] =!= Sort[Keys[validationFunction]],
                 Return[$Failed],
             True, Null
         ]
@@ -469,11 +476,13 @@ crossValidateModel[data_, trainingFun : _Function | {__Function}, opts : Options
     ]
 ];
 
-listOperator1[funs_List][args___] := Map[#[args]&, funs];
-listOperator1[f : Except[_List]][args___] := f[args];
+listOrAssociationQ = Function[ListQ[#] || AssociationQ[#]];
 
-listOperator2[funs_List][results_List, args___] := MapThread[#1[#2, args]&, {funs, results}];
-listOperator2[f : Except[_List]][args___] := f[args];
+listOperator1[funs_?listOrAssociationQ][args___] := Map[#[args]&, funs];
+listOperator1[f : Except[_?listOrAssociationQ]][args___] := f[args];
+
+listOperator2[funs_?listOrAssociationQ][results_?listOrAssociationQ, args___] := MapThread[#1[#2, args]&, {funs, results}];
+listOperator2[f : Except[_?listOrAssociationQ]][args___] := f[args];
 
 dataSize[data_List] := Length[data];
 dataSize[data_] := Length[First[data]];
@@ -503,8 +512,8 @@ defaultValidationFunction[
     ]
 ];
 
-defaultValidationFunction[functionPattern[Predict]] := PredictorMeasurements;
-defaultValidationFunction[functionPattern[Classify]] := ClassifierMeasurements;
+defaultValidationFunction[functionPattern[Predict], args___] := PredictorMeasurements[#1, #2, args]&;
+defaultValidationFunction[functionPattern[Classify], args___] := ClassifierMeasurements[#1, #2, args]&;
 
 defaultValidationFunction[HoldPattern[Function[NetTrain[_, _, args___]] | Function[_, NetTrain[_, _, args___], ___]]] := Function[
     NetTrain[
@@ -519,10 +528,11 @@ defaultValidationFunction[HoldPattern[Function[NetTrain[_, _, args___]] | Functi
         ValidationSet -> #2,
         Method -> {"SGD", "LearningRate" -> 0},
         MaxTrainingRounds -> 1,
-        Sequence @@ Cases[{args}, _Rule],
+        Sequence @@ Cases[Flatten @ {args}, _Rule],
         TrainingProgressReporting -> None
     ]
 ];
+defaultValidationFunction[___] := Function[#2];
 
 extractIndices[data_List, indices_List] := data[[indices]];
 extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
@@ -552,7 +562,7 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
 },
     partitionLength = Ceiling[Divide[nData, nFolds]];
     Flatten @ If[ TrueQ[OptionValue["ParallelQ"]], 
-        Function[Null, ParallelTable[##, DistributedContexts -> Automatic], HoldAll],
+        Function[Null, ParallelTable[##, DistributedContexts -> Automatic, Method -> "CoarsestGrained"], HoldAll],
         Table
     ][
         With[{
@@ -604,7 +614,7 @@ subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Mo
         }
     ];
     If[ TrueQ[OptionValue["ParallelQ"]], 
-        Function[Null, ParallelTable[##, DistributedContexts -> Automatic], HoldAll],
+        Function[Null, ParallelTable[##, DistributedContexts -> Automatic, Method -> "CoarsestGrained"], HoldAll],
         Table
     ][
         With[{
