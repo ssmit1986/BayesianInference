@@ -547,16 +547,12 @@ defaultValidationFunction[___] := Function[#2];
 extractIndices[data_List, indices_List] := data[[indices]];
 extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
 
-kFoldIndices[n_Integer, k_Integer] := kFoldIndices[n, k, Floor[Divide[n, k]]];
-kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partitions},
-    partitions =  Partition[
+kFoldIndices[n_Integer, k_Integer] := Developer`ToPackedArray /@ Flatten[ (* This essentially transposes a ragged array *)
+    Partition[
         RandomSample[Range[n]], 
-        partitionLength, partitionLength, {1, 1}, Nothing
-    ];
-    If[ Length[partitions] > k, (* This ensures that none of the partitions will be very small. *)
-        partitions[[k]] = Join @@ partitions[[k ;;]]
-    ];
-    Developer`ToPackedArray /@ Take[partitions, k]
+        k, k, {1, 1}, Nothing
+    ],
+    {{2}, {1}}
 ];
 
 Options[kFoldValidation] = {
@@ -578,10 +574,8 @@ parseParallelOptions[___] := Table;
 kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     nRuns = OptionValue["Runs"],
     nFolds = OptionValue["Folds"],
-    nData = dataSize[data],
-    partitionLength
+    nData = dataSize[data]
 },
-    partitionLength = Ceiling[Divide[nData, nFolds]];
     Flatten @ parseParallelOptions[OptionValue["ParallelQ"]][
         With[{
             estimate = estimator[extractIndices[data, Join @@ Delete[partition, fold]]]
@@ -591,7 +585,7 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
                 "ValidationResult" -> tester[estimate, extractIndices[data, partition[[fold]]]]
             |>
         ],
-        {partition, Table[kFoldIndices[nData, nFolds, partitionLength], nRuns]},
+        {partition, Table[kFoldIndices[nData, nFolds], nRuns]},
         {fold, nFolds}
     ]
 ];
