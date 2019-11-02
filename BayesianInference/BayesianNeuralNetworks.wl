@@ -563,6 +563,17 @@ Options[kFoldValidation] = {
     "Folds" -> 5,
     "ParallelQ" -> False
 };
+
+parseParallelOptions[True] := parseParallelOptions[{True}];
+parseParallelOptions[{True, args___Rule}] := Function[Null, 
+    ParallelTable[##, args,
+        DistributedContexts -> Automatic,
+        Method -> "CoarsestGrained"
+    ],
+    HoldAll
+];
+parseParallelOptions[___] := Table;
+
 kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     nRuns = OptionValue["Runs"],
     nFolds = OptionValue["Folds"],
@@ -570,10 +581,7 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     partitionLength
 },
     partitionLength = Ceiling[Divide[nData, nFolds]];
-    Flatten @ If[ TrueQ[OptionValue["ParallelQ"]], 
-        Function[Null, ParallelTable[##, DistributedContexts -> Automatic, Method -> "CoarsestGrained"], HoldAll],
-        Table
-    ][
+    Flatten @ parseParallelOptions[OptionValue["ParallelQ"]][
         With[{
             estimate = estimator[extractIndices[data, Join @@ Delete[partition, fold]]]
         },
@@ -622,10 +630,7 @@ subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Mo
             other_ :> Function[other[nData, nVal]]
         }
     ];
-    If[ TrueQ[OptionValue["ParallelQ"]], 
-        Function[Null, ParallelTable[##, DistributedContexts -> Automatic, Method -> "CoarsestGrained"], HoldAll],
-        Table
-    ][
+    parseParallelOptions[OptionValue["ParallelQ"]][
         With[{
             partitionedData = Replace[
                 samplingFunction[],
