@@ -404,12 +404,16 @@ batchnormToChain[net : _NetGraph | _NetChain] := Quiet[
     {NetReplace::norep}
 ];
 
+crossValidateModel::unknownMethod = "Unknow method `1`";
+crossValidateModel::badValidationMethod = "Cannot use validation method `1` with training method `2`";
+
 Options[crossValidateModel] = Join[
     {
         Method -> "KFold",
         "ValidationFunction" -> Automatic
     }
 ];
+
 crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]] := crossValidateModel[
     data,
     Function[EstimatedDistribution[#1, dist]],
@@ -424,9 +428,6 @@ crossValidateModel[data_,
     AssociationMap[Function[dist, Function[EstimatedDistribution[#1, dist]]], dists],
     opts
 ];
-
-crossValidateModel::unknownMethod = "Unknow method `1`";
-crossValidateModel::badValidationMethod = "Cannot use validation method `1` with training method `2`";
 
 crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
     method,
@@ -552,7 +553,7 @@ kFoldIndices[n_Integer, k_Integer, partitionLength_Integer] := Module[{partition
         RandomSample[Range[n]], 
         partitionLength, partitionLength, {1, 1}, Nothing
     ];
-    If[ Length[partitions] > k, 
+    If[ Length[partitions] > k, (* This ensures that none of the partitions will be very small. *)
         partitions[[k]] = Join @@ partitions[[k ;;]]
     ];
     Developer`ToPackedArray /@ Take[partitions, k]
