@@ -439,7 +439,7 @@ crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
     method = Replace[
         Flatten @ {OptionValue[Method]},
         {
-            {"LeaveOneOut", rest___} :> {"KFold", "Folds" -> nDat, rest}
+            {"LeaveOneOut", rest___} :> {"KFold", "Folds" -> nDat, Sequence @@ FilterRules[{rest}, "ParallelQ"]}
         }
     ];
     rules = Rest[method];
@@ -599,8 +599,8 @@ subSamplingIndices[n_Integer, k_Integer] := AssociationThread[
 ];
 
 Options[subSamplingValidation] = {
-    "Runs" -> 10,
-    ValidationSet -> Scaled[0.2],
+    "Runs" -> 5,
+    ValidationSet -> Scaled[1/5],
     "ParallelQ" -> False,
     "SamplingFunction" -> Automatic
 };
