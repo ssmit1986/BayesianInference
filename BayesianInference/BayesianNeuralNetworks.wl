@@ -429,7 +429,7 @@ crossValidateModel[data_,
     opts
 ];
 
-crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
+crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun_, opts : OptionsPattern[]] := Module[{
     method,
     nDat = dataSize[data],
     rules,
@@ -439,7 +439,11 @@ crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
     method = Replace[
         Flatten @ {OptionValue[Method]},
         {
-            {"LeaveOneOut", rest___} :> {"KFold", "Folds" -> nDat, Sequence @@ FilterRules[{rest}, "ParallelQ"]}
+            {"LeaveOneOut", rest___} :> {"KFold", "Folds" -> nDat, Sequence @@ FilterRules[{rest}, "ParallelQ"]},
+            {"BootStrap", rest___} :> {"RandomSubSampling",
+                "SamplingFunction" -> {"BootStrap", Lookup[{rest}, "BootStrapSize", nDat]},
+                Sequence @@ FilterRules[{rest}, {"Runs", "ParallelQ"}]
+            }
         }
     ];
     rules = Rest[method];
@@ -457,6 +461,7 @@ crossValidateModel[data_, trainingFun_, opts : OptionsPattern[]] := Module[{
     validationFunction = Replace[
         OptionValue["ValidationFunction"],
         {
+            None :> defaultValidationFunction[None],
             Automatic :> defaultValidationFunction[],
             {Automatic, args___} :> defaultValidationFunction[args]
         }
@@ -502,6 +507,8 @@ quietReporting = ReplaceAll[
         (method : Classify | Predict | NetTrain)[args___] :> method[args, TrainingProgressReporting -> None]
     }
 ];
+
+defaultValidationFunction[None][_, _] := Missing[];
 
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
 
@@ -613,7 +620,7 @@ subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Mo
     nVal = Replace[
         OptionValue[ValidationSet],
         {
-            Scaled[f_] :> Max[1, Floor[f nData]]
+            Scaled[f_] :> Min[Max[1, Floor[f * nData]], nData]
         }
     ];
     samplingFunction = Replace[
@@ -622,7 +629,7 @@ subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Mo
             Automatic :> Function[subSamplingIndices[nData, nVal]],
             "BootStrap" :> Function[RandomChoice[Range[nData], nData]],
             {"BootStrap", n_Integer} :> Function[RandomChoice[Range[nData], n]],
-            {"BootStrap", Scaled[f_]} :> With[{n = Max[1, Floor[f nData]]},
+            {"BootStrap", Scaled[f_]} :> With[{n = Max[1, Floor[f * nData]]},
                 Function[RandomChoice[Range[nData], n]]
             ],
             other_ :> Function[other[nData, nVal]]
