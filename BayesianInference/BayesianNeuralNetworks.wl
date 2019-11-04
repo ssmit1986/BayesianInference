@@ -459,10 +459,12 @@ crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun_, opts :
     validationFunction = Replace[
         OptionValue["ValidationFunction"],
         {
+            f_Function :> f,
+            {Automatic, args___} :> defaultValidationFunction[args],
             None :> defaultValidationFunction[None],
-            Automatic :> defaultValidationFunction[],
-            {Automatic, args___} :> defaultValidationFunction[args]
-        }
+            Automatic :> defaultValidationFunction[]
+        },
+        {0, 1}
     ];
     If[ listOrAssociationQ[trainingFun],
         Which[ 
