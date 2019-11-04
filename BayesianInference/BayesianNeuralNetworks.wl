@@ -508,15 +508,29 @@ quietReporting = ReplaceAll[
     }
 ];
 
+
+slotFunctionPattern = HoldPattern[Function[_] | Function[Null, __]];
+
+(* Turns a function with multiple slots into a function that accepts all arguments as a list in the first slot *)
+multiToVectorArgumentFunction[function : slotFunctionPattern] := Replace[
+    function,
+    {
+        Slot[i_Integer] :> Slot[1][[i]],
+        insideFun : slotFunctionPattern :> insideFun (* Make sure only the outer function is affected *)
+    },
+    {1, DirectedInfinity[1]}
+];
+multiToVectorArgumentFunction[other_] := Function[other @@ #];
+
 defaultValidationFunction[None][_, _] := Missing[];
 
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
 
-defaultValidationFunction[f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]][fit_FittedModel, val_] := With[{
-    fitFun = fit["Function"]
+defaultValidationFunction[f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]][fit_FittedModel, val_?MatrixQ] := With[{
+    fitFun = multiToVectorArgumentFunction[fit["Function"]] (* Turn the function into a form that can be efficiently mapped over a matrix *)
 },
     f[
-        Map[fitFun @@ # &, Drop[val, None, -1]], (* Fitted values. This form seems most efficient *)
+        Map[fitFun, Drop[val, None, -1]],
         val[[All, -1]] (* True values*)
     ]
 ];
@@ -554,8 +568,8 @@ defaultValidationFunction[][net : (_NetGraph | _NetChain | _NetTrainResultsObjec
 
 defaultValidationFunction[___][_, val_] := val;
 
-extractIndices[data_List, indices_List] := data[[indices]];
-extractIndices[data : _Rule | _?AssociationQ, indices_List] := data[[All, indices]];
+extractIndices[data_List, indices_List] := Developer`ToPackedArray @ data[[indices]];
+extractIndices[data : _Rule | _?AssociationQ, indices_List] := Developer`ToPackedArray /@ data[[All, indices]];
 
 kFoldIndices[n_Integer, k_Integer] := Developer`ToPackedArray /@ Flatten[ (* This essentially transposes a ragged array *)
     Partition[
