@@ -413,13 +413,11 @@ Options[crossValidateModel] = Join[
         "ValidationFunction" -> Automatic
     }
 ];
-
 crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]] := crossValidateModel[
     data,
     Function[EstimatedDistribution[#1, dist]],
     opts
 ];
-
 crossValidateModel[data_,
     dists_?listOrAssociationQ /; AllTrue[dists, DistributionParameterQ],
     opts : OptionsPattern[]
@@ -508,7 +506,6 @@ quietReporting = ReplaceAll[
     }
 ];
 
-
 slotFunctionPattern = HoldPattern[Function[_] | Function[Null, __]];
 
 (* Turns a function with multiple slots into a function that accepts all arguments as a list in the first slot *)
@@ -579,12 +576,6 @@ kFoldIndices[n_Integer, k_Integer] := Developer`ToPackedArray /@ Flatten[ (* Thi
     {{2}, {1}}
 ];
 
-Options[kFoldValidation] = {
-    "Runs" -> 1,
-    "Folds" -> 5,
-    "ParallelQ" -> False
-};
-
 parseParallelOptions[True] := parseParallelOptions[{True}];
 parseParallelOptions[{True, args___Rule}] := Function[Null, 
     ParallelTable[##, args,
@@ -595,6 +586,11 @@ parseParallelOptions[{True, args___Rule}] := Function[Null,
 ];
 parseParallelOptions[___] := Table;
 
+Options[kFoldValidation] = {
+    "Runs" -> 1,
+    "Folds" -> 5,
+    "ParallelQ" -> False
+};
 kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     nRuns = OptionValue["Runs"],
     nData = dataSize[data],
