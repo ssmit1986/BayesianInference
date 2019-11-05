@@ -600,9 +600,11 @@ Options[kFoldValidation] = {
 kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     nRuns = OptionValue["Runs"],
     nData = dataSize[data],
-    nFolds
+    nFolds,
+    partitions
 },
     nFolds = Clip[Round @ OptionValue["Folds"], {1, nData}];
+    partitions = Table[kFoldIndices[nData, nFolds], nRuns];
     Flatten @ parseParallelOptions[OptionValue["ParallelQ"]][
         With[{
             estimate = estimator[extractIndices[data, Join @@ Delete[partition, fold]]]
@@ -613,7 +615,7 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
             |>
         ],
         {fold, nFolds},
-        {partition, Table[kFoldIndices[nData, nFolds], nRuns]}
+        {partition, partitions}
     ]
 ];
 
