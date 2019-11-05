@@ -612,8 +612,8 @@ kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
                 "ValidationResult" -> tester[estimate, extractIndices[data, partition[[fold]]]]
             |>
         ],
-        {partition, Table[kFoldIndices[nData, nFolds], nRuns]},
-        {fold, nFolds}
+        {fold, nFolds},
+        {partition, Table[kFoldIndices[nData, nFolds], nRuns]}
     ]
 ];
 
