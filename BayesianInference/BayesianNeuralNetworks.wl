@@ -491,9 +491,8 @@ crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun : Except
 ];
 
 parseValidationOption = Replace[{
-    f_Function :> f,
     {Automatic, args___} :> defaultValidationFunction[args],
-    None :> defaultValidationFunction[None],
+    None :> Function[Missing[]],
     Automatic :> defaultValidationFunction[]
 }];
 
@@ -524,8 +523,6 @@ multiToVectorArgumentFunction[function : slotFunctionPattern] := Replace[
     {1, DirectedInfinity[1]}
 ];
 multiToVectorArgumentFunction[other_] := Function[other @@ #];
-
-defaultValidationFunction[None][_, _] := Missing[];
 
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
 
