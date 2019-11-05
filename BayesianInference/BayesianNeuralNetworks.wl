@@ -419,15 +419,18 @@ crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]]
     opts
 ];
 crossValidateModel[data_,
-    dists_?listOrAssociationQ /; AllTrue[dists, DistributionParameterQ],
+    dists_?(Function[ListQ[#] || AssociationQ[#]]) /; AllTrue[dists, DistributionParameterQ],
     opts : OptionsPattern[]
 ] := crossValidateModel[
     data,
-    AssociationMap[Function[dist, Function[EstimatedDistribution[#1, dist]]], dists],
+    If[ AssociationQ[dists], Map, AssociationMap][
+        Function[dist, Function[EstimatedDistribution[#1, dist]]],
+        dists
+    ],
     opts
 ];
 
-crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun_, opts : OptionsPattern[]] := Module[{
+crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun : Except[_List], opts : OptionsPattern[]] := Module[{
     method,
     nDat = dataSize[data],
     rules,
@@ -459,21 +462,17 @@ crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun_, opts :
     validationFunction = Replace[
         OptionValue["ValidationFunction"],
         {
-            f_Function :> f,
-            {Automatic, args___} :> defaultValidationFunction[args],
-            None :> defaultValidationFunction[None],
-            Automatic :> defaultValidationFunction[]
-        },
-        {0, 1}
+            assoc_?AssociationQ :> parseValidationOption /@ assoc,
+            other_ :> parseValidationOption[other]
+        }
     ];
-    If[ listOrAssociationQ[trainingFun],
+    If[ AssociationQ[trainingFun],
         Which[ 
-            !listOrAssociationQ[validationFunction],
+            !AssociationQ[validationFunction],
                 validationFunction = Function[validationFunction] /@ trainingFun,
             Or[
                 Length[validationFunction] =!= Length[trainingFun],
-                Head[trainingFun] =!= Head[validationFunction],
-                AssociationQ[trainingFun] && Sort[Keys[trainingFun]] =!= Sort[Keys[validationFunction]]
+                Sort[Keys[trainingFun]] =!= Sort[Keys[validationFunction]]
             ],
                 (
                     Message[crossValidateModel::badValidationMethod, Short[trainingFun], Short[OptionValue["ValidationFunction"]]];
@@ -491,13 +490,18 @@ crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun_, opts :
     ]
 ];
 
-listOrAssociationQ = Function[ListQ[#] || AssociationQ[#]];
+parseValidationOption = Replace[{
+    f_Function :> f,
+    {Automatic, args___} :> defaultValidationFunction[args],
+    None :> defaultValidationFunction[None],
+    Automatic :> defaultValidationFunction[]
+}];
 
-listOperator1[funs_?listOrAssociationQ][args___] := Map[#[args]&, funs];
-listOperator1[f : Except[_?listOrAssociationQ]][args___] := f[args];
+listOperator1[funs_?AssociationQ][args___] := Map[#[args]&, funs];
+listOperator1[f : Except[_?AssociationQ]][args___] := f[args];
 
-listOperator2[funs_?listOrAssociationQ][results_?listOrAssociationQ, args___] := MapThread[#1[#2, args]&, {funs, results}];
-listOperator2[f : Except[_?listOrAssociationQ]][args___] := f[args];
+listOperator2[funs_?AssociationQ][results_?AssociationQ, args___] := MapThread[#1[#2, args]&, {funs, results}];
+listOperator2[f : Except[_?AssociationQ]][args___] := f[args];
 
 dataSize[data_List] := Length[data];
 dataSize[data_] := Length[First[data]];
