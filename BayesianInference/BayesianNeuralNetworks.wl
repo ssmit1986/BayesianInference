@@ -410,7 +410,8 @@ crossValidateModel::badValidationMethod = "Cannot use validation method `1` with
 Options[crossValidateModel] = Join[
     {
         Method -> "KFold",
-        "ValidationFunction" -> Automatic
+        "ValidationFunction" -> Automatic,
+        "ParallelQ" -> False
     }
 ];
 crossValidateModel[data_, dist_?DistributionParameterQ, opts : OptionsPattern[]] := crossValidateModel[
@@ -440,14 +441,14 @@ crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun : Except
     method = Replace[
         Flatten @ {OptionValue[Method]},
         {
-            {"LeaveOneOut", rest___} :> {"KFold", "Folds" -> nDat, Sequence @@ FilterRules[{rest}, "ParallelQ"]},
+            {"LeaveOneOut", rest___} :> {"KFold", "Folds" -> nDat, Sequence @@ FilterRules[{rest}, Except["Folds"]]},
             {"BootStrap", rest___} :> {"RandomSubSampling",
                 "SamplingFunction" -> {"BootStrap", Lookup[{rest}, "BootStrapSize", nDat]},
                 Sequence @@ FilterRules[{rest}, {"Runs", "ParallelQ"}]
             }
         }
     ];
-    rules = Rest[method];
+    rules = Join[Rest[method], FilterRules[{opts}, {"ParallelQ"}]];
     methodFun = Replace[
         First[method],
         {
