@@ -468,18 +468,14 @@ crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun : Except
         }
     ];
     If[ AssociationQ[trainingFun],
-        Which[ 
-            !AssociationQ[validationFunction],
-                validationFunction = Function[validationFunction] /@ trainingFun,
-            Or[
-                Length[validationFunction] =!= Length[trainingFun],
-                Sort[Keys[trainingFun]] =!= Sort[Keys[validationFunction]]
-            ],
-                (
-                    Message[crossValidateModel::badValidationMethod, Short[trainingFun], Short[OptionValue["ValidationFunction"]]];
-                    Return[$Failed]
-                ),
-            True, Null
+        If[ !AssociationQ[validationFunction],
+            validationFunction = Function[validationFunction] /@ trainingFun
+            ,
+            (* Make sure the keys are sorted in the same order so that MapThread will work without issue *)
+            validationFunction = AssociationThread[
+                Keys[trainingFun],
+                Lookup[validationFunction, Keys[trainingFun], defaultValidationFunction[]]
+            ]
         ]
     ];
     
