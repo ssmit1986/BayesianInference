@@ -405,7 +405,6 @@ batchnormToChain[net : _NetGraph | _NetChain] := Quiet[
 ];
 
 crossValidateModel::unknownMethod = "Unknow method `1`";
-crossValidateModel::badValidationMethod = "Cannot use validation method `1` with training method `2`";
 
 Options[crossValidateModel] = Join[
     {
