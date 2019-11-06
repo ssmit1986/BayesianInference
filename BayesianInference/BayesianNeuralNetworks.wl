@@ -508,7 +508,7 @@ dataSize[data_] := Length[First[data]];
 
 quietReporting = ReplaceAll[
     {
-        (method : Classify | Predict | NetTrain)[args___] :> method[args, TrainingProgressReporting -> None]
+        (method : Classify | Predict | NetTrain | LearnDistribution)[args___] :> method[args, TrainingProgressReporting -> None]
     }
 ];
 
@@ -526,6 +526,7 @@ multiToVectorArgumentFunction[function : slotFunctionPattern] := Replace[
 multiToVectorArgumentFunction[other_] := Function[other @@ #];
 
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
+defaultValidationFunction[___][dist_LearnedDistribution, val_] := - Mean[Log @ PDF[dist, val]];
 
 defaultValidationFunction[f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]][fit_FittedModel, val_?MatrixQ] := With[{
     fitFun = multiToVectorArgumentFunction[fit["Function"]] (* Turn the function into a form that can be efficiently mapped over a matrix *)
