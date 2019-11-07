@@ -510,7 +510,7 @@ quietReporting = ReplaceAll[
 slotFunctionPattern = HoldPattern[Function[_] | Function[Null, __]];
 
 (* Turns a function with multiple slots into a function that accepts all arguments as a list in the first slot *)
-multiToVectorArgumentFunction[function : slotFunctionPattern] := Replace[
+multiArgToVectorArgFunction[function : slotFunctionPattern] := Replace[
     function,
     {
         Slot[i_Integer] :> Slot[1][[i]],
@@ -518,18 +518,24 @@ multiToVectorArgumentFunction[function : slotFunctionPattern] := Replace[
     },
     {1, DirectedInfinity[1]}
 ];
-multiToVectorArgumentFunction[other_] := Function[other @@ #];
+multiArgToVectorArgFunction[other_] := Function[other @@ #];
 
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
 defaultValidationFunction[___][dist_LearnedDistribution, val_] := - Mean[Log @ PDF[dist, val]];
 
-defaultValidationFunction[f : _ : Function[RootMeanSquare @ Subtract[#1, #2]]][fit_FittedModel, val_?MatrixQ] := With[{
-    fitFun = multiToVectorArgumentFunction[fit["Function"]] (* Turn the function into a form that can be efficiently mapped over a matrix *)
+defaultValidationFunction[
+    aggregationFunction : _ : Automatic,
+    dataPreProcessor : _ : Identity
+][fit_FittedModel, val_] := With[{
+    matrix = dataPreProcessor[val] (* this should return a matrix in the same format as accepted by, e.g., LinearModelFit *)
 },
-    f[
-        Map[fitFun, Drop[val, None, -1]],
-        val[[All, -1]] (* True values*)
-    ]
+    Replace[aggregationFunction, Automatic :> Function[RootMeanSquare @ Subtract[#1, #2]]][
+        Map[ (* Turn the function into a form that can be efficiently mapped over a matrix *)
+            multiArgToVectorArgFunction[fit["Function"]],
+            matrix[[All, 1 ;; -2 ;; 1]]
+        ], (* fitted values *)
+        matrix[[All, -1]] (* True values*)
+    ] /; MatrixQ[matrix] && Dimensions[matrix][[2]] > 1
 ];
 
 defaultValidationFunction[args___][pred_PredictorFunction, val_] := PredictorMeasurements[pred, val, args];
