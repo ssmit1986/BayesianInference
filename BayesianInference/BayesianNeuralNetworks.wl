@@ -574,12 +574,15 @@ defaultValidationFunction[___][_, val_] := val;
 extractIndices[data_List, indices_List] := Developer`ToPackedArray @ data[[indices]];
 extractIndices[data : _Rule | _?AssociationQ, indices_List] := Developer`ToPackedArray /@ data[[All, indices]];
 
-kFoldIndices[n_Integer, k_Integer] := Developer`ToPackedArray /@ Flatten[ (* This essentially transposes a ragged array *)
-    Partition[
-        RandomSample[Range[n]], 
-        k, k, {1, 1}, Nothing
+kFoldIndices[n_Integer, k_Integer] := Replace[
+    Flatten[ (* This essentially transposes a ragged array *)
+        Partition[
+            RandomSample[Range[n]], 
+            k, k, {1, 1}, Nothing
+        ],
+        {{2}, {1}}
     ],
-    {{2}, {1}}
+    array : Except[_?Developer`PackedArrayQ] :> Developer`ToPackedArray /@ array
 ];
 
 parseParallelOptions[True] := parseParallelOptions[{True}];
