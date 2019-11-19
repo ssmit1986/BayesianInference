@@ -6,6 +6,7 @@ BeginPackage["FunctionRepositoryFunctions`"]
 crossValidateModel;
 conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[dist, {i1 -> val1, ...}, {j1, j2, ...}] gives the {j1, j2, ...} marginal of dist when the indices {i1, ...} are conditioned to values {val1, ...}";
 kullbackLeiblerDivergence::usage = "kullbackLeiblerDivergence[P, Q] computes the Kullback-Leibler divergence from distribution Q to P";
+multiNonlinearModelFit;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -525,6 +526,63 @@ supportSubSetQ[p_Interval, q_Interval] := With[{int = IntervalIntersection[p, q]
 supportSubSetQ[p_, q_] /; Head[p] =!= Head[q] := False;
 supportSubSetQ[__] := Undefined;
 
+Options[multiNonlinearModelFit] = Join[
+    Options[NonlinearModelFit],
+    {
+        "DatasetIndexSymbol" -> \[FormalN]
+    }
+];
+
+multiNonlinearModelFit[datasets_, form_, fitParams_, independents : Except[_List], opts : OptionsPattern[]] := 
+    multiNonlinearModelFit[datasets, form, fitParams, {independents}, opts];
+ 
+multiNonlinearModelFit[datasets_, form : Except[{__Rule}, _List], fitParams_, independents_, opts : OptionsPattern[]] := 
+    multiNonlinearModelFit[datasets, <|"Expressions" -> form, "Constraints" -> True|>, fitParams, independents, opts];
+ 
+multiNonlinearModelFit[
+    datasets : {__?(MatrixQ[#1, NumericQ] &)}, 
+    KeyValuePattern[{"Expressions" -> expressions_List, "Constraints" -> constraints_}], 
+    fitParams_List, 
+    independents_List,
+    opts : OptionsPattern[]
+] := Module[{
+    fitfun, weights,
+    numSets = Length[expressions], 
+    augmentedData = Join @@ MapIndexed[
+        Join[ConstantArray[N[#2], Length[#1]], #1, 2]&,
+        datasets
+    ], 
+    indexSymbol = OptionValue["DatasetIndexSymbol"]
+},
+    Condition[
+        fitfun = With[{
+            conditions = Join @@ ({#1, expressions[[#1]]} & ) /@ Range[numSets]
+        }, 
+            Switch @@ Prepend[conditions, Round[indexSymbol]]
+        ]; 
+        weights = Replace[
+            OptionValue[Weights],
+            {
+                (list_List)?(VectorQ[#1, NumericQ]& ) /; Length[list] === numSets :> 
+                    Join @@ MapThread[ConstantArray, {list, Length /@ datasets}], 
+                list : {__?(VectorQ[#1, NumericQ] & )} /; Length /@ list === Length /@ datasets :>
+                    Join @@ list, 
+                "InverseLengthWeights" :> Join @@ (ConstantArray[1./#1, #1] & ) /@ Length /@ datasets
+            }
+        ]; 
+        NonlinearModelFit[
+            augmentedData,
+            If[TrueQ[constraints], fitfun, {fitfun, constraints}], 
+            fitParams,
+            Flatten[{indexSymbol, independents}],
+            Weights -> weights, 
+            Sequence @@ FilterRules[{opts}, Options[NonlinearModelFit]]
+        ]
+        ,
+        numSets === Length[datasets]
+    ]
+];
+ 
 End[] (* End Private Context *)
 
 EndPackage[]
