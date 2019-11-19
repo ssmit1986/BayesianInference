@@ -13,7 +13,6 @@ sampleTrainedNet;
 netRegularizationLoss;
 networkLogEvidence;
 batchnormToChain;
-crossValidateModel;
 
 Begin["`Private`"] (* Begin Private Context *)
 
