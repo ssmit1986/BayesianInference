@@ -11,7 +11,11 @@ Paclet[
         {
             {"Documentation", Language -> "English"}, 
             {"Kernel", "Context" -> 
-                {"BayesianInference`", "BayesianUtilities`", "BayesianStatistics`", "BayesianGaussianProcess`", "BayesianVisualisations`", "BayesianNeuralNetworks`", "ExponentialFamilyDefinitions`", "BayesianConjugatePriors`", "BayesianLinearRegression`", "LaplaceApproximation`"}
+                {
+                    "BayesianInference`", "BayesianUtilities`", "BayesianStatistics`", "BayesianGaussianProcess`", 
+                    "BayesianVisualisations`", "BayesianNeuralNetworks`", "ExponentialFamilyDefinitions`", "BayesianConjugatePriors`", 
+                    "BayesianLinearRegression`", "LaplaceApproximation`", "FunctionRepositoryFunctions`"
+                }
             }
         }
 ]
