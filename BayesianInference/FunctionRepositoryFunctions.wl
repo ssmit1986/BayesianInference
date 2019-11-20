@@ -3,7 +3,7 @@
 BeginPackage["FunctionRepositoryFunctions`"]
 (* Exported symbols added here with SymbolName::usage *)
 
-crossValidateModel;
+crossValidateModel::usage = "crossValidateModel[data, fitFunction] repeatedly splits the data into training/validation subsets; then fits a model using fitFunction on the training set and validates the result with the validation set.";
 conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[dist, {i1 -> val1, ...}, {j1, j2, ...}] gives the {j1, j2, ...} marginal of dist when the indices {i1, ...} are conditioned to values {val1, ...}";
 kullbackLeiblerDivergence::usage = "kullbackLeiblerDivergence[P, Q] computes the Kullback-Leibler divergence from distribution Q to P";
 multiNonlinearModelFit;
@@ -85,7 +85,7 @@ crossValidateModel[data : (_List | _Rule | _?AssociationQ), trainingFun : Except
     ];
     
     methodFun[
-        data,
+        data, nDat,
         quietReporting @ listOperator1[trainingFun],
         listOperator2[validationFunction],
         Sequence @@ FilterRules[rules, Options[methodFun]]
@@ -206,9 +206,8 @@ Options[kFoldValidation] = {
     "Folds" -> 5,
     "ParallelQ" -> False
 };
-kFoldValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
+kFoldValidation[data_, nData_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     nRuns = OptionValue["Runs"],
-    nData = dataSize[data],
     nFolds,
     partitions
 },
@@ -239,10 +238,9 @@ Options[subSamplingValidation] = {
     "ParallelQ" -> False,
     "SamplingFunction" -> Automatic
 };
-subSamplingValidation[data_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
+subSamplingValidation[data_, nData_, estimator_, tester_, opts : OptionsPattern[]] := Module[{
     nRuns = OptionValue["Runs"],
     nVal,
-    nData = dataSize[data],
     samplingFunction
 },
     nVal = Clip[
