@@ -7,6 +7,7 @@ crossValidateModel::usage = "crossValidateModel[data, fitFunction] repeatedly sp
 conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[dist, {i1 -> val1, ...}, {j1, j2, ...}] gives the {j1, j2, ...} marginal of dist when the indices {i1, ...} are conditioned to values {val1, ...}";
 kullbackLeiblerDivergence::usage = "kullbackLeiblerDivergence[P, Q] computes the Kullback-Leibler divergence from distribution Q to P";
 multiNonlinearModelFit;
+recursiveGroupBy::usage = "recursiveGroupBy[data, fun1, fun2, ...] is equivalent to GroupBy[data, fun1, GroupBy[#, fun2, GroupBy[...]]&], with each function grouping at a deeper level.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -580,7 +581,43 @@ multiNonlinearModelFit[
         numSets === Length[datasets]
     ]
 ];
- 
+
+recursiveGroupBy[data_, funs__] := Fold[
+    Function[{result, element},
+        Map[
+            Activate @ Function[
+                Evaluate @ Inactive[GroupBy][#, parseGroupingFunction[element[[1]]]]
+            ],
+            result,
+            element[[2]]
+        ]
+    ],
+    data,
+    MapIndexed[{#1, Subtract[#2, 1]}&, {funs}]
+];
+
+parseGroupingFunction[(key : _String | _Key | {(_String | _Key)..}) -> KeyDrop] := parseGroupingFunction[key] -> KeyDrop[key];
+parseGroupingFunction[groupFun_ -> f_] := parseGroupingFunction[groupFun] -> f;
+parseGroupingFunction[key_String] := Function[Slot[key]];
+parseGroupingFunction[key_Key] := Function[#1[key]];
+parseGroupingFunction[keys : {(_String | _Key)..}] := With[{
+    slots = Replace[keys,
+        {
+            s_String :> Inactive[Slot[s]],
+            k_Key :> Inactive[Slot[1][k]]
+        },
+        {1}
+    ]
+},
+    Activate @ Function[slots]
+];
+parseGroupingFunction[{grouping_, aggregatingFunction_}] := Sequence[
+    parseGroupingFunction[grouping],
+    aggregatingFunction
+];
+parseGroupingFunction[{grouping_}] := parseGroupingFunction[grouping]; 
+parseGroupingFunction[fun_] := fun;
+
 End[] (* End Private Context *)
 
 EndPackage[]
