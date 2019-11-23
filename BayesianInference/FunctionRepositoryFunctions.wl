@@ -596,21 +596,10 @@ recursiveGroupBy[data_, funs__] := Fold[
     MapIndexed[{#1, Subtract[#2, 1]}&, {funs}]
 ];
 
-parseGroupingFunction[(key : _String | _Key | {(_String | _Key)..}) -> KeyDrop] := parseGroupingFunction[key] -> KeyDrop[key];
+keyPattern = (_String | _Key);
+parseGroupingFunction[(key : keyPattern | {keyPattern..}) -> KeyDrop] := parseGroupingFunction[key] -> KeyDrop[key];
 parseGroupingFunction[groupFun_ -> f_] := parseGroupingFunction[groupFun] -> f;
-parseGroupingFunction[key_String] := Function[Slot[key]];
-parseGroupingFunction[key_Key] := Function[#1[key]];
-parseGroupingFunction[keys : {(_String | _Key)..}] := With[{
-    slots = Replace[keys,
-        {
-            s_String :> Inactive[Slot[s]],
-            k_Key :> Inactive[Slot[1][k]]
-        },
-        {1}
-    ]
-},
-    Activate @ Function[slots]
-];
+parseGroupingFunction[keys : keyPattern | {keyPattern..}] := Lookup[keys];
 parseGroupingFunction[{grouping_, aggregatingFunction_}] := Sequence[
     parseGroupingFunction[grouping],
     aggregatingFunction
