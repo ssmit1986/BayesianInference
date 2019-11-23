@@ -586,7 +586,7 @@ recursiveGroupBy[data_, funs__] := Fold[
     Function[{result, element},
         Map[
             Activate @ Function[
-                Evaluate @ Inactive[GroupBy][#, parseGroupingFunction[element[[1]]]]
+                Evaluate @ Inactive[GroupBy][Inactive[Slot][1], parseGroupingFunction[element[[1]]]]
             ],
             result,
             element[[2]]
