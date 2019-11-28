@@ -7,7 +7,6 @@ crossValidateModel::usage = "crossValidateModel[data, fitFunction] repeatedly sp
 conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[dist, {i1 -> val1, ...}, {j1, j2, ...}] gives the {j1, j2, ...} marginal of dist when the indices {i1, ...} are conditioned to values {val1, ...}";
 kullbackLeiblerDivergence::usage = "kullbackLeiblerDivergence[P, Q] computes the Kullback-Leibler divergence from distribution Q to P";
 multiNonlinearModelFit;
-recursiveGroupBy::usage = "recursiveGroupBy[fun1, fun2, ...][data] is equivalent to GroupBy[data, fun1, GroupBy[#, fun2, GroupBy[...]]&], with each function grouping at a deeper level.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -581,31 +580,6 @@ multiNonlinearModelFit[
         numSets === Length[datasets]
     ]
 ];
-
-recursiveGroupBy[funs__][data_] := Fold[
-    Function[{result, element},
-        Map[
-            Activate @ Function[
-                Evaluate @ Inactive[GroupBy][Inactive[Slot][1], parseGroupingFunction[element[[1]]]]
-            ],
-            result,
-            element[[2]]
-        ]
-    ],
-    data,
-    MapIndexed[{#1, Subtract[#2, 1]}&, {funs}]
-];
-
-keyPattern = (_String | _Key);
-parseGroupingFunction[(key : keyPattern | {keyPattern..}) -> KeyDrop] := parseGroupingFunction[key] -> KeyDrop[key];
-parseGroupingFunction[groupFun_ -> f_] := parseGroupingFunction[groupFun] -> f;
-parseGroupingFunction[keys : keyPattern | {keyPattern..}] := Lookup[keys];
-parseGroupingFunction[{grouping_, aggregatingFunction_}] := Sequence[
-    parseGroupingFunction[grouping],
-    aggregatingFunction
-];
-parseGroupingFunction[{grouping_}] := parseGroupingFunction[grouping]; 
-parseGroupingFunction[fun_] := fun;
 
 End[] (* End Private Context *)
 
