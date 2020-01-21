@@ -7,6 +7,7 @@ crossValidateModel::usage = "crossValidateModel[data, fitFunction] repeatedly sp
 conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[dist, {i1 -> val1, ...}, {j1, j2, ...}] gives the {j1, j2, ...} marginal of dist when the indices {i1, ...} are conditioned to values {val1, ...}";
 kullbackLeiblerDivergence::usage = "kullbackLeiblerDivergence[P, Q] computes the Kullback-Leibler divergence from distribution Q to P";
 multiNonlinearModelFit;
+sparseAssociation;
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -580,6 +581,104 @@ multiNonlinearModelFit[
         numSets === Length[datasets]
     ]
 ];
+
+Options[isparseAssociation] = {"SortKeys" -> True};
+Options[sparseAssociation] = Join[
+    Options[isparseAssociation]
+];
+
+sparseAssociation[array : (_SparseArray | {}), opts : OptionsPattern[]] := With[{
+    result = isparseAssociation[array, FilterRules[{opts}, Options[isparseAssociation]]]
+},
+    result /; AssociationQ[result]
+];
+
+sparseAssociation[list_List?ArrayQ, default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] := With[{
+    result = isparseAssociation[
+        SparseArray[list, Dimensions[list], default],
+        FilterRules[{opts}, Options[isparseAssociation]]
+    ]
+},
+    result /; AssociationQ[result]
+];
+
+sparseAssociation[list_List?ArrayQ, keys_List, default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] := Module[{
+    dims = Dimensions[list],
+    depth,
+    keyList
+},
+    depth = Length[dims];
+    keyList = Replace[keys,
+        l : Except[{__List}] :> ConstantArray[l, depth]
+    ];
+    If[ Or[ (* check if the supplied keys can match the dimensions of the array *)
+            Length[keyList] =!= depth,
+            Or @@ Thread[Length /@ keyList < dims]
+        ],
+        Return[$Failed]
+    ];
+    isparseAssociation[
+        SparseArray[list, dims, default],
+        keys,
+        FilterRules[{opts}, Options[isparseAssociation]]
+    ]
+];
+
+sparseAssociation[array_?ArrayQ, keys_List, opts : OptionsPattern[]] := Module[{
+    dims = Dimensions[array],
+    depth,
+    keyList
+},
+    depth = Length[dims];
+    keyList = Replace[keys,
+        l : Except[{__List}] :> ConstantArray[l, depth]
+    ];
+    If[ Or[ (* check if the supplied keys can match the dimensions of the array *)
+            Length[keyList] =!= depth,
+            Or @@ Thread[Length /@ keyList < dims]
+        ],
+        Return[$Failed]
+    ];
+    isparseAssociation[array, keyList, FilterRules[{opts}, Options[isparseAssociation]]]
+];
+
+Options[isparseAssociation] = {"SortKeys" -> True};
+isparseAssociation[array_SparseArray?ArrayQ, opts : OptionsPattern[]] := Module[{
+    rules = Most @ ArrayRules[array],
+    depth = ArrayDepth[array],
+    assoc
+},
+    Condition[
+        assoc = GroupBy[
+            rules,
+            Map[ (* generate list of grouping rules *)
+                Function[ind,
+                    Function[#[[1, ind]]]
+                ],
+                Range[depth]
+            ],
+            #[[1, 2]]& (* extract the element at the given position *)
+        ];
+        If[ TrueQ[OptionValue["SortKeys"]],
+            Map[KeySort, assoc, {0, depth - 1}],
+            assoc
+        ]
+        ,
+        depth > 0
+    ]
+];
+isparseAssociation[array_SparseArray?ArrayQ, keys : {__List}, opts : OptionsPattern[]] := With[{
+    assoc = isparseAssociation[array, opts]
+},
+    MapIndexed[
+        With[{k = keys[[Length[#2] + 1]]},
+            KeyMap[k[[#]]&, #1]
+        ]&,
+        assoc,
+        {0, ArrayDepth[array] - 1}
+    ]
+];
+isparseAssociation[{} | _SparseArray, ___] := <||>;
 
 End[] (* End Private Context *)
 
