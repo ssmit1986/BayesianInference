@@ -587,70 +587,55 @@ Options[sparseAssociation] = Join[
     Options[isparseAssociation]
 ];
 
-sparseAssociation[array : (_SparseArray | {}), opts : OptionsPattern[]] := With[{
-    result = isparseAssociation[array, FilterRules[{opts}, Options[isparseAssociation]]]
-},
-    result /; AssociationQ[result]
-];
+sparseAssociation[{}, ___] := <||>;
 
-sparseAssociation[list_List?ArrayQ, default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] := With[{
+sparseAssociation[array_?ArrayQ, default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] := With[{
     result = isparseAssociation[
-        SparseArray[list, Dimensions[list], default],
+        ArrayRules[array, default],
         FilterRules[{opts}, Options[isparseAssociation]]
     ]
 },
     result /; AssociationQ[result]
 ];
 
-sparseAssociation[list_List?ArrayQ, keys_List, default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] := Module[{
-    dims = Dimensions[list],
-    depth,
-    keyList
+sparseAssociation[array_?ArrayQ, keys : Except[{__List}, _List], default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] :=
+    sparseAssociation[array, ConstantArray[keys, ArrayDepth[array]], default, opts];
+
+sparseAssociation[
+    array_?ArrayQ,
+    keys : {__List},
+    default : Except[_List | _Rule] : 0,
+    opts : OptionsPattern[]
+] := Module[{
+    dims = Dimensions[array]
 },
-    depth = Length[dims];
-    keyList = Replace[keys,
-        l : Except[{__List}] :> ConstantArray[l, depth]
-    ];
-    If[ Or[ (* check if the supplied keys can match the dimensions of the array *)
-            Length[keyList] =!= depth,
-            Or @@ Thread[Length /@ keyList < dims]
-        ],
-        Return[$Failed]
-    ];
-    isparseAssociation[
-        SparseArray[list, dims, default],
-        keys,
-        FilterRules[{opts}, Options[isparseAssociation]]
+    Condition[
+        isparseAssociation[
+            ArrayRules[array, default],
+            keys,
+            FilterRules[{opts}, Options[isparseAssociation]]
+        ]
+        ,
+        checkKeyDims[dims, Length /@ keys]
     ]
 ];
 
-sparseAssociation[array_?ArrayQ, keys_List, opts : OptionsPattern[]] := Module[{
-    dims = Dimensions[array],
-    depth,
-    keyList
-},
-    depth = Length[dims];
-    keyList = Replace[keys,
-        l : Except[{__List}] :> ConstantArray[l, depth]
-    ];
-    If[ Or[ (* check if the supplied keys can match the dimensions of the array *)
-            Length[keyList] =!= depth,
-            Or @@ Thread[Length /@ keyList < dims]
-        ],
-        Return[$Failed]
-    ];
-    isparseAssociation[array, keyList, FilterRules[{opts}, Options[isparseAssociation]]]
+checkKeyDims[arrayDims_List, keyDims_List] := TrueQ @ And[
+    Length[arrayDims] === Length[keyDims],
+    And @@ Thread[keyDims >= arrayDims]
 ];
+checkKeyDims[___] := False;
 
 Options[isparseAssociation] = {"SortKeys" -> True};
-isparseAssociation[array_SparseArray?ArrayQ, opts : OptionsPattern[]] := Module[{
-    rules = Most @ ArrayRules[array],
-    depth = ArrayDepth[array],
+
+isparseAssociation[{{Verbatim[_]..} -> default_}, ___] := <|"Data" -> <||>, "Default" -> default|>;
+isparseAssociation[rules_List, opts : OptionsPattern[]] := Module[{
+    depth = Length[rules[[1, 1]]],
     assoc
 },
     Condition[
         assoc = GroupBy[
-            rules,
+            Most @ rules,
             Map[ (* generate list of grouping rules *)
                 Function[ind,
                     Function[#[[1, ind]]]
@@ -659,26 +644,32 @@ isparseAssociation[array_SparseArray?ArrayQ, opts : OptionsPattern[]] := Module[
             ],
             #[[1, 2]]& (* extract the element at the given position *)
         ];
-        If[ TrueQ[OptionValue["SortKeys"]],
-            Map[KeySort, assoc, {0, depth - 1}],
-            assoc
-        ]
+        <|
+            "Data"-> If[ TrueQ[OptionValue["SortKeys"]],
+                Map[KeySort, assoc, {0, depth - 1}],
+                assoc
+            ],
+            "Default" -> rules[[-1, 2]]
+        |>
         ,
         depth > 0
     ]
 ];
-isparseAssociation[array_SparseArray?ArrayQ, keys : {__List}, opts : OptionsPattern[]] := With[{
-    assoc = isparseAssociation[array, opts]
+isparseAssociation[rules_, keys : {__List}, opts : OptionsPattern[]] := Module[{
+    assoc = isparseAssociation[rules, opts]
 },
-    MapIndexed[
-        With[{k = keys[[Length[#2] + 1]]},
-            KeyMap[k[[#]]&, #1]
+    MapAt[
+        MapIndexed[
+            With[{k = keys[[Length[#2] + 1]]},
+                KeyMap[k[[#]]&, #1]
+            ]&,
+            #,
+            {0, Length[rules[[1, 1]]] - 1}
         ]&,
         assoc,
-        {0, ArrayDepth[array] - 1}
-    ]
+        {Key["Data"]}
+    ] /; AssociationQ[assoc]
 ];
-isparseAssociation[{} | _SparseArray, ___] := <||>;
 
 End[] (* End Private Context *)
 
