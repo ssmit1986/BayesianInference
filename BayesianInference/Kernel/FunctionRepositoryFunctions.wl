@@ -589,15 +589,6 @@ Options[sparseAssociation] = Join[
 
 sparseAssociation[{}, ___] := <||>;
 
-sparseAssociation[array_?ArrayQ, default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] := With[{
-    result = isparseAssociation[
-        ArrayRules[array, default],
-        FilterRules[{opts}, Options[isparseAssociation]]
-    ]
-},
-    result /; AssociationQ[result]
-];
-
 sparseAssociation[array_?ArrayQ, keys : Except[{__List}, _List], default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] :=
     sparseAssociation[array, ConstantArray[keys, ArrayDepth[array]], default, opts];
 
@@ -618,6 +609,36 @@ sparseAssociation[
         ,
         checkKeyDims[dims, Length /@ keys]
     ]
+];
+
+sparseAssociation[array_?ArrayQ, default : _ : 0, opts : OptionsPattern[]] := With[{
+    result = isparseAssociation[
+        ArrayRules[array, default],
+        FilterRules[{opts}, Options[isparseAssociation]]
+    ]
+},
+    result /; AssociationQ[result]
+];
+
+sparseAssociation[expr_, level_Integer, keys_List, default : _ : 0, OptionsPattern[]] := Module[{
+    assoc = positionAssociation[expr, Except[default], {level}],
+    keyList = Replace[keys, l : Except[{__List}] :> ConstantArray[l, level]]
+},
+    isparseAssociation[
+        Append[Normal[assoc], {_} -> default],
+        keyList
+    ] /; And[
+        AssociationQ[assoc],
+        checkKeyDims[
+            Activate[Thread[Inactive[Max] @@ Keys[assoc]]],
+            Length /@ keyList
+        ]
+    ] 
+];
+sparseAssociation[expr_, level_Integer, default : _ : 0, OptionsPattern[]] := Module[{
+    assoc = positionAssociation[expr, Except[default], {level}]
+},
+    isparseAssociation[Append[Normal[assoc], {_} -> default]] /; AssociationQ[assoc]
 ];
 
 checkKeyDims[arrayDims_List, keyDims_List] := TrueQ @ And[
@@ -669,6 +690,13 @@ isparseAssociation[rules_, keys : {__List}, opts : OptionsPattern[]] := Module[{
         assoc,
         {Key["Data"]}
     ] /; AssociationQ[assoc]
+];
+
+Options[positionAssociation] = {Heads -> False};
+positionAssociation[expr_, args__, opts : OptionsPattern[]] := With[{
+    pos = Position[expr, args, Heads -> OptionValue[Heads]]
+},
+    AssociationThread[pos, Extract[expr, pos]] /; ListQ[pos]
 ];
 
 End[] (* End Private Context *)
