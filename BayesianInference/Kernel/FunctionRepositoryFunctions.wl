@@ -582,45 +582,35 @@ multiNonlinearModelFit[
     ]
 ];
 
-Options[isparseAssociation] = {"SortKeys" -> True};
-Options[sparseAssociation] = Join[
-    Options[isparseAssociation]
-];
-
 sparseAssociation[{}, ___] := <||>;
 
-sparseAssociation[array_?ArrayQ, keys : Except[{__List}, _List], default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] :=
-    sparseAssociation[array, ConstantArray[keys, ArrayDepth[array]], default, opts];
+sparseAssociation[array_?ArrayQ, keys : Except[{__List}, _List], default : Except[_List | _Rule] : 0] :=
+    sparseAssociation[array, ConstantArray[keys, ArrayDepth[array]], default];
 
 sparseAssociation[
     array_?ArrayQ,
     keys : {__List},
-    default : Except[_List | _Rule] : 0,
-    opts : OptionsPattern[]
+    default : Except[_List | _Rule] : 0
 ] := Module[{
     dims = Dimensions[array]
 },
     Condition[
         isparseAssociation[
             ArrayRules[array, default],
-            keys,
-            FilterRules[{opts}, Options[isparseAssociation]]
+            keys
         ]
         ,
         checkKeyDims[dims, Length /@ keys]
     ]
 ];
 
-sparseAssociation[array_?ArrayQ, default : _ : 0, opts : OptionsPattern[]] := With[{
-    result = isparseAssociation[
-        ArrayRules[array, default],
-        FilterRules[{opts}, Options[isparseAssociation]]
-    ]
+sparseAssociation[array_?ArrayQ, default : _ : 0] := With[{
+    result = isparseAssociation[ArrayRules[array, default]]
 },
     result /; AssociationQ[result]
 ];
 
-sparseAssociation[expr_, level_Integer, keys_List, default : _ : 0, OptionsPattern[]] := Module[{
+sparseAssociation[expr_, level_Integer, keys_List, default : _ : 0] := Module[{
     assoc = positionAssociation[expr, Except[default], {level}],
     keyList = Replace[keys, l : Except[{__List}] :> ConstantArray[l, level]]
 },
@@ -635,7 +625,7 @@ sparseAssociation[expr_, level_Integer, keys_List, default : _ : 0, OptionsPatte
         ]
     ] 
 ];
-sparseAssociation[expr_, level_Integer, default : _ : 0, OptionsPattern[]] := Module[{
+sparseAssociation[expr_, level_Integer, default : _ : 0] := Module[{
     assoc = positionAssociation[expr, Except[default], {level}]
 },
     isparseAssociation[Append[Normal[assoc], {_} -> default]] /; AssociationQ[assoc]
@@ -647,10 +637,9 @@ checkKeyDims[arrayDims_List, keyDims_List] := TrueQ @ And[
 ];
 checkKeyDims[___] := False;
 
-Options[isparseAssociation] = {"SortKeys" -> True};
-
 isparseAssociation[{{Verbatim[_]..} -> default_}, ___] := <|"Data" -> <||>, "Default" -> default|>;
-isparseAssociation[rules_List, opts : OptionsPattern[]] := Module[{
+
+isparseAssociation[rules_List] := Module[{
     depth = Length[rules[[1, 1]]],
     assoc
 },
@@ -666,30 +655,25 @@ isparseAssociation[rules_List, opts : OptionsPattern[]] := Module[{
             #[[1, 2]]& (* extract the element at the given position *)
         ];
         <|
-            "Data"-> If[ TrueQ[OptionValue["SortKeys"]],
-                Map[KeySort, assoc, {0, depth - 1}],
-                assoc
-            ],
+            "Data"-> assoc,
             "Default" -> rules[[-1, 2]]
         |>
         ,
         depth > 0
     ]
 ];
-isparseAssociation[rules_, keys : {__List}, opts : OptionsPattern[]] := Module[{
-    assoc = isparseAssociation[rules, opts]
+
+isparseAssociation[rules_, keys : {__List}] := isparseAssociation[indexRulesToKeys[rules, keys]];
+
+indexRulesToKeys[list_, keys_] := Module[{
+    rules = list
 },
-    MapAt[
-        MapIndexed[
-            With[{k = keys[[Length[#2] + 1]]},
-                KeyMap[k[[#]]&, #1]
-            ]&,
-            #,
-            {0, Length[rules[[1, 1]]] - 1}
-        ]&,
-        assoc,
-        {Key["Data"]}
-    ] /; AssociationQ[assoc]
+    rules[[;; -2, 1]] = MapIndexed[
+        keys[[#2[[2]], #1]] &,
+        rules[[;; -2, 1]],
+        {2}
+    ];
+    rules
 ];
 
 Options[positionAssociation] = {Heads -> False};
