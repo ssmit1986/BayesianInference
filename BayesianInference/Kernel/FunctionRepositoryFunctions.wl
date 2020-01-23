@@ -582,17 +582,21 @@ multiNonlinearModelFit[
     ]
 ];
 
+Options[sparseAssociation] = {"Level" -> Automatic};
+
 sparseAssociation[{}, ___] := <||>;
 
-sparseAssociation[array_?ArrayQ, keys : Except[{__List}, _List], default : Except[_List | _Rule] : 0] :=
-    sparseAssociation[array, ConstantArray[keys, ArrayDepth[array]], default];
+sparseAssociation[array_?ArrayQ, keys : Except[{__List}, _List], default : Except[_List | _Rule] : 0, opts : OptionsPattern[]] :=
+    sparseAssociation[array, ConstantArray[keys, ArrayDepth[array]], default, opts];
 
 sparseAssociation[
     array_?ArrayQ,
     keys : {__List},
-    default : Except[_List | _Rule] : 0
-] := Module[{
-    dims = Dimensions[array]
+    default : Except[_List | _Rule] : 0,
+    opts : OptionsPattern[]
+] := With[{
+    dims = Dimensions[array],
+    lvl = OptionValue["Level"]
 },
     Condition[
         isparseAssociation[
@@ -600,35 +604,52 @@ sparseAssociation[
             keys
         ]
         ,
-        checkKeyDims[dims, Length /@ keys]
+        lvl === Automatic && checkKeyDims[dims, Length /@ keys]
     ]
 ];
 
-sparseAssociation[array_?ArrayQ, default : _ : 0] := With[{
-    result = isparseAssociation[ArrayRules[array, default]]
+sparseAssociation[array_?ArrayQ, default : _ : 0, opts : OptionsPattern[]] := With[{
+    lvl = OptionValue["Level"]
 },
-    result /; AssociationQ[result]
+    isparseAssociation[ArrayRules[array, default]] /; lvl === Automatic
 ];
 
-sparseAssociation[expr_, level_Integer, keys_List, default : _ : 0] := Module[{
-    assoc = positionAssociation[expr, Except[default], {level}],
-    keyList = Replace[keys, l : Except[{__List}] :> ConstantArray[l, level]]
+sparseAssociation[expr_, keys_List, default : _ : 0, opts : OptionsPattern[]] := Module[{
+    level = OptionValue["Level"],
+    assoc, keyList
 },
-    isparseAssociation[
-        Append[Normal[assoc], {_} -> default],
-        keyList
-    ] /; And[
-        AssociationQ[assoc],
-        checkKeyDims[
-            Activate[Thread[Inactive[Max] @@ Keys[assoc]]],
-            Length /@ keyList
+    Condition[
+        keyList = Replace[keys, l : Except[{__List}] :> ConstantArray[l, level]];
+        assoc = positionAssociation[expr, Except[default], {level}];
+        If[ And[
+                AssociationQ[assoc],
+                checkKeyDims[
+                    Activate[Thread[Inactive[Max] @@ Keys[assoc]]],
+                    Length /@ keyList
+                ]
+            ],
+            isparseAssociation[
+                Append[Normal[assoc], {_} -> default],
+                keyList
+            ],
+            $Failed
         ]
+        ,
+        IntegerQ[level]
     ] 
 ];
-sparseAssociation[expr_, level_Integer, default : _ : 0] := Module[{
-    assoc = positionAssociation[expr, Except[default], {level}]
+sparseAssociation[expr_, default : _ : 0, opts : OptionsPattern[]] := Module[{
+    level = OptionValue["Level"],
+    assoc
 },
-    isparseAssociation[Append[Normal[assoc], {_} -> default]] /; AssociationQ[assoc]
+    Condition[
+        assoc = positionAssociation[expr, Except[default], {level}];
+        If[ AssociationQ[assoc],
+            isparseAssociation[Append[Normal[assoc], {_} -> default]],
+            $Failed
+        ],
+        IntegerQ[level]
+    ]
 ];
 
 checkKeyDims[arrayDims_List, keyDims_List] := TrueQ @ And[
