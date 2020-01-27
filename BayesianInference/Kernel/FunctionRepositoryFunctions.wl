@@ -8,6 +8,7 @@ conditionedMultinormalDistribution::usage = "conditionedMultinormalDistribution[
 kullbackLeiblerDivergence::usage = "kullbackLeiblerDivergence[P, Q] computes the Kullback-Leibler divergence from distribution Q to P";
 multiNonlinearModelFit;
 sparseAssociation;
+firstValue::usage = "firstValue[{expr_1, expr_2, ...}, pattern] evalutates held expr_i in turn, returning the value of the first expression that evaluates to a result matching the pattern.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -702,6 +703,14 @@ positionAssociation[expr_, args__, opts : OptionsPattern[]] := With[{
     pos = Position[expr, args, Heads -> OptionValue[Heads]]
 },
     AssociationThread[pos, Extract[expr, pos]] /; ListQ[pos]
+];
+
+SetAttributes[firstValue, HoldFirst];
+Options[firstValue] = Options[FirstCase];
+firstValue[expr_, pattern_, args___] := FirstCase[
+    Unevaluated[expr],
+    _?(MatchQ[pattern]),
+    args
 ];
 
 End[] (* End Private Context *)
