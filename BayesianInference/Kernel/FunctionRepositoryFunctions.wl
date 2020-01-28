@@ -9,6 +9,7 @@ kullbackLeiblerDivergence::usage = "kullbackLeiblerDivergence[P, Q] computes the
 multiNonlinearModelFit;
 sparseAssociation;
 firstValue::usage = "firstValue[{expr_1, expr_2, ...}, pattern] evalutates held expr_i in turn, returning the value of the first expression that evaluates to a result matching the pattern.";
+deleteContainedStrings::usage = "deleteContainedStrings[{str1, str2, ...}] deletes every string that is a substring of at least one other string in the list. Preserves ordering.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -711,6 +712,17 @@ firstValue[expr_, pattern_, args___] := FirstCase[
     Unevaluated[expr],
     _?(MatchQ[pattern]),
     args
+];
+
+Options[deleteContainedStrings] = Options[StringContainsQ];
+deleteContainedStrings[{}, ___] := {};
+deleteContainedStrings[strings : {__String}, opts : OptionsPattern[]] := Module[{
+    sorted = ReverseSortBy[strings, StringLength]
+},
+    SortBy[
+        DeleteDuplicates[sorted, StringContainsQ[##, opts] &],
+        FirstPosition[strings, #, Missing[], {1}, Heads -> False] &
+    ]
 ];
 
 End[] (* End Private Context *)
