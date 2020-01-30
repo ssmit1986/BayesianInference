@@ -119,6 +119,7 @@ quietReporting = ReplaceAll[
 slotFunctionPattern = HoldPattern[Function[_] | Function[Null, __]];
 
 (* Turns a function with multiple slots into a function that accepts all arguments as a list in the first slot *)
+multiArgToVectorArgFunction[fit_FittedModel] := multiArgToVectorArgFunction[fit["Function"]];
 multiArgToVectorArgFunction[function : slotFunctionPattern] := Replace[
     function,
     {
@@ -135,12 +136,12 @@ defaultValidationFunction[___][dist_LearnedDistribution, val_] := - Mean[Log @ P
 defaultValidationFunction[
     aggregationFunction : _ : Automatic,
     dataPreProcessor : _ : Identity
-][fit_FittedModel, val_] := With[{
+][fit : (_Function | _FittedModel), val_] := With[{
     matrix = dataPreProcessor[val] (* this should return a matrix in the same format as accepted by, e.g., LinearModelFit *)
 },
     Replace[aggregationFunction, Automatic :> Function[RootMeanSquare @ Subtract[#1, #2]]][
         Map[ (* Turn the function into a form that can be efficiently mapped over a matrix *)
-            multiArgToVectorArgFunction[fit["Function"]],
+            multiArgToVectorArgFunction[fit],
             matrix[[All, 1 ;; -2 ;; 1]]
         ], (* fitted values *)
         matrix[[All, -1]] (* True values*)
