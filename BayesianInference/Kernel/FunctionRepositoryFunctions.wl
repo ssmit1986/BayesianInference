@@ -706,11 +706,11 @@ positionAssociation[expr_, args__, opts : OptionsPattern[]] := With[{
     AssociationThread[pos, Extract[expr, pos]] /; ListQ[pos]
 ];
 
-SetAttributes[firstMatchingValue, HoldFirst];
+SetAttributes[firstMatchingValue, HoldAll];
 Options[firstMatchingValue] = Options[FirstCase];
 firstMatchingValue[
     {expressions___},
-    HoldPattern[(head : (Rule | RuleDelayed))[patt_, transformation_]],
+    (head : (Rule | RuleDelayed))[patt_, transformation_],
     default : _ : Missing["NotFound"]
 ] := Module[{
     matched
@@ -741,6 +741,7 @@ firstMatchingValue[{expressions___}, otherPattern_, default : _ : Missing["NotFo
     ],
     default
 ];
+firstMatchingValue[other_, _, default : _ : Missing["NotFound"]] := default;
 
 
 Options[deleteContainedStrings] = Options[StringContainsQ];
