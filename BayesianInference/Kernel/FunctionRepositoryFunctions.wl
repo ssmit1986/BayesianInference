@@ -708,11 +708,40 @@ positionAssociation[expr_, args__, opts : OptionsPattern[]] := With[{
 
 SetAttributes[firstMatchingValue, HoldFirst];
 Options[firstMatchingValue] = Options[FirstCase];
-firstMatchingValue[expr_, pattern_, args___] := FirstCase[
-    Unevaluated[expr],
-    _?(MatchQ[pattern]),
-    args
+firstMatchingValue[
+    {expressions___},
+    HoldPattern[(head : (Rule | RuleDelayed))[patt_, transformation_]],
+    default : _ : Missing["NotFound"]
+] := Module[{
+    matched
+},
+    FirstCase[
+        Hold[expressions],
+        possibleMatch_ :> With[{
+            try = Replace[
+                matched = True;
+                possibleMatch
+                ,
+                {
+                    head[patt, transformation],
+                    _ :> (matched = False)
+                }
+            ]
+        },
+            try /; TrueQ[matched]
+        ],
+        default
+    ]
 ];
+
+firstMatchingValue[{expressions___}, otherPattern_, default : _ : Missing["NotFound"]] := FirstCase[
+    Hold[expressions],
+    possibleMatch_ :> With[{try = possibleMatch},
+        try /; MatchQ[try, otherPattern]
+    ],
+    default
+];
+
 
 Options[deleteContainedStrings] = Options[StringContainsQ];
 deleteContainedStrings[{}, ___] := {};
