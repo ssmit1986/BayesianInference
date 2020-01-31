@@ -130,6 +130,8 @@ multiArgToVectorArgFunction[function : slotFunctionPattern] := Replace[
 ];
 multiArgToVectorArgFunction[other_] := Function[other @@ #];
 
+defaultFitLossFunction = Function[RootMeanSquare @ Subtract[#1, #2]];
+
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
 defaultValidationFunction[___][dist_LearnedDistribution, val_] := - Mean[Log @ PDF[dist, val]];
 
@@ -139,7 +141,7 @@ defaultValidationFunction[
 ][fit : (_Function | _FittedModel), val_] := With[{
     matrix = dataPreProcessor[val] (* this should return a matrix in the same format as accepted by, e.g., LinearModelFit *)
 },
-    Replace[aggregationFunction, Automatic :> Function[RootMeanSquare @ Subtract[#1, #2]]][
+    Replace[aggregationFunction, Automatic :> defaultFitLossFunction][
         Map[ (* Turn the function into a form that can be efficiently mapped over a matrix *)
             multiArgToVectorArgFunction[fit],
             matrix[[All, 1 ;; -2 ;; 1]]
@@ -156,7 +158,7 @@ defaultValidationFunction[
 ][fitParamRules : {__Rule}, val_] := With[{
     matrix = dataPreProcessor[val] (* this should return a matrix in the same format as accepted by, e.g., LinearModelFit *)
 },
-    Replace[aggregationFunction, Automatic :> Function[RootMeanSquare @ Subtract[#1, #2]]][
+    Replace[aggregationFunction, Automatic :> defaultFitLossFunction][
         ReplaceAll[ (* fitted values *)
             fitExpr,
             Map[ (* create a list of replacement lists {{__Rule}.. } to calculate the value of fitExpr for all input values *)
