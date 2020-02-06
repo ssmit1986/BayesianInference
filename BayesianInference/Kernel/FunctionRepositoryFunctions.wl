@@ -120,13 +120,12 @@ slotFunctionPattern = HoldPattern[Function[_] | Function[Null, __]];
 
 (* Turns a function with multiple slots into a function that accepts all arguments as a list in the first slot *)
 multiArgToVectorArgFunction[fit_FittedModel] := multiArgToVectorArgFunction[fit["Function"]];
-multiArgToVectorArgFunction[function : slotFunctionPattern] := Replace[
-    function,
+multiArgToVectorArgFunction[function : slotFunctionPattern] := Function @@ ReplaceAll[
+    Hold @@ function,
     {
-        Slot[i_Integer] :> Slot[1][[i]],
-        insideFun : slotFunctionPattern :> insideFun (* Make sure only the outer function is affected *)
-    },
-    {1, DirectedInfinity[1]}
+        insideFun : slotFunctionPattern :> insideFun, (* Make sure only the outer function is affected *)
+        Slot[i_Integer] :> Slot[1][[i]]
+    }
 ];
 multiArgToVectorArgFunction[other_] := Function[other @@ #];
 
