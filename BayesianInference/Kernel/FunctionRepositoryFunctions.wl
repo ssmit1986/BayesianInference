@@ -131,12 +131,27 @@ multiArgToVectorArgFunction[other_] := Function[other @@ #];
 
 defaultFitLossFunction = Function[RootMeanSquare @ Subtract[#1, #2]];
 
+(* Function that transforms data from common formats into a matrix form suitable for functions like LinearModelFit *)
+defaultFitDataPreprocessor[mat_List?MatrixQ] := mat;
+defaultFitDataPreprocessor[rules : {__Rule}] := defaultFitDataPreprocessor[rules[[All, 1]] -> rules[[All, 2]]];
+defaultFitDataPreprocessor[
+    in_List?MatrixQ -> out_List?VectorQ
+] /; Length[in] === Length[out] := Join[in, List /@ out, 2];
+defaultFitDataPreprocessor[
+    in_List?VectorQ -> out_List?VectorQ
+] /; Length[in] === Length[out] := Join[List /@ in, List /@ out, 2];
+defaultFitDataPreprocessor[
+    assoc_?AssociationQ /; MatchQ[assoc, KeyValuePattern[{"Input" -> _List, "Output" -> _List}]]
+] := defaultFitDataPreprocessor[assoc["Input"] -> assoc["Output"]];
+defaultFitDataPreprocessor[vec_List?VectorQ] := defaultFitDataPreprocessor[Range[Length[vec]] -> vec];
+defaultFitDataPreprocessor[_] := $Failed;
+
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
 defaultValidationFunction[___][dist_LearnedDistribution, val_] := - Mean[Log @ PDF[dist, val]];
 
 defaultValidationFunction[
     aggregationFunction : _ : Automatic,
-    dataPreProcessor : _ : Identity
+    dataPreProcessor : _ : defaultFitDataPreprocessor
 ][fit : (_Function | _FittedModel), val_] := With[{
     matrix = dataPreProcessor[val] (* this should return a matrix in the same format as accepted by, e.g., LinearModelFit *)
 },
@@ -153,7 +168,7 @@ defaultValidationFunction[
 defaultValidationFunction[
     {fitExpr_, independents : {__}},
     aggregationFunction : _ : Automatic,
-    dataPreProcessor : _ : Identity
+    dataPreProcessor : _ : defaultFitDataPreprocessor
 ][fitParamRules : {__Rule}, val_] := With[{
     matrix = dataPreProcessor[val] (* this should return a matrix in the same format as accepted by, e.g., LinearModelFit *)
 },
