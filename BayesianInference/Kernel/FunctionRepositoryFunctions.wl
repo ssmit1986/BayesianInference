@@ -143,7 +143,7 @@ defaultFitDataPreprocessor[
 defaultFitDataPreprocessor[
     assoc_?AssociationQ /; MatchQ[assoc, KeyValuePattern[{"Input" -> _List, "Output" -> _List}]]
 ] := defaultFitDataPreprocessor[assoc["Input"] -> assoc["Output"]];
-defaultFitDataPreprocessor[vec_List?VectorQ] := defaultFitDataPreprocessor[Range[Length[vec]] -> vec];
+defaultFitDataPreprocessor[vec: Except[{__Rule}, _List?VectorQ]] := defaultFitDataPreprocessor[Range[Length[vec]] -> vec];
 defaultFitDataPreprocessor[_] := $Failed;
 
 defaultValidationFunction[___][dist_?DistributionParameterQ, val_] := Divide[-LogLikelihood[dist, val], Length[val]];
@@ -873,6 +873,21 @@ expressionToFunction[
         {HoldAll}
     ],
     Flatten[Hold @@ Cases[Hold[vars], s_Symbol :> Hold[s], {2, 3}]]
+];
+
+$dataTypes = <|
+    "Matrix" -> _?MatrixQ,
+    "Vector" -> Except[{__Rule}, _List?VectorQ],
+    "ListOfRules" -> {__Rule},
+    "RuleOfLists" -> (_List -> _List),
+    "Assocation" -> _?(AssociationQ[#] && MatchQ[#, KeyValuePattern[{"Input" -> _List, "Output" -> _List}]]&)
+|>
+
+convertDataFormat[type_][data_] := convertDataFormat[data, type];
+
+convertDataFormat[data_, type_String] /; KeyExistsQ[$dataTypes, type] && AnyTrue[$dataTypes, MatchQ[data, #]&] := convertDataFormat[
+    data,
+    $dataTypes[type]
 ];
 
 End[] (* End Private Context *)
