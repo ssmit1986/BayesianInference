@@ -10,6 +10,7 @@ multiNonlinearModelFit;
 sparseAssociation;
 firstMatchingValue::usage = "firstMatchingValue[{expr_1, expr_2, ...}, pattern] evalutates held expr_i in turn, returning the value of the first expression that evaluates to a result matching the pattern.";
 deleteContainedStrings::usage = "deleteContainedStrings[{str1, str2, ...}] deletes every string that is a substring of at least one other string in the list. Preserves ordering.";
+convertDataFormat::usage = "convertDataFormat[data, type] attempts to convert machine learning data to a different format to make it easier to switch out fitting methods.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -877,18 +878,87 @@ expressionToFunction[
 
 $dataTypes = <|
     "Matrix" -> _?MatrixQ,
-    "Vector" -> Except[{__Rule}, _List?VectorQ],
     "ListOfRules" -> {__Rule},
+    "Vector" -> Except[{__Rule}, _?VectorQ],
     "RuleOfLists" -> (_List -> _List),
-    "Assocation" -> _?(AssociationQ[#] && MatchQ[#, KeyValuePattern[{"Input" -> _List, "Output" -> _List}]]&)
-|>
-
-convertDataFormat[type_][data_] := convertDataFormat[data, type];
-
-convertDataFormat[data_, type_String] /; KeyExistsQ[$dataTypes, type] && AnyTrue[$dataTypes, MatchQ[data, #]&] := convertDataFormat[
-    data,
-    $dataTypes[type]
+    "Association" -> _Association?(MatchQ[KeyValuePattern[{"Input" -> _List, "Output" -> _List}]])
+|>;
+emptyDataQ = MatchQ @ Alternatives[
+    {}, {{}}, <||> ,
+    ({} -> {}), 
+    _Association(MatchQ[KeyValuePattern[{"Input" -> {}, "Output" -> {}}]])
 ];
+
+convertDataFormat[type_String][data_] := convertDataFormat[data, type];
+
+convertDataFormat[_?emptyDataQ, "Matrix" | "Vector" | "ListOfRules"] := {};
+convertDataFormat[_?emptyDataQ, "RuleOfLists"] := {} -> {};
+convertDataFormat[_?emptyDataQ, "Assocation"] := <|"Input" -> {}, "Output" -> {}|>;
+
+convertDataFormat[data_, typeOut_String] /; MemberQ[Keys[$dataTypes], typeOut] := Module[{
+    typeIn = Catch @ KeyValueMap[
+        Function[
+            If[ MatchQ[data, #2],
+                Throw[#1]
+            ]
+        ],
+        $dataTypes
+    ],
+    dataOut
+},
+    Condition[
+        If[ typeIn === typeOut
+            ,
+            data
+            ,
+            dataOut = Developer`ToPackedArray /@ convertToRuleOfLists[data, typeIn];
+            If[ And[
+                    MatchQ[typeOut, "Matrix" | "Vector"],
+                    MatchQ[dataOut, _ -> _?MatrixQ],
+                    MatchQ[Dimensions[dataOut[[2]]], {_, _?(# > 1&)}]
+                ]
+                ,
+                Return[$Failed]
+            ];
+            dataOut = convertToTargetType[dataOut, typeOut];
+            If[ MatchQ[dataOut, $dataTypes[typeOut]],
+                dataOut,
+                $Failed
+            ]
+        ]
+        ,
+        StringQ[typeIn]
+    ]
+];
+convertDataFormat[_, _] := $Failed;
+
+convertToRuleOfLists[data_, "Matrix"] := Switch[
+    Dimensions[data]
+    ,
+    {_, 1},
+        Range[Length[data]] -> data[[All, 1]],
+    {_, 2},
+        data[[All, 1]] -> data[[All, 2]],
+    _,
+        data[[All, 1 ;; -2 ;; 1]] -> data[[All, -1]]
+];
+convertToRuleOfLists[data_, "Vector"] := Range[Length[data]] -> data;
+convertToRuleOfLists[data_, "ListOfRules"] := data[[All, 1]] -> data[[All, 2]];
+convertToRuleOfLists[data_, "RuleOfLists"] := data;
+convertToRuleOfLists[data_, "Association"] := data["Input"] -> data["Output"];
+
+convertToTargetType[in_ -> out_, "Matrix"] := Join[##, 2]& @@ Replace[
+    {in, out},
+    vec_List?VectorQ :> List /@ vec,
+    {1}
+];
+convertToTargetType[in_ -> out_, "Vector"] /; MatchQ[Differences[Prepend[in, 0]], {1..} | {{1}..}] := Flatten @ out;
+convertToTargetType[data_, "ListOfRules"] := Thread[data];
+convertToTargetType[data_, "RuleOfLists"] := data
+convertToTargetType[in_ -> out_, "Association"] := <|
+    "Input" -> in,
+    "Output" -> out
+|>;
 
 End[] (* End Private Context *)
 
