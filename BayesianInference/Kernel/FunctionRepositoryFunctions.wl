@@ -932,6 +932,29 @@ convertDataFormat[data_, typeOut_String] /; MemberQ[Keys[$dataTypes], typeOut] :
 ];
 convertDataFormat[_, _] := $Failed;
 
+With[{
+    cf = Compile[{
+        {lst, _Integer, 1}
+    },
+        Module[{
+            i = 1,
+            boole = True
+        },
+            Do[
+                boole = j == i++;
+                If[ !boole, Break[]],
+                {j, lst}
+            ];
+            boole
+        ]
+    ]
+},
+    (* Test if a list is equal to Range[n] for some n *)
+    rangeQ[{}] := True;
+    rangeQ[list : {__Integer}] := cf[list];
+    rangeQ[_] := False
+];
+
 convertToRuleOfLists[data_, "Matrix"] := Switch[
     Dimensions[data]
     ,
@@ -952,7 +975,7 @@ convertToTargetType[in_ -> out_, "Matrix"] := Join[##, 2]& @@ Replace[
     vec_List?VectorQ :> List /@ vec,
     {1}
 ];
-convertToTargetType[in_ -> out_, "Vector"] /; MatchQ[Differences[Prepend[in, 0]], {1..} | {{1}..}] := Flatten @ out;
+convertToTargetType[in_ -> out_, "Vector"] /; rangeQ[in] := Flatten @ out;
 convertToTargetType[data_, "ListOfRules"] := Thread[data];
 convertToTargetType[data_, "RuleOfLists"] := data
 convertToTargetType[in_ -> out_, "Association"] := <|
