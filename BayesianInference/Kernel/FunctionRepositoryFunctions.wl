@@ -889,6 +889,12 @@ emptyDataQ = MatchQ @ Alternatives[
     _Association(MatchQ[KeyValuePattern[{"Input" -> {}, "Output" -> {}}]])
 ];
 
+convertDataFormat::uneqLen = "Input and output lists are of unequal length";
+convertDataFormat::outDim = "Output data has to be 1D for matrix or vector output";
+convertDataFormat::convertFail = "Failed to convert data from type `1` to `2`";
+convertDataFormat::vectIncompatible = "The provided inputs are incompatible with the Vector output type.\nThe input data should be of the form Range[n] for some value n";
+convertDataFormat::notImplemented = "Output type `1` has not been implemented for this data format";
+
 convertDataFormat[type_String][data_] := convertDataFormat[data, type];
 
 convertDataFormat[_?emptyDataQ, "Matrix" | "Vector" | "ListOfRules"] := {};
@@ -907,30 +913,38 @@ convertDataFormat[data_, typeOut_String] /; MemberQ[Keys[$dataTypes], typeOut] :
     dataOut
 },
     Condition[
-        If[ typeIn === typeOut
-            ,
-            data
-            ,
-            dataOut = Developer`ToPackedArray /@ convertToRuleOfLists[data, typeIn];
-            If[ And[
-                    MatchQ[typeOut, "Matrix" | "Vector"],
-                    MatchQ[dataOut, _ -> _?MatrixQ],
-                    MatchQ[Dimensions[dataOut[[2]]], {_, _?(# > 1&)}]
-                ]
-                ,
-                Return[$Failed]
-            ];
-            dataOut = convertToTargetType[dataOut, typeOut];
-            If[ MatchQ[dataOut, $dataTypes[typeOut]],
-                dataOut,
-                $Failed
+        If[ typeIn === typeOut, Return[data]];
+        
+        dataOut = Developer`ToPackedArray /@ convertToRuleOfLists[data, typeIn];
+        If[ UnsameQ @@ Map[Length, dataOut],
+            Message[convertDataFormat::uneqLen];
+            Return[$Failed]
+        ];
+        If[ And[
+                MatchQ[typeOut, "Matrix" | "Vector"],
+                MatchQ[dataOut, _ -> _?MatrixQ],
+                MatchQ[Dimensions[dataOut[[2]]], {_, _?(# > 1&)}]
             ]
+            ,
+            Message[convertDataFormat::outDim];
+            Return[$Failed]
+        ];
+        dataOut = convertToTargetType[dataOut, typeOut];
+        If[ MatchQ[dataOut, $dataTypes[typeOut]]
+            ,
+            dataOut
+            ,
+            Message[convertDataFormat::convertFail, typeIn, typeOut];
+            $Failed
         ]
         ,
         StringQ[typeIn]
     ]
 ];
-convertDataFormat[_, _] := $Failed;
+convertDataFormat[_, out_] := (
+    Message[convertDataFormat::notImplemented, out];
+    $Failed
+);
 
 With[{
     cf = Compile[{
@@ -952,6 +966,7 @@ With[{
     (* Test if a list is equal to Range[n] for some n *)
     rangeQ[{}] := True;
     rangeQ[list : {__Integer}] := cf[list];
+    rangeQ[list_?MatrixQ] /; MatchQ[Dimensions[list], {_, 1}] := rangeQ[list[[All, 1]]];
     rangeQ[_] := False
 ];
 
@@ -975,7 +990,12 @@ convertToTargetType[in_ -> out_, "Matrix"] := Join[##, 2]& @@ Replace[
     vec_List?VectorQ :> List /@ vec,
     {1}
 ];
-convertToTargetType[in_ -> out_, "Vector"] /; rangeQ[in] := Flatten @ out;
+convertToTargetType[in_ -> out_?VectorQ, "Vector"] /; rangeQ[in] := out;
+convertToTargetType[in_ -> out_?MatrixQ, "Vector"] /; And[
+    MatchQ[Dimensions[out], {_, 1}],
+    rangeQ[in]
+] := out[[All, 1]];
+convertToTargetType[_, "Vector"] := (Message[convertDataFormat::vectIncompatible]; $Failed);
 convertToTargetType[data_, "ListOfRules"] := Thread[data];
 convertToTargetType[data_, "RuleOfLists"] := data
 convertToTargetType[in_ -> out_, "Association"] := <|
