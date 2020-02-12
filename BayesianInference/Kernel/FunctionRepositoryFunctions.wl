@@ -481,16 +481,17 @@ kullbackLeiblerDivergence[p_?DistributionParameterQ, q_?DistributionParameterQ, 
         {method, methodOpts} = TakeDrop[methodSpec, 1];
         method = First[method];
         Switch[ method,
-            Expectation, Null,
+            Expectation,
+                Null,
             NExpectation,
-            With[{rand = Quiet[RandomVariate[#, 5] & /@ {p, q}]}, (* 
-                Test if p and q can be sampled from *)
-                If[! AllTrue[rand, ArrayQ],
-                    Message[kullbackLeiblerDivergence::randomSample, p, q];
-                    Return[$Failed]
-                ]
-            ],
-            _, (Message[kullbackLeiblerDivergence::method, method]; Return[$Failed])
+                With[{rand = Quiet[RandomVariate[#, 5] & /@ {p, q}]}, (* 
+                    Test if p and q can be sampled from *)
+                    If[! AllTrue[rand, ArrayQ],
+                        Message[kullbackLeiblerDivergence::randomSample, p, q];
+                        Return[$Failed]
+                    ]
+                ],
+            _,  (Message[kullbackLeiblerDivergence::method, method]; Return[$Failed])
         ];
         domainp = DistributionDomain[p];
         domainq = DistributionDomain[q];
