@@ -11,6 +11,7 @@ sparseAssociation;
 firstMatchingValue::usage = "firstMatchingValue[{expr_1, expr_2, ...}, pattern] evalutates held expr_i in turn, returning the value of the first expression that evaluates to a result matching the pattern.";
 deleteContainedStrings::usage = "deleteContainedStrings[{str1, str2, ...}] deletes every string that is a substring of at least one other string in the list. Preserves ordering.";
 convertDataFormat::usage = "convertDataFormat[data, type] attempts to convert machine learning data to a different format to make it easier to switch out fitting methods.";
+maximumSpacingEstimation::usage = "maximumSpacingEstimation[data, dist] fits dist to data using the maximum spacing estimation method.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -1003,6 +1004,44 @@ convertToTargetType[in_ -> out_, "Association"] := <|
     "Input" -> in,
     "Output" -> out
 |>;
+
+Options[maximumSpacingEstimation] = Options[NMaximize];
+maximumSpacingEstimation[
+    data_?(VectorQ[#, NumericQ]&),
+    dist_?Statistics`Library`UnivariateDistributionQ,
+    opts : OptionsPattern[]
+] := Module[{
+    expr = Inactivate[
+        Mean @ Log @ Differences @ Flatten[{
+            0,
+            CDF[dist, Sort @ data],
+            1
+        }],
+        Except[Sort]
+    ],
+    cons = DistributionParameterAssumptions[dist],
+    result
+},
+    result = Block[{
+        Indeterminate = -Statistics`Library`MachineInfinity
+    },
+        NMaximize[
+            {
+                expr,
+                cons
+            },
+            Statistics`Library`GetDistributionParameters[dist],
+            opts
+        ]
+    ];
+    If[ MatchQ[result, {_, {__Rule}}],
+        <|
+            "Distribution" -> dist /. Last[result],
+            "MaxSpacingEstimate" -> First[result]
+        |>,
+        $Failed
+    ]
+];
 
 End[] (* End Private Context *)
 

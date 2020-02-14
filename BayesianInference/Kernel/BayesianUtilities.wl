@@ -37,7 +37,7 @@ improperUniformDistribution::usage = "improperUniformDistribution[n] is an impro
 
 Begin["`Private`"] (* Begin Private Context *)
 
-$MachineLogZero = - 0.99 * $MaxMachineNumber;
+$MachineLogZero = - Statistics`Library`MachineInfinity;
 
 $BayesianContexts = Flatten[
     {
