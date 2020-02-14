@@ -1005,7 +1005,10 @@ convertToTargetType[in_ -> out_, "Association"] := <|
     "Output" -> out
 |>;
 
-Options[maximumSpacingEstimation] = Options[NMaximize];
+Options[maximumSpacingEstimation] = Join[
+    Options[NMaximize],
+    {Assumptions :> $Assumptions}
+];
 maximumSpacingEstimation[
     data_?(VectorQ[#, NumericQ]&),
     dist_?Statistics`Library`UnivariateDistributionQ,
@@ -1028,10 +1031,10 @@ maximumSpacingEstimation[
         NMaximize[
             {
                 expr,
-                cons
+                Simplify[cons && OptionValue[Assumptions]]
             },
             Statistics`Library`GetDistributionParameters[dist],
-            opts
+            Sequence @@ FilterRules[{opts}, Options[NMaximize]]
         ]
     ];
     If[ MatchQ[result, {_, {__Rule}}],
