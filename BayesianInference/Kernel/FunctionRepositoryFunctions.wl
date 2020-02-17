@@ -748,15 +748,21 @@ positionAssociation[expr_, args__, opts : OptionsPattern[]] := With[{
 
 SetAttributes[firstMatchingValue, HoldAll];
 Options[firstMatchingValue] = Options[FirstCase];
+
+firstMatchingValue[expr_, patt_, opt : OptionsPattern[]] := firstMatchingValue[expr, patt, Missing["NotFound"], {1}, opt];
+firstMatchingValue[expr_, patt_, default_, opt : OptionsPattern[]] := firstMatchingValue[expr, patt, default, {1}, opt];
+
 firstMatchingValue[
-    {expressions___},
+    expr_,
     (head : (Rule | RuleDelayed))[patt_, transformation_],
-    default : _ : Missing["NotFound"]
+    default_,
+    lvl_,
+    opts : OptionsPattern[]
 ] := Module[{
     matched
 },
     FirstCase[
-        Hold[expressions],
+        Unevaluated[expr],
         possibleMatch_ :> With[{
             try = Replace[
                 matched = True;
@@ -770,19 +776,27 @@ firstMatchingValue[
         },
             try /; TrueQ[matched]
         ],
-        default
+        default,
+        lvl,
+        opts
     ]
 ];
 
-firstMatchingValue[{expressions___}, otherPattern_, default : _ : Missing["NotFound"]] := FirstCase[
-    Hold[expressions],
+firstMatchingValue[
+    expr_,
+    otherPattern_,
+    default_,
+    lvl_,
+    opts : OptionsPattern[]
+] := FirstCase[
+    Unevaluated[expr],
     possibleMatch_ :> With[{try = possibleMatch},
         try /; MatchQ[try, otherPattern]
     ],
-    default
+    default,
+    lvl,
+    opts
 ];
-firstMatchingValue[other_, _, default : _ : Missing["NotFound"]] := default;
-
 
 Options[deleteContainedStrings] = Options[StringContainsQ];
 deleteContainedStrings[{}, ___] := {};
