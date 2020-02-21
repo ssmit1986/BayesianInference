@@ -1064,10 +1064,11 @@ maximumSpacingEstimation[
 Options[tukeyMedianPolish] = {
     MaxIterations -> 100,
     SameTest -> Automatic,
-    Tolerance -> 1.*^-6
+    Tolerance -> Scaled[1.*^-4]
 };
 tukeyMedianPolish[
     mat_?(MatrixQ[#, NumericQ]&),
+    outputType : ("Matrix" | "PropertyAssociation") : "Matrix",
     opts : OptionsPattern[]
 ] /; AllTrue[Dimensions[mat], GreaterThan[1]] := Module[{
     matrix = ArrayPad[mat, {{0, 1}, {0, 1}}],
@@ -1080,6 +1081,7 @@ tukeyMedianPolish[
         {OptionValue[SameTest], OptionValue[Tolerance]},
         {
             {Automatic, tol_?Positive} :> Function[Max @ Abs[Subtract[#1, #2]] < tol],
+            {Automatic, Scaled[tol_?Positive]} :> Function[Max @ Abs[Subtract[#1, #2]] < tol * Max @ Abs[#1]],
             {other_, _} :> other
         }
     ]
@@ -1096,7 +1098,15 @@ tukeyMedianPolish[
         2,
         maxIt
     ];
-    matrix
+    If[ outputType =!= "Matrix",
+        <|
+            "Residuals" -> matrix[[;; -2, ;; -2]],
+            "RowEffects" -> matrix[[;; -2, -1]],
+            "ColumnEffects" -> matrix[[-1, ;; -2]],
+            "OverallEffect" -> matrix[[-1, -1]]
+        |>,
+        matrix
+    ]
 ];
 
 columnNormalize[Hold[m_], {dim1_, dim2_}] := With[{
