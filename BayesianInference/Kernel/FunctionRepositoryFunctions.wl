@@ -12,6 +12,7 @@ firstMatchingValue::usage = "firstMatchingValue[{expr_1, expr_2, ...}, pattern] 
 deleteContainedStrings::usage = "deleteContainedStrings[{str1, str2, ...}] deletes every string that is a substring of at least one other string in the list. Preserves ordering.";
 convertDataFormat::usage = "convertDataFormat[data, type] attempts to convert machine learning data to a different format to make it easier to switch out fitting methods.";
 maximumSpacingEstimation::usage = "maximumSpacingEstimation[data, dist] fits dist to data using the maximum spacing estimation method.";
+tukeyMedianPolish::usage = "tukeyMedianPolish[mat] performs the Tukey median polish algorithm to find row and column effects in a data matrix.";
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -1058,6 +1059,63 @@ maximumSpacingEstimation[
         |>,
         $Failed
     ]
+];
+
+Options[tukeyMedianPolish] = {
+    MaxIterations -> 100,
+    SameTest -> Automatic,
+    Tolerance -> 1.*^-6
+};
+tukeyMedianPolish[
+    mat_?(MatrixQ[#, NumericQ]&),
+    opts : OptionsPattern[]
+] /; AllTrue[Dimensions[mat], GreaterThan[1]] := Module[{
+    matrix = ArrayPad[mat, {{0, 1}, {0, 1}}],
+    dims = Dimensions[mat],
+    maxIt = Replace[
+        OptionValue[MaxIterations],
+        Except[_Integer?Positive] -> 100
+    ],
+    sameTest = Replace[
+        {OptionValue[SameTest], OptionValue[Tolerance]},
+        {
+            {Automatic, tol_?Positive} :> Function[Max @ Abs[Subtract[#1, #2]] < tol],
+            {other_, _} :> other
+        }
+    ]
+},
+    NestWhile[
+        Function[
+            rowNormalize[
+                columnNormalize[#, dims],
+                dims
+            ]
+        ],
+        Hold[matrix],
+        sameTest[ReleaseHold[#1], ReleaseHold[#2]]&,
+        2,
+        maxIt
+    ];
+    matrix
+];
+
+columnNormalize[Hold[m_], {dim1_, dim2_}] := With[{
+    medians = Median[m[[;; dim1]]]
+},
+    Do[
+        m[[i]] -= medians,
+        {i, dim1}
+    ];
+    m[[-1]] += medians;
+    Hold[m]
+];
+
+rowNormalize[Hold[m_], {dim1_, dim2_}] := With[{
+    medians = Median /@ m[[All, ;; dim2]]
+},
+    m[[All, ;; dim2]] -= medians;
+    m[[All, -1]] += medians;
+    Hold[m]
 ];
 
 End[] (* End Private Context *)
