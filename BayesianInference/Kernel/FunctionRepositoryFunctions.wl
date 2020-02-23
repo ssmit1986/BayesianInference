@@ -1080,36 +1080,37 @@ tukeyMedianPolish[
     sameTest = Replace[
         {OptionValue[SameTest], OptionValue[Tolerance]},
         {
-            {Automatic, tol_?Positive} :> Function[Max @ Abs[Subtract[#1, #2]] < tol],
-            {Automatic, Scaled[tol_?Positive]} :> Function[Max @ Abs[Subtract[#1, #2]] < tol * Max @ Abs[#1]],
+            {Automatic, tol_?Positive} :> Function[Max @ Abs[Subtract[#1, #2]] > tol],
+            {Automatic, Scaled[tol_?Positive]} :> Function[Max @ Abs[Subtract[#1, #2]] > tol * Max @ Abs[#1]],
             {other_, _} :> other
         }
     ]
 },
     NestWhile[
         Function[
-            rowNormalize[
-                columnNormalize[#, dims],
-                dims
-            ]
+            columnNormalize[matrix, dims];
+            rowNormalize[matrix, dims];
+            matrix
         ],
-        Hold[matrix],
-        sameTest[ReleaseHold[#1], ReleaseHold[#2]]&,
+        matrix,
+        sameTest,
         2,
         maxIt
     ];
-    If[ outputType =!= "Matrix",
-        <|
-            "Residuals" -> matrix[[;; -2, ;; -2]],
-            "RowEffects" -> matrix[[;; -2, -1]],
-            "ColumnEffects" -> matrix[[-1, ;; -2]],
-            "OverallEffect" -> matrix[[-1, -1]]
-        |>,
-        matrix
+    Switch[ outputType,
+        "PropertyAssociation",
+            <|
+                "Residuals" -> matrix[[;; -2, ;; -2]],
+                "RowEffects" -> matrix[[;; -2, -1]],
+                "ColumnEffects" -> matrix[[-1, ;; -2]],
+                "OverallEffect" -> matrix[[-1, -1]]
+            |>,
+        _, matrix
     ]
 ];
 
-columnNormalize[Hold[m_], {dim1_, dim2_}] := With[{
+SetAttributes[columnNormalize, HoldFirst];
+columnNormalize[m_, {dim1_, dim2_}] := With[{
     medians = Median[m[[;; dim1]]]
 },
     Do[
@@ -1117,15 +1118,16 @@ columnNormalize[Hold[m_], {dim1_, dim2_}] := With[{
         {i, dim1}
     ];
     m[[-1]] += medians;
-    Hold[m]
+    m
 ];
 
-rowNormalize[Hold[m_], {dim1_, dim2_}] := With[{
+SetAttributes[rowNormalize, HoldFirst];
+rowNormalize[m_, {dim1_, dim2_}] := With[{
     medians = Median /@ m[[All, ;; dim2]]
 },
     m[[All, ;; dim2]] -= medians;
     m[[All, -1]] += medians;
-    Hold[m]
+    m
 ];
 
 End[] (* End Private Context *)
