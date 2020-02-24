@@ -1089,45 +1089,10 @@ tukeyMedianPolish[opts : OptionsPattern[]] := Module[{
 },
     Condition[
         With[{
-            stopQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]],
-            maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100]
+            fun = itukeyMedianPolish[Sequence @@ FilterRules[{opts}, Options[itukeyMedianPolish]]]
         },
-            cf = Compile[{{mat, _Real, 2}},
-                Module[{
-                    matrix, prevIt,
-                    dims = Dimensions[mat]
-                },
-                    If[ Length[dims] =!= 2 || dims[[1]] === 0 || dims[[2]] === 0, 
-                        Return[{{}}]
-                    ];
-                    matrix = Table[
-                        If[ i <= dims[[1]] && j <= dims[[2]],
-                            mat[[i, j]],
-                            0.
-                        ],
-                        {i, dims[[1]] + 1},
-                        {j, dims[[2]] + 1}
-                    ];
-                    Do[
-                        prevIt = matrix;
-                        With[{medians = Median[matrix[[;; dims[[1]]]]]},
-                            Do[
-                                matrix[[k]] -= medians,
-                                {k, dims[[1]]}
-                            ];
-                            matrix[[-1]] += medians
-                        ];
-                        With[{medians = Median /@ matrix[[All, ;; dims[[2]]]]},
-                            matrix[[All, ;; dims[[2]]]] -= medians;
-                            matrix[[All, -1]] += medians;
-                        ];
-                        If[ stopQ[prevIt, matrix],
-                            Break[]
-                        ],
-                        {i, maxIt}
-                    ];
-                    matrix
-                ],
+            cf = Compile[{{m, _Real, 2}},
+                fun[m],
                 Evaluate[Sequence @@ Cases[compilationOpts, OptionsPattern[]]]
             ];
             If[ MatrixQ[cf[RandomReal[1, {3, 3}]], NumericQ],
@@ -1143,35 +1108,64 @@ tukeyMedianPolish[opts : OptionsPattern[]] := Module[{
 
 tukeyMedianPolish[opts : OptionsPattern[]][
     mat_?(MatrixQ[#, NumericQ]&)
-] /; MatchQ[Dimensions[mat], {_Integer?Positive, _Integer?Positive}] := itukeyMedianPolish[mat, opts];
+] /; MatchQ[Dimensions[mat], {_Integer?Positive, _Integer?Positive}] :=
+    itukeyMedianPolish[Sequence @@ FilterRules[{opts}, Options[itukeyMedianPolish]]] @ mat;
 
 tukeyMedianPolish[opts : OptionsPattern[]][{} | _?MatrixQ] := {{}};
 
 tukeyMedianPolish[opts : OptionsPattern[]][_] := $Failed;
 
-Options[itukeyMedianPolish] = Options[tukeyMedianPolish];
-itukeyMedianPolish[mat_, opts : OptionsPattern[]] := Module[{
-    matrix = ArrayPad[mat, {{0, 1}, {0, 1}}],
-    dims = Dimensions[mat],
-    maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100],
-    stopQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]]
+Options[itukeyMedianPolish] = DeleteCases[
+    Options[tukeyMedianPolish],
+    Compiled -> _
+];
+itukeyMedianPolish[opts : OptionsPattern[]] := With[{
+    stopQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]],
+    maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100]
 },
-    NestWhile[
-        Function[
-            columnNormalize[matrix, dims];
-            rowNormalize[matrix, dims];
+    Function[mat,
+        Module[{
+            matrix,
+            dims = Dimensions[mat],
+            columnMedians,
+            rowMedians
+        },
+            If[ Length[dims] =!= 2 || dims[[1]] === 0 || dims[[2]] === 0, 
+                Return[{{}}]
+            ];
+            matrix = Table[
+                If[ i <= dims[[1]] && j <= dims[[2]],
+                    mat[[i, j]],
+                    0
+                ],
+                {i, dims[[1]] + 1},
+                {j, dims[[2]] + 1}
+            ];
+            columnMedians = Median[matrix[[;; dims[[1]]]]];
+            Do[
+                Do[
+                    matrix[[k]] -= columnMedians,
+                    {k, dims[[1]]}
+                ];
+                matrix[[-1]] += columnMedians;
+                
+                rowMedians = Median /@ matrix[[All, ;; dims[[2]]]];
+                matrix[[All, ;; dims[[2]]]] -= rowMedians;
+                matrix[[All, -1]] += rowMedians;
+                
+                columnMedians = Median[matrix[[;; dims[[1]]]]];
+                If[ stopQ[Join[columnMedians, rowMedians], matrix],
+                    Break[]
+                ],
+                {i, maxIt}
+            ];
             matrix
-        ],
-        matrix,
-        !stopQ[#1, #2]&,
-        2,
-        maxIt
-    ];
-    matrix
+        ]
+    ]
 ];
 
-parseToleranceOptions[Automatic, tol_?Positive] := Function[Max @ Abs[Subtract[#1, #2]] < tol];
-parseToleranceOptions[Automatic, Scaled[tol_?Positive]] := Function[Max @ Abs[Subtract[#1, #2]] < tol * Max @ Abs[#2]];
+parseToleranceOptions[Automatic, tol_?Positive] := Function[Max @ Abs[#1] < tol];
+parseToleranceOptions[Automatic, Scaled[tol_?Positive]] := Function[Max @ Abs[#1] < tol * Max @ Abs[#2]];
 parseToleranceOptions[other_, _] := other;
 
 validOutputQ = MatchQ[_List?(MatrixQ[#, NumericQ]&) | _?FailureQ];
@@ -1184,27 +1178,6 @@ propAssoc[mat_?MatrixQ] := <|
     "OverallEffect" -> mat[[-1, -1]]
 |>;
 propAssoc[_] := $Failed;
-
-SetAttributes[columnNormalize, HoldFirst];
-columnNormalize[m_, {dim1_, dim2_}] := With[{
-    medians = Median[m[[;; dim1]]]
-},
-    Do[
-        m[[i]] -= medians,
-        {i, dim1}
-    ];
-    m[[-1]] += medians;
-    m
-];
-
-SetAttributes[rowNormalize, HoldFirst];
-rowNormalize[m_, {dim1_, dim2_}] := With[{
-    medians = Median /@ m[[All, ;; dim2]]
-},
-    m[[All, ;; dim2]] -= medians;
-    m[[All, -1]] += medians;
-    m
-];
 
 End[] (* End Private Context *)
 
