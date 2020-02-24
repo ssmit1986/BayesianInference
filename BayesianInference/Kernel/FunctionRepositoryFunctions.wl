@@ -1089,7 +1089,7 @@ tukeyMedianPolish[opts : OptionsPattern[]] := Module[{
 },
     Condition[
         With[{
-            continueQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]],
+            stopQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]],
             maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100]
         },
             cf = Compile[{{mat, _Real, 2}},
@@ -1097,7 +1097,9 @@ tukeyMedianPolish[opts : OptionsPattern[]] := Module[{
                     matrix, prevIt,
                     dims = Dimensions[mat]
                 },
-                    If[ Length[dims] != 2 || dims[[1]] == 0 || dims[[2]] == 0, Return[{{}}]];
+                    If[ Length[dims] =!= 2 || dims[[1]] === 0 || dims[[2]] === 0, 
+                        Return[{{}}]
+                    ];
                     matrix = Table[
                         If[ i <= dims[[1]] && j <= dims[[2]],
                             mat[[i, j]],
@@ -1119,7 +1121,7 @@ tukeyMedianPolish[opts : OptionsPattern[]] := Module[{
                             matrix[[All, ;; dims[[2]]]] -= medians;
                             matrix[[All, -1]] += medians;
                         ];
-                        If[ !continueQ[matrix, prevIt],
+                        If[ stopQ[prevIt, matrix],
                             Break[]
                         ],
                         {i, maxIt}
@@ -1152,7 +1154,7 @@ itukeyMedianPolish[mat_, opts : OptionsPattern[]] := Module[{
     matrix = ArrayPad[mat, {{0, 1}, {0, 1}}],
     dims = Dimensions[mat],
     maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100],
-    continueQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]]
+    stopQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]]
 },
     NestWhile[
         Function[
@@ -1161,15 +1163,15 @@ itukeyMedianPolish[mat_, opts : OptionsPattern[]] := Module[{
             matrix
         ],
         matrix,
-        continueQ,
+        !stopQ[#1, #2]&,
         2,
         maxIt
     ];
     matrix
 ];
 
-parseToleranceOptions[Automatic, tol_?Positive] := Function[Max @ Abs[Subtract[#1, #2]] > tol];
-parseToleranceOptions[Automatic, Scaled[tol_?Positive]] := Function[Max @ Abs[Subtract[#1, #2]] > tol * Max @ Abs[#1]];
+parseToleranceOptions[Automatic, tol_?Positive] := Function[Max @ Abs[Subtract[#1, #2]] < tol];
+parseToleranceOptions[Automatic, Scaled[tol_?Positive]] := Function[Max @ Abs[Subtract[#1, #2]] < tol * Max @ Abs[#2]];
 parseToleranceOptions[other_, _] := other;
 
 validOutputQ = MatchQ[_List?(MatrixQ[#, NumericQ]&) | _?FailureQ];
