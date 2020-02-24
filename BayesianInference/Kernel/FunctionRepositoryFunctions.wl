@@ -1063,7 +1063,7 @@ maximumSpacingEstimation[
 
 Options[tukeyMedianPolish] = {
     MaxIterations -> 100,
-    SameTest -> Automatic,
+    "ConvergenceTest" -> Automatic,
     Tolerance -> Scaled[1.*^-4],
     Compiled -> False
 };
@@ -1120,7 +1120,7 @@ Options[itukeyMedianPolish] = DeleteCases[
     Compiled -> _
 ];
 itukeyMedianPolish[opts : OptionsPattern[]] := With[{
-    stopQ = parseToleranceOptions[OptionValue[SameTest], OptionValue[Tolerance]],
+    stopQ = parseToleranceOptions[OptionValue["ConvergenceTest"], OptionValue[Tolerance]],
     maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100]
 },
     Function[mat,
