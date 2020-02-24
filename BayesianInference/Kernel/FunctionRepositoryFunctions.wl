@@ -1065,6 +1065,7 @@ Options[tukeyMedianPolish] = {
     MaxIterations -> 100,
     "ConvergenceTest" -> Automatic,
     Tolerance -> Scaled[1.*^-4],
+    "LocationEstimator" -> Median,
     Compiled -> False
 };
 
@@ -1121,7 +1122,8 @@ Options[itukeyMedianPolish] = DeleteCases[
 ];
 itukeyMedianPolish[opts : OptionsPattern[]] := With[{
     stopQ = parseToleranceOptions[OptionValue["ConvergenceTest"], OptionValue[Tolerance]],
-    maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100]
+    maxIt = Replace[OptionValue[MaxIterations], Except[_Integer?Positive] -> 100],
+    locEst = OptionValue["LocationEstimator"]
 },
     Function[mat,
         Module[{
@@ -1141,7 +1143,7 @@ itukeyMedianPolish[opts : OptionsPattern[]] := With[{
                 {i, dims[[1]] + 1},
                 {j, dims[[2]] + 1}
             ];
-            columnMedians = Median[matrix[[;; dims[[1]]]]];
+            columnMedians = locEst[matrix[[;; dims[[1]]]]];
             Do[
                 Do[
                     matrix[[k]] -= columnMedians,
@@ -1149,11 +1151,11 @@ itukeyMedianPolish[opts : OptionsPattern[]] := With[{
                 ];
                 matrix[[-1]] += columnMedians;
                 
-                rowMedians = Median /@ matrix[[All, ;; dims[[2]]]];
+                rowMedians = locEst /@ matrix[[All, ;; dims[[2]]]];
                 matrix[[All, ;; dims[[2]]]] -= rowMedians;
                 matrix[[All, -1]] += rowMedians;
                 
-                columnMedians = Median[matrix[[;; dims[[1]]]]];
+                columnMedians = locEst[matrix[[;; dims[[1]]]]];
                 If[ stopQ[Join[columnMedians, rowMedians], matrix],
                     Break[]
                 ],
