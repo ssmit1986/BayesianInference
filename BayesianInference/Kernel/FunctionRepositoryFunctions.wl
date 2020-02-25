@@ -1177,7 +1177,23 @@ propAssoc[mat_?MatrixQ] := <|
     "Residuals" -> mat[[;; -2, ;; -2]],
     "RowEffects" -> mat[[;; -2, -1]],
     "ColumnEffects" -> mat[[-1, ;; -2]],
-    "OverallEffect" -> mat[[-1, -1]]
+    "OverallEffect" -> mat[[-1, -1]],
+    "TukeyAdditivityPlot" -> ListPlot[
+        Transpose[{
+            Flatten @ Divide[
+                Outer[
+                    Times,
+                    mat[[-1, ;; -2]],
+                    mat[[;; -2, -1]]
+                ],
+                mat[[-1, -1]]
+            ],
+            Flatten[mat[[;; -2, ;; -2]]]
+        }],
+        AxesLabel -> {"Diagnostic Comparison Values", "Residuals"},
+        AxesOrigin -> {0, 0},
+        PlotRange -> All
+    ]
 |>;
 propAssoc[_] := $Failed;
 
