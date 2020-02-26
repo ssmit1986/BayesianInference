@@ -1173,28 +1173,34 @@ parseToleranceOptions[other_, _] := other;
 validOutputQ = MatchQ[_List?(MatrixQ[#, NumericQ]&) | _?FailureQ];
 
 propAssoc[{{}} | {}] := <||>;
-propAssoc[mat_?MatrixQ] := <|
-    "Residuals" -> mat[[;; -2, ;; -2]],
-    "RowEffects" -> mat[[;; -2, -1]],
-    "ColumnEffects" -> mat[[-1, ;; -2]],
-    "OverallEffect" -> mat[[-1, -1]],
-    "TukeyAdditivityPlot" -> ListPlot[
-        Transpose[{
-            Flatten @ Divide[
-                Outer[
-                    Times,
-                    mat[[-1, ;; -2]],
-                    mat[[;; -2, -1]]
-                ],
-                mat[[-1, -1]]
+propAssoc[mat_?MatrixQ] := With[{
+    additivityPlotValues =Transpose[{
+        Flatten @ Divide[
+            Outer[
+                Times,
+                mat[[-1, ;; -2]],
+                mat[[;; -2, -1]]
             ],
-            Flatten[mat[[;; -2, ;; -2]]]
-        }],
-        AxesLabel -> {"Diagnostic Comparison Values", "Residuals"},
-        AxesOrigin -> {0, 0},
-        PlotRange -> All
-    ]
-|>;
+            mat[[-1, -1]]
+        ],
+        Flatten[mat[[;; -2, ;; -2]]]
+    }]
+},
+    <|
+        "Matrix" -> mat,
+        "Residuals" -> mat[[;; -2, ;; -2]],
+        "RowEffects" -> mat[[;; -2, -1]],
+        "ColumnEffects" -> mat[[-1, ;; -2]],
+        "OverallEffect" -> mat[[-1, -1]],
+        "TukeyAdditivityPlot" -> ListPlot[
+            additivityPlotValues,
+            AxesLabel -> {"Diagnostic Comparison Values", "Residuals"},
+            AxesOrigin -> {0, 0},
+            PlotRange -> All
+        ],
+        "TukeyAdditivityPlotValues" -> additivityPlotValues
+    |>
+];
 propAssoc[_] := $Failed;
 
 End[] (* End Private Context *)
