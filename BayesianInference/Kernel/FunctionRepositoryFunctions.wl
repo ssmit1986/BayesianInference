@@ -14,7 +14,7 @@ convertDataFormat::usage = "convertDataFormat[data, type] attempts to convert ma
 maximumSpacingEstimation::usage = "maximumSpacingEstimation[data, dist] fits dist to data using the maximum spacing estimation method.";
 tukeyMedianPolish::usage = "tukeyMedianPolish[mat] performs the Tukey median polish algorithm to find row and column effects in a data matrix.";
 
-Begin["`Private`"] (* Begin Private Context *)
+Begin["`Private`crossValidateModel`"] (* Begin Private Context *)
 
 crossValidateModel::unknownMethod = "Unknow method `1`";
 
@@ -331,6 +331,9 @@ subSamplingValidation[data_, nData_, estimator_, tester_, opts : OptionsPattern[
     ]
 ];
 
+End[]
+
+Begin["`Private`conditionedMultinormalDistribution`"]
 
 conditionedMultinormalDistribution::noDim = "Distribution has no dimensions left after conditioning on indices `1`";
 conditionedMultinormalDistribution::dupIndex = "Duplicate indices found among the conditioning indices `1` and marginalization indices `2`";
@@ -451,6 +454,10 @@ conditionedMultinormalDistribution[
     ]
 ];
 
+End[]
+
+Begin["`Private`kullbackLeiblerDivergence`"]
+
 Options[kullbackLeiblerDivergence] = {
     Method -> Expectation,
     Assumptions :> $Assumptions
@@ -568,6 +575,10 @@ supportSubSetQ[p_Interval, q_Interval] := With[{int = IntervalIntersection[p, q]
 supportSubSetQ[p_, q_] /; Head[p] =!= Head[q] := False;
 supportSubSetQ[__] := Undefined;
 
+End[]
+
+Begin["`Private`multiNonlinearModelFit`"]
+
 Options[multiNonlinearModelFit] = Join[
     Options[NonlinearModelFit],
     {
@@ -624,6 +635,10 @@ multiNonlinearModelFit[
         numSets === Length[datasets]
     ]
 ];
+
+End[]
+
+Begin["`Private`sparseAssociation`"]
 
 Options[sparseAssociation] = {"Level" -> Automatic};
 
@@ -747,6 +762,10 @@ positionAssociation[expr_, args__, opts : OptionsPattern[]] := With[{
     AssociationThread[pos, Extract[expr, pos]] /; ListQ[pos]
 ];
 
+End[]
+
+Begin["`Private`firstMatchingValue`"]
+
 SetAttributes[firstMatchingValue, HoldAll];
 Options[firstMatchingValue] = Options[FirstCase];
 
@@ -799,6 +818,10 @@ firstMatchingValue[
     opts
 ];
 
+End[]
+
+Begin["`Private`deleteContainedStrings`"]
+
 Options[deleteContainedStrings] = Options[StringContainsQ];
 deleteContainedStrings[{}, ___] := {};
 deleteContainedStrings[strings : {__String}, opts : OptionsPattern[]] := Module[{
@@ -809,6 +832,10 @@ deleteContainedStrings[strings : {__String}, opts : OptionsPattern[]] := Module[
         FirstPosition[strings, #, Missing[], {1}, Heads -> False] &
     ]
 ];
+
+End[]
+
+Begin["`Private`expressionToFunction`"]
 
 Options[expressionToFunction] = {Attributes -> {}};
 Attributes[expressionToFunction] = {HoldAll};
@@ -893,6 +920,16 @@ expressionToFunction[
     Flatten[Hold @@ Cases[Hold[vars], s_Symbol :> Hold[s], {2, 3}]]
 ];
 
+End[]
+
+Begin["`Private`convertDataFormat`"]
+
+convertDataFormat::uneqLen = "Input and output lists are of unequal length";
+convertDataFormat::outDim = "Output data has to be 1D for matrix or vector output";
+convertDataFormat::convertFail = "Failed to convert data from type `1` to `2`";
+convertDataFormat::vectIncompatible = "The provided inputs are incompatible with the Vector output type.\nThe input data should be of the form Range[n] for some value n";
+convertDataFormat::notImplemented = "Output type `1` has not been implemented for this data format";
+
 $dataTypes = <|
     "Matrix" -> _?MatrixQ,
     "ListOfRules" -> {__Rule},
@@ -905,12 +942,6 @@ emptyDataQ = MatchQ @ Alternatives[
     ({} -> {}), 
     _Association(MatchQ[KeyValuePattern[{"Input" -> {}, "Output" -> {}}]])
 ];
-
-convertDataFormat::uneqLen = "Input and output lists are of unequal length";
-convertDataFormat::outDim = "Output data has to be 1D for matrix or vector output";
-convertDataFormat::convertFail = "Failed to convert data from type `1` to `2`";
-convertDataFormat::vectIncompatible = "The provided inputs are incompatible with the Vector output type.\nThe input data should be of the form Range[n] for some value n";
-convertDataFormat::notImplemented = "Output type `1` has not been implemented for this data format";
 
 convertDataFormat[type_String][data_] := convertDataFormat[data, type];
 
@@ -1020,6 +1051,10 @@ convertToTargetType[in_ -> out_, "Association"] := <|
     "Output" -> out
 |>;
 
+End[]
+
+Begin["`Private`maximumSpacingEstimation`"]
+
 Options[maximumSpacingEstimation] = Join[
     Options[NMaximize],
     {Assumptions :> $Assumptions}
@@ -1060,6 +1095,10 @@ maximumSpacingEstimation[
         $Failed
     ]
 ];
+
+End[]
+
+Begin["`Private`tukeyMedianPolish`"]
 
 Options[tukeyMedianPolish] = {
     MaxIterations -> 100,
