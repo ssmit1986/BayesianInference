@@ -521,10 +521,19 @@ kullbackLeiblerDivergence[p_?DistributionParameterQ, q_?DistributionParameterQ, 
                 _ -> Global`x
             }
         ];
+        assumptions = Simplify @ And[
+            assumptions,
+            Block[{Statistics`Library`RealIntegerQ = Element[# ,Integers]&},
+                If[ ListQ[rv],
+                    And @@ MapThread[Statistics`DistributionsCommonDump`DomainMemberQ, {domainp, rv}],
+                    Statistics`DistributionsCommonDump`DomainMemberQ[domainp, rv]
+                ]
+            ]
+        ];
         Assuming[ assumptions,
             Simplify[
                 method[
-                    LogLikelihood[p, {rv}] - LogLikelihood[q, {rv}],
+                    Refine[LogLikelihood[p, {rv}] - LogLikelihood[q, {rv}]],
                     Distributed[rv, p],
                     Sequence @@ methodOpts
                 ],
