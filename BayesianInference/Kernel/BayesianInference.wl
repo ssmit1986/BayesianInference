@@ -5,8 +5,7 @@ ClearAll[
     "BayesianVisualisations`*", "BayesianVisualisations`Private`*",
     "BayesianNeuralNetworks`*", "BayesianNeuralNetworks`Private`*",
     "BayesianConjugatePriors`*", "BayesianConjugatePriors`Private`*",
-    "LaplaceApproximation`*", "LaplaceApproximation`Private`*",
-    "FunctionRepositoryFunctions`*", "FunctionRepositoryFunctions`Private`*"
+    "LaplaceApproximation`*", "LaplaceApproximation`Private`*"
 ];
 Needs["GeneralUtilities`"];
 Get["BayesianInference`BayesianUtilities`"];
@@ -17,5 +16,4 @@ Get["BayesianInference`BayesianNeuralNetworks`"];
 Get["BayesianInference`ExponentialFamilyDefinitions`"];
 Get["BayesianInference`BayesianConjugatePriors`"];
 Get["BayesianInference`BayesianLinearRegression`"];
-Get["BayesianInference`LaplaceApproximation`"];
-Get["BayesianInference`FunctionRepositoryFunctions`"]
+Get["BayesianInference`LaplaceApproximation`"]
