@@ -62,20 +62,22 @@ numericVectorQ = Function[VectorQ[#, NumericQ]];
 MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
 
 Unprotect[MixtureDistribution];
-Format[MixtureDistribution[list1_List, list2_List]] := posteriorDistribution[
-    Framed[
-        Tooltip[
-            StringForm[
-                "<< Mixture of `1` distributions >>",
-                Length[list1]
-            ],
-            Grid[
-                KeyValueMap[List] @ CountsBy[list2, Head],
-                Alignment -> Left
-            ]
-        ]
-    ]
+
+MixtureDistribution /: MakeBoxes[MixtureDistribution[list1_List, list2_List], form_] /; Length[list1] === Length[list2] := BoxForm`ArrangeSummaryBox[
+    MixtureDistribution,
+    MixtureDistribution[list1, list2],
+    BoxForm`GenericIcon[KernelMixtureDistribution],
+    {
+        BoxForm`SummaryItem[{"Mixture of distributions"}],
+        BoxForm`SummaryItem[{"Distributions: ", Length[list1]}]
+    },
+    Join[
+        {"Counts by distribution type:"},
+        KeyValueMap[BoxForm`SummaryItem[{ToString[#1] <> ": ", #2}]&] @ CountsBy[list2, Head]
+    ],
+    form
 ];
+
 Protect[MixtureDistribution];
 
 summaryForm[list_List] := ToString @ StringForm["List (``)", StringRiffle[ToString /@ Dimensions[list], " \[Times] "]];
