@@ -97,25 +97,23 @@ summaryForm[atom : (_?NumericQ | _String)] := ToString[Short[atom]];
 summaryForm[ts_TemporalData] := ToString @ StringForm["TimeSeries (`1` data points)", ts["PathLength"]]
 summaryForm[other_] := ToString[StringForm["``[...]", Head[other]]];
 
-
-Format[inferenceObject[assoc_?AssociationQ]] := With[{
+inferenceObject /: MakeBoxes[inferenceObject[assoc_?AssociationQ], form_] := With[{
     notMissing = DeleteMissing @ assoc
 },
-    inferenceObject[
-        If[ TrueQ[Length[notMissing] > 0],
-            Tooltip[
-                #,
-                Grid[KeyValueMap[{#1, summaryForm[#2]}&, notMissing], Alignment -> Left]
-            ]&,
-            Identity
-        ] @ Framed[
-            StringForm[
-                "<< `1` defined properties >>",
-                Length[notMissing]
-            ]
-        ]
+    BoxForm`ArrangeSummaryBox[
+        "inferenceObject",
+        inferenceObject[assoc],
+        BoxForm`GenericIcon[WeightedData],
+        Sequence @@ TakeDrop[
+            Prepend[
+                KeyValueMap[BoxForm`SummaryItem[{ToString[#1] <> ": ", summaryForm[#2]}]&, notMissing],
+                BoxForm`SummaryItem[{"Defined properties: ", Length[notMissing]}]
+            ],
+            UpTo[3]
+        ],
+        form
     ]
-];
+]
 
 inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
 inferenceObject /: Append[inferenceObject[assoc_?AssociationQ], elem_] :=  inferenceObject @ Append[assoc, elem];
