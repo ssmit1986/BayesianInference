@@ -256,12 +256,13 @@ updateParameters[
 ] := Module[{
     designTrans = Transpose[designMat],
     designSq, nDat, nOut,
-    bUpdate, lambdaUpdate, vUpdate, nuUpdate
+    bUpdate, lambdaUpdate, invLambdaUpdate, vUpdate, nuUpdate
 },
     {nDat, nOut} = Dimensions[yMat];
     designSq = designTrans.designMat;
-    bUpdate = LinearSolve[designSq + lambda0, (designTrans.yMat + lambda0.b0)];
-    lambdaUpdate = designSq + lambda0;
+    lambdaUpdate = symmetrizeMatrix[designSq + lambda0];
+    invLambdaUpdate = symmetrizeMatrix @ Inverse[lambdaUpdate];
+    bUpdate = invLambdaUpdate.(designTrans.yMat + lambda0.b0);
     vUpdate = With[{
         residuals = yMat - designMat.bUpdate,
         bDiff = bUpdate - b0
@@ -269,7 +270,7 @@ updateParameters[
         v0 + Transpose[residuals].residuals + Transpose[bDiff].lambda0.bDiff
     ];
     nuUpdate = nu0 + nDat;
-    {bUpdate, symmetrizeMatrix @ lambdaUpdate, symmetrizeMatrix @ Inverse[lambdaUpdate], vUpdate, nuUpdate}
+    {bUpdate, lambdaUpdate, invLambdaUpdate, vUpdate, nuUpdate}
 ];
 
 (* Multivariate *)
