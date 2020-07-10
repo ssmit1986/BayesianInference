@@ -30,7 +30,7 @@ directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, va
 logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y - x]. Threads over lists";
 logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
 vectorRandomVariate;
-conditionalProductDistribution::usage = "conditionalProductDistribution works like ParameterMixtureDistribution, but is specifically for RandomVariate and returns all intermediate random numbers drawn";
+GeneralUtilities`SetUsage[conditionalProductDistribution, "conditionalProductDistribution[Distributed[var$1, dist$1], Distributed[var$2, dist$2], $$] represents a vector distribution where each dist$i can dependend on var$j for all i$ < j$"];
 modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
 wrapArgsInList::usage = "wrapArgsInList[function, i] sets a downvalue to function to automatically wrap argument i in a list.";
 improperUniformDistribution::usage = "improperUniformDistribution[n] is an improper distribution with a constant PDF over all points in nD. It can be used for defining improper priors";
@@ -464,48 +464,142 @@ directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
     ]
 ];
 
-conditionalProductDistribution /: LogLikelihood[
-    cpd_conditionalProductDistribution,
-    vals : {__Rule}
-] := With[{
-    symbols = vals[[All, 1]]
+(* code for conditionalProductDistribution *)
+randomVariables[dists__Distributed] := Flatten @ {dists}[[All, 1]];
+
+dependencyOrderedQ[dists : Distributed[_, _]..] := With[{
+    ndists = Length[{dists}],
+    vars = randomVariables[dists],
+    list = {dists}
 },
-    Catch[
-        Total @ Cases[
-            cpd,
-            Distributed[sym_, dist_] :> If[ MemberQ[symbols, sym],
-                LogLikelihood[
-                    dist /. vals,
-                    {sym /. vals}
-                ],
-                Throw[Undefined, "underspecified"]
-            ],
-            DirectedInfinity[1]
+    Which[
+        !DuplicateFreeQ[vars],
+            Message[
+                conditionalProductDistribution::duplicates,
+                Keys @ Select[Counts[vars], GreaterThan[1]]
+            ];
+            False,
+        !TrueQ[
+            And @@ Map[
+                FreeQ[ (* test if the nth distribution does not depend on any of the first n variables *)
+                    list[[#, 2]],
+                    Alternatives @@ DeleteDuplicates @ Flatten[list[[;; #, 1]]]
+                ]&,
+                Range[1, ndists]
+            ]
         ],
-        "underspecified"
+            Message[conditionalProductDistribution::depend];
+            False,
+        True, True
     ]
 ];
+dependencyOrderedQ[___] := False;
 
-conditionalProductDistribution /: RandomVariate[cpd_conditionalProductDistribution] := MapAt[
-    First,
-    RandomVariate[cpd, 1],
-    {All, 2}
+conditionalProductDistribution::depend = "Dependency of distributions is circular or not ordered correctly.";
+conditionalProductDistribution::duplicates = "Duplicate variables `1` found.";
+
+conditionalProductDistribution /: Graph[conditionalProductDistribution[dists__Distributed], rest___] := Module[{
+    vars = randomVariables[dists],
+    edges
+},
+    edges = Flatten @ Map[
+        Outer[
+            DirectedEdge,
+            Cases[#[[2]], Alternatives @@ vars, {0, DirectedInfinity[1]}],
+            Intersection[vars, Flatten @ {#[[1]]}]
+        ]&,
+        {dists}
+    ];
+    Graph[vars, edges, rest, VertexLabels -> Automatic]
+];
+
+conditionalMap[f_, agg_, dists : {__Distributed}] := agg @ Map[
+    f[#[[2]], #[[1]]]&,
+    dists
+];
+conditionalMap[f_, agg_, dists : {__Distributed}, wrapper_] := agg @ Map[
+    f[#[[2]], wrapper @ #[[1]]]&,
+    dists
+];
+conditionalMap[f_, agg_, dists : {{__Distributed}..}, rest___] := Map[
+    conditionalMap[f, agg, #, rest]&,
+    dists
+];
+conditionalMap[___] := $Failed
+
+MapThread[
+    Function[{fun, wrapper, aggregator},
+        conditionalProductDistribution /: fun[
+            conditionalProductDistribution[dists__Distributed],
+            coords_List
+        ] := Module[{
+            vars = randomVariables[dists],
+            assoc,
+            nvars
+        },
+            nvars = Length[vars];
+            Which[
+                MatchQ[Replace[coords, {l_List :> Length[l], _ -> $Failed}, {1}], {nvars..}],
+                    assoc = AssociationThread[vars, #]& /@ coords,
+                Length[coords] === nvars,
+                    assoc = AssociationThread[vars, coords],
+                True,
+                    Return[$Failed]
+            ];
+            Replace[fun,
+                {
+                    Likelihood | LogLikelihood :> aggregator,
+                    _ :> Identity
+                }
+            ] @ conditionalMap[fun, aggregator, {dists} /. assoc, Replace[wrapper, None :> Sequence[]]]
+        ]
+    ],
+    {
+        {PDF,           Likelihood,     LogLikelihood   },
+        {None,          List,           List            },
+        {Apply[Times],  Apply[Times],   Total           }
+    }
 ];
 
 conditionalProductDistribution /: RandomVariate[
-    cpd_conditionalProductDistribution,
-    int_Integer | {int_Integer} 
-] := Flatten @ vectorRandomVariate[cpd, int];
-
-conditionalProductDistribution /: RandomVariate[
-    cpd_conditionalProductDistribution,
-    intArray : {_Integer, __Integer}
-] := MapAt[
-    First @ Fold[Partition, #, Reverse[intArray]]&,
-    RandomVariate[cpd, Times @@ intArray],
-    {All, 2}
+    conditionalProductDistribution[dists__Distributed],
+    opts : OptionsPattern[]
+] := Catch[
+    Values @ Fold[
+        Function[
+            Prepend[#1, 
+                Replace[
+                    {#2[[1]], RandomVariate[#2[[2]] /. #1, opts]},
+                    {
+                        {var : Except[_List], num : Except[_RandomVariate]} :> var -> num,
+                        {var_List, num_List} /; Length[var] === Length[num] :> AssociationThread[var, num],
+                        _ :> Throw[$Failed, rvNoNum]
+                    }
+                ]
+            ]
+        ],
+        <||>,
+        Reverse @ {dists}
+    ],
+    rvNoNum
 ];
 
+conditionalProductDistribution /: RandomVariate[
+    pdist_conditionalProductDistribution,
+    n_Integer,
+    opts : OptionsPattern[]
+] := Table[RandomVariate[pdist, opts], n];
+
+conditionalProductDistribution /: RandomVariate[
+    pdist_conditionalProductDistribution,
+    spec : {__Integer},
+    opts : OptionsPattern[]
+] := Table[RandomVariate[pdist, opts], Evaluate[Sequence @@ Map[List, spec]]];
+
+conditionalProductDistribution[dists : Distributed[_, _]..] /; !dependencyOrderedQ[dists] := $Failed;
+conditionalProductDistribution[___, Except[Distributed[_, _]], ___] := $Failed;
+
+(*
 vectorRandomVariate[conditionalProductDistribution[], _] := {};
 
 vectorRandomVariate[conditionalProductDistribution[first___, last_], n_Integer] := With[{
@@ -594,7 +688,7 @@ vectorRandomVariate[
 
 vectorRandomVariate[d_ /; MemberQ[d, _List], n_Integer] := RandomVariate /@ Thread[d];
 vectorRandomVariate[d_?(Quiet[DistributionParameterQ[#]]&), n_Integer] := RandomVariate[d, n];
-
+*)
 modelGraph[dist_Distributed, rest___] := modelGraph[{dist}, rest];
 modelGraph[dist_, rule : Except[_?VectorQ  -> _?VectorQ , _Rule], rest___] := modelGraph[dist, Flatten @* List /@ rule, rest];
 modelGraph[dist_, other : Except[_Rule], rest___] := modelGraph[dist, {} -> other, rest];
