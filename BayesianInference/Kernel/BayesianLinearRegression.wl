@@ -1,4 +1,4 @@
-BeginPackage["BayesianConjugatePriors`", {"GeneralUtilities`"}]
+BeginPackage["BayesianConjugatePriors`", {"GeneralUtilities`", "BayesianUtilities`"}]
 
 BayesianLinearRegression::usage = "BayesianLinearRegression[{x1, x2, ...} -> {y1, y2, ...}, {f1, f2, ...}, {var1, var2, ...}] performs a Bayesion linear fit.";
 
@@ -206,7 +206,13 @@ bayesianLinearRegressionInternal[designMat_?MatrixQ, yMat_?MatrixQ /; Dimensions
             },
                 Function[MatrixTDistribution[#B, fun @ #LambdaInverse, #V, #Nu - d + 1]]
             ],
-            "ErrorDistribution" -> Function[InverseWishartMatrixDistribution[#Nu, #V]]
+            "ErrorDistribution" -> Function[InverseWishartMatrixDistribution[#Nu, #V]],
+            "FullPosterior" -> Function[
+                conditionalProductDistribution[
+                    Distributed[\[FormalCapitalB], MatrixNormalDistribution[#B, #LambdaInverse, \[FormalCapitalSigma]]],
+                    Distributed[\[FormalCapitalSigma], InverseWishartMatrixDistribution[#Nu, #V]]
+                ]
+            ]
         |>
     |>
 ];
@@ -231,7 +237,13 @@ bayesianLinearRegressionInternal[designMat_?MatrixQ, yVec_?VectorQ,
             },
                 Function[MultivariateTDistribution[#B, fun[(#V/#Nu) * #LambdaInverse], #Nu]]
             ],
-            "ErrorDistribution" -> Function[InverseGammaDistribution[#Nu/2, #V/2]]
+            "ErrorDistribution" -> Function[InverseGammaDistribution[#Nu/2, #V/2]],
+            "FullPosterior" -> Function[
+                conditionalProductDistribution[
+                    Distributed[\[FormalB], MultinormalDistribution[#B, #LambdaInverse * \[FormalCapitalV]]],
+                    Distributed[\[FormalCapitalV], InverseGammaDistribution[#Nu/2, #V/2]]
+                ]
+            ]
         |>
     |>
 ];
