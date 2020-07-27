@@ -24,8 +24,7 @@ paramSpecPattern = BayesianStatistics`Private`paramSpecPattern;
 
 nullKernelPattern = HoldPattern[Function[Repeated[_, {0, 1}], 0 | 0., ___]];
 
-covarianceMatrix[points_List, kernel : nullKernelPattern, nugget_] :=
-    nugget /@ points;
+covarianceMatrix[points_List, kernel : nullKernelPattern, nugget_] := nugget /@ points;
 
 covarianceMatrix[points_List, kernel : Except[nullKernelPattern], nugget_] := Quiet[
     Plus[
@@ -169,7 +168,7 @@ gaussianProcessLogLikelihood[
     meanFunction : _ : Function[0]
 ] := Catch[
     gaussianProcessLogLikelihood[][
-        dataOut - meanFunction /@ dataIn,
+        Subtract[dataOut, meanFunction /@ dataIn],
         matrixInverseAndDet @ covarianceMatrix[
             dataIn,
             kernel,
@@ -298,7 +297,7 @@ defineGaussianProcess[
                             Function[
                                 Catch[
                                     fun[
-                                        outputData - (mean[#]) /@ inputData,
+                                        Subtract[outputData, mean[#] /@ inputData],
                                         matrixInverseAndDet[covarianceFunction[#]]
                                     ],
                                     "MatInv"
@@ -408,7 +407,7 @@ predictFromGaussianProcessInternal = Function[
                     Plus[
                         meanFunction /@ inputs,
                         Dot[
-                            invCov[Flatten @ examples[[2]] - meanFunction /@ examples[[1]]],
+                            invCov @ Subtract[Flatten @ examples[[2]], meanFunction /@ examples[[1]]],
                             kandKappa["k"]
                         ]
                     ],
