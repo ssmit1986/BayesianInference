@@ -10,7 +10,7 @@ It also provides some functionality for Markov Chain Monte Carlo sampling (MCMC)
 A new recently added function called `BayesianLinearRegression` provides the Bayesian alternative to Mathematica's `LinearModelFit`.
 
 Finally, there is also some code that helps to construct neural networks for quasi-Bayesian regression as explained on the following pages:
-* http://mlg.eng.cam.ac.uk/yarin/blog_3d801aa532c1ce.html
+* http://www.cs.ox.ac.uk/people/yarin.gal/website/blog_3d801aa532c1ce.html
 * http://blog.wolfram.com/2018/05/31/how-optimistic-do-you-want-to-be-bayesian-neural-network-regression-with-prediction-errors/
 
 

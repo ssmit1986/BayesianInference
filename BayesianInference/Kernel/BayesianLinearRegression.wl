@@ -1,4 +1,4 @@
-BeginPackage["BayesianConjugatePriors`", {"GeneralUtilities`"}]
+BeginPackage["BayesianConjugatePriors`", {"GeneralUtilities`", "BayesianUtilities`"}]
 
 BayesianLinearRegression::usage = "BayesianLinearRegression[{x1, x2, ...} -> {y1, y2, ...}, {f1, f2, ...}, {var1, var2, ...}] performs a Bayesion linear fit.";
 
@@ -206,7 +206,13 @@ bayesianLinearRegressionInternal[designMat_?MatrixQ, yMat_?MatrixQ /; Dimensions
             },
                 Function[MatrixTDistribution[#B, fun @ #LambdaInverse, #V, #Nu - d + 1]]
             ],
-            "ErrorDistribution" -> Function[InverseWishartMatrixDistribution[#Nu, #V]]
+            "ErrorDistribution" -> Function[InverseWishartMatrixDistribution[#Nu, #V]],
+            "FullPosterior" -> Function[
+                conditionalProductDistribution[
+                    Distributed[\[FormalCapitalB], MatrixNormalDistribution[#B, #LambdaInverse, \[FormalCapitalSigma]]],
+                    Distributed[\[FormalCapitalSigma], InverseWishartMatrixDistribution[#Nu, #V]]
+                ]
+            ]
         |>
     |>
 ];
@@ -231,7 +237,13 @@ bayesianLinearRegressionInternal[designMat_?MatrixQ, yVec_?VectorQ,
             },
                 Function[MultivariateTDistribution[#B, fun[(#V/#Nu) * #LambdaInverse], #Nu]]
             ],
-            "ErrorDistribution" -> Function[InverseGammaDistribution[#Nu/2, #V/2]]
+            "ErrorDistribution" -> Function[InverseGammaDistribution[#Nu/2, #V/2]],
+            "FullPosterior" -> Function[
+                conditionalProductDistribution[
+                    Distributed[\[FormalB], MultinormalDistribution[#B, #LambdaInverse * \[FormalCapitalV]]],
+                    Distributed[\[FormalCapitalV], InverseGammaDistribution[#Nu/2, #V/2]]
+                ]
+            ]
         |>
     |>
 ];
@@ -256,12 +268,13 @@ updateParameters[
 ] := Module[{
     designTrans = Transpose[designMat],
     designSq, nDat, nOut,
-    bUpdate, lambdaUpdate, vUpdate, nuUpdate
+    bUpdate, lambdaUpdate, invLambdaUpdate, vUpdate, nuUpdate
 },
     {nDat, nOut} = Dimensions[yMat];
     designSq = designTrans.designMat;
-    bUpdate = LinearSolve[designSq + lambda0, (designTrans.yMat + lambda0.b0)];
-    lambdaUpdate = designSq + lambda0;
+    lambdaUpdate = symmetrizeMatrix[designSq + lambda0];
+    invLambdaUpdate = symmetrizeMatrix @ Inverse[lambdaUpdate];
+    bUpdate = invLambdaUpdate.(designTrans.yMat + lambda0.b0);
     vUpdate = With[{
         residuals = yMat - designMat.bUpdate,
         bDiff = bUpdate - b0
@@ -269,7 +282,7 @@ updateParameters[
         v0 + Transpose[residuals].residuals + Transpose[bDiff].lambda0.bDiff
     ];
     nuUpdate = nu0 + nDat;
-    {bUpdate, symmetrizeMatrix @ lambdaUpdate, symmetrizeMatrix @ Inverse[lambdaUpdate], vUpdate, nuUpdate}
+    {bUpdate, lambdaUpdate, invLambdaUpdate, vUpdate, nuUpdate}
 ];
 
 (* Multivariate *)

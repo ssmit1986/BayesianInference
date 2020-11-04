@@ -130,6 +130,21 @@ Options[directPosteriorDistribution] = Join[
     {"IntegrationOptions" -> {}}
 ];
 
+paramNormalForm[list : {(paramSpecPattern | _Symbol)..}, dist_?DistributionParameterQ] :=
+    paramNormalForm[list, DistributionDomain[dist]];
+paramNormalForm[list : {(paramSpecPattern | _Symbol)..}, distList_List] /; Length[list] === Length[distList] := Replace[
+    MapThread[
+        paramNormalForm,
+        {list, distList}
+    ],
+    Except[{paramSpecPattern..}] -> $Failed
+];
+paramNormalForm[paramSpec : paramSpecPattern, _] := paramSpec;
+paramNormalForm[param_Symbol, dist_?DistributionParameterQ] := paramNormalForm[param, DistributionDomain[dist]];
+paramNormalForm[param_Symbol, Interval[{a_, b_}]] := {param, a, b};
+paramNormalForm[__] := $Failed;
+
+
 defineInferenceProblem::dataFormat = "Data was provided in unusable format";
 defineInferenceProblem::insuffInfo = "Not enough information was provide to define the problem. Failed at: `1`";
 defineInferenceProblem::logLike = "Unable to automatically construct the loglikelihood function for distribution `1`. Please construct one manually";
@@ -179,6 +194,8 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
             ]
         ];
         
+        assoc["Parameters"] = paramNormalForm[assoc["Parameters"], assoc["PriorDistribution"]];
+        
         Which[ 
             MatchQ[assoc["Parameters"], {paramSpecPattern..}],
                 Null,
@@ -187,6 +204,9 @@ defineInferenceProblem[input_?AssociationQ] := inferenceObject @ Catch[
             True,
                 Message[defineInferenceProblem::insuffInfo, "Parameter definition"];
                 Throw[$Failed, "problemDef"]
+        ];
+        If[ MatchQ[DistributionDomain @ assoc["PriorDistribution"], _Interval],
+            assoc["PriorDistribution"] = ProductDistribution[assoc["PriorDistribution"]] 
         ];
         
         regressionQ = regressionDataQ[assoc["Data"]];
