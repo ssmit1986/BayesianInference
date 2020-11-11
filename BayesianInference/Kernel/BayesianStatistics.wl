@@ -913,7 +913,7 @@ nestedSamplingInternal[
         If[ !numericVectorQ[
                 Values @ variableSamplePoints[[All, "LogLikelihood"]]
             ],
-            Return["Bad likelihood function"]
+            Return["Bad likelihood function", Module]
         ];
         meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
         covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
@@ -1189,7 +1189,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
         |>
     ];
     If[ !TrueQ[IntegerQ[nRuns] && nRuns > 0],
-        Return[output]
+        Return[output, Module]
     ];
 
     keys = Keys[result["Samples"]];

@@ -546,7 +546,7 @@ MapThread[
                 Length[coords] === nvars,
                     assoc = AssociationThread[vars, coords],
                 True,
-                    Return[$Failed]
+                    Return[$Failed, Module]
             ];
             Replace[fun,
                 {

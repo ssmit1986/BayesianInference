@@ -40,14 +40,14 @@ BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_Li
 },
     If[ formattedData === $Failed,  
         Message[BayesianLinearRegression::dataFormat, Short[data]];
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
    
    dimIn2 = Dimensions[formattedData[[1]]][[2]];
    dimOut = Dimensions[formattedData[[2]]][[2]];
    If[ dimIn1 =!= dimIn2,
         Message[BayesianLinearRegression::dataDims, dimIn1, dimIn2];
-        Return[$Failed]  
+        Return[$Failed, Module]
     ];
    
     designMat = Replace[
@@ -65,7 +65,7 @@ BayesianLinearRegression[data : _Rule | {__Rule}, basis_List, independentVars_Li
     ];
     If[ !MatrixQ[designMat],
         Message[BayesianLinearRegression::designMat, designMat];
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
     result = bayesianLinearRegressionInternal[designMat, formattedData[[2]], OptionValue["PriorParameters"]];
     fullBasis = First @ DesignMatrix[
