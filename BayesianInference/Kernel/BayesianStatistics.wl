@@ -904,6 +904,7 @@ nestedSamplingInternal[
                     <|
                         "Point" -> point,
                         "LogLikelihood" -> logLikelihoodFunction[point],
+                        "LogPriorPDF" -> logPriorDensityFunction[point],
                         "AcceptanceRate" -> Missing["InitialSample"]
                     |>
                 ]
