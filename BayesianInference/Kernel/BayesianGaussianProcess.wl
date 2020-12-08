@@ -249,7 +249,7 @@ defineGaussianProcess[
             logLikelihood = Lookup[{rest}, "LogLikelihoodFunction"]
         },
             If[ Length[inputData] =!= Length[outputData],
-                Return["Input and output data are not of same length", Module]
+                Throw["Input and output data are not of same length", "problemDef"]
             ];
             
             {kernelFunction, nuggetFunction, meanFunction} = Replace[{kerf, nugf, meanf}, None -> (0&), {1}];
