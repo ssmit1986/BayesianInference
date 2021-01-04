@@ -211,7 +211,7 @@ approximateEvidence[
     ];
     If[ !MatchQ[maxVals, {_?NumericQ, {__Rule}}],
         Message[approximateEvidence::nmaximize, Short[maxVals]];
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
     mean = Values[Last[maxVals]];
     precisionMat = - numericD[logPostDens, modelParams -> mean, "Hessian",
@@ -350,7 +350,7 @@ approximateEvidence[
         ];
         If[ !MatchQ[maxHyper, {_?NumericQ, {__Rule}}],
             Message[approximateEvidence::nmaximize, Short[maxHyper]];
-            Return[$Failed]
+            Return[$Failed, Module]
         ];
         mean = Values[Last[maxHyper]];
         precisionMat = - numericD[numFun[hyperParams], hyperParams -> mean, "Hessian",
@@ -488,7 +488,7 @@ laplacePosteriorFit[
     ];
     If[ !AcyclicGraphQ[graph],
         Message[laplacePosteriorFit::acyclic];
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
     modelParams = Union @ Flatten @ prior[[All, 1]];
     nParam = Length[modelParams];
@@ -500,13 +500,13 @@ laplacePosteriorFit[
             ]
         ],
         Message[laplacePosteriorFit::dependency];
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
     
     assumptions = Simplify[modelAssumptions[prior] && OptionValue[Assumptions]];
     If[ !FreeQ[assumptions, Alternatives @@ Join[varsIn, varsOut]],
         Message[laplacePosteriorFit::assum, assumptions];
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
     logPost = Simplify[
         numericalLogPosterior[data, likelihood, prior, varsIn -> varsOut,
@@ -524,7 +524,7 @@ laplacePosteriorFit[
         Replace[hyperParams, {} :> Unevaluated[Sequence[]]],
         Sequence @@ FilterRules[{opts}, Options[approximateEvidence]] 
     ];
-    If[ !AssociationQ[result], Return[$Failed]];
+    If[ !AssociationQ[result], Return[$Failed, Module]];
     cov = With[{presMat = result["PrecisionMatrix"]},
         If[ !MissingQ[presMat],
             BayesianConjugatePriors`Private`symmetrizeMatrix @ Inverse[presMat],
@@ -590,7 +590,7 @@ fitPrecisionAtMax[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
 },
     If[ !TrueQ[npts > dim * (dim + 1) / 2 + 1],
         Message[fitPrecisionAtMax::insuf, npts, dim * (dim + 1) / 2 + 2];
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
     symCov = Normal @ SymmetrizedArray[{i_, j_} :> \[FormalC][i, j], dim * {1, 1}, Symmetric[{1, 2}]];
     covElements = Union @@ symCov;

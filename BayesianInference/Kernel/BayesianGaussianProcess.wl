@@ -249,7 +249,7 @@ defineGaussianProcess[
             logLikelihood = Lookup[{rest}, "LogLikelihoodFunction"]
         },
             If[ Length[inputData] =!= Length[outputData],
-                Return["Input and output data are not of same length"]
+                Throw["Input and output data are not of same length", "problemDef"]
             ];
             
             {kernelFunction, nuggetFunction, meanFunction} = Replace[{kerf, nugf, meanf}, None -> (0&), {1}];
@@ -387,7 +387,7 @@ predictFromGaussianProcess[ex : (_Rule | {__Rule}), in_List, kf_, nf_, mf_] := M
             !numericMatrixQ[inputs],
             !MatchQ[Dimensions[examples[[2]]], {_, 1}]
         ],
-        Return[$Failed]
+        Return[$Failed, Module]
     ];
     {kernelFunction, nuggetFunction, meanFunction} = Replace[{kf, nf, mf}, None -> (0&), {1}];
     predictFromGaussianProcessInternal[examples, inputs, kernelFunction, nuggetFunction, meanFunction]

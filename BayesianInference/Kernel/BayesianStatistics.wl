@@ -702,15 +702,18 @@ Options[createMCMCChain] = {
 };
 iterateMCMC = Statistics`MCMC`MarkovChainIterate;
 
+symmetrizeMatrix[mat_List] := Divide[mat + Transpose[mat], 2];
+
 nsMCMC[
     logDensity_,
     initialPoint_List,
     meanEst_List,
-    covEst_List,
+    cov_List,
     {numberOfSteps_Integer, extraSteps_Integer, maxSteps_Integer},
     minMaxAcceptanceRate : {_, _}
 ] := With[{
-    startingIteration = 10
+    startingIteration = 10,
+    covEst = symmetrizeMatrix[cov]
 },
     Module[{
         (* Initialise the chain at step 10 so that the estimated covariance does not go all over the place *)
@@ -914,7 +917,7 @@ nestedSamplingInternal[
         If[ !numericVectorQ[
                 Values @ variableSamplePoints[[All, "LogLikelihood"]]
             ],
-            Return["Bad likelihood function"]
+            Return["Bad likelihood function", Module]
         ];
         meanEst = Mean[Values @ variableSamplePoints[[All, "Point"]]];
         covEst = Covariance[Values @ variableSamplePoints[[All, "Point"]]];
@@ -1190,7 +1193,7 @@ evidenceSampling[assoc_?AssociationQ, paramNames : _List : {}, opts : OptionsPat
         |>
     ];
     If[ !TrueQ[IntegerQ[nRuns] && nRuns > 0],
-        Return[output]
+        Return[output, Module]
     ];
 
     keys = Keys[result["Samples"]];
