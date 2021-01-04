@@ -702,7 +702,7 @@ Options[createMCMCChain] = {
 };
 iterateMCMC = Statistics`MCMC`MarkovChainIterate;
 
-symmetrizeMatrix[mat_List] := Divide[mat + Transpose[mat], 2];
+symmetrizeMatrix[mat_] := Divide[mat + Transpose[mat], 2];
 
 nsMCMC[
     logDensity_,
