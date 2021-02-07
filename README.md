@@ -66,3 +66,7 @@ See the `example_code.nb` notebook for a general explanation of the code and sev
 
 * 02 October 2019 (version 1.2)
     * Add new Laplace approximation functionality to the package, which should provide a lightweight alternative to nested sampling for general inference problems. See the example code for documentation about using `laplacePosteriorFit`.
+    
+* 07 Februari 2021 (version 1.4)
+    * Add function `replaceFactorials` to facilitate automatic compilation of factorial functions.
+    * Various bug fixes.
