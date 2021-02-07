@@ -4,7 +4,7 @@
 
 Paclet[
     "Name" -> "BayesianInference",
-    "Version" -> "1.3",
+    "Version" -> "1.4",
     "MathematicaVersion" -> "11.3+",
     "Creator" -> "Sjoerd Smit",
     "Extensions" -> {

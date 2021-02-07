@@ -2,38 +2,45 @@
 
 BeginPackage["BayesianUtilities`", {"CompiledFunctionTools`"}]
 (* Exported symbols added here with SymbolName::usage *)
-passOptionsDown::usage = "passOptionsDown[mainFunction, subFunction, {opts}] passes options down correctly from the main function into a sub function, even when the default options for both functions are different";
-quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the functionalities of Quiet and Check";
-normalizeData::usage = "normalizeData[data] will center and scale the data and return an association containing the transformed data together with the scaling functions used";
-normalizedDataQ::usage = "normalizedDataQ[data] tests if dat is an association produced by normalizedData";
-dataNormalForm::usage = "dataNormalForm[data] brings the data to the standard form that is used throughout this package";
-dataNormalFormQ::usage = "dataNormalFormQ[data] tests if the data are in the standard format produced by dataNormalForm";
-regressionDataQ::usage = "regressionDataQ[data] test if the data are in a format suitable for regression problems";
-takePosteriorFraction::usage = "takePosteriorFraction[obj, frac] drops the samples with the smallest weights from the posterior distribution, leaving fraction frac of the posterior mass";
-logSumExp::usage = "logSumExp[list] calculates Log[Total[Exp[list]]], but in a numerically stable fashion. Does not thread automatically";
-$MachineLogZero::usage = "A number that is used to represent the the log of zero probabilities in machine numbers";
-checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has calls to MainEvaluate. If it does, it will issue a message and return False. It will return True for CompiledFunctions that pass the test and $Failed for any expression other than a CompiledFunction";
-distributionDimension::usage = "distributionDimension[dist] checks the dimension of the domain of dist. Note that it returns {1} for 1D vector distributions like MultinormalDistribution[{{1}}]";
-inferenceObject::usage = "A wrapper for an Association containing all relevant information for an inference problem. Can be converted to an Association with Normal";
-inferenceObjectQ::usage = "inferenceObjectQ[obj] returns True for valid inference objects";
-posteriorDistribution::usage = "posteriorDistribution is a wrapper that typesets large MixtureDistributions";
-varsToParamVector::usage = "varsToParamVector[expr, {sym1, sym2...} -> vectorSym] replaces instances of sym_i in expr with Indexed[vectorSym, i]";
-expressionToFunction::usage = "expressionToFunction[expr, {sym1, sym2...} -> vectorSym] returns the function Function[vectorSym, varsToParamVector[expr, {sym1, sym2...} -> vectorSym]]";
-simplifyLogPDF::usage = "simplifyLogPDF[pdf, assum] Attempts to simplify analytical log probability densities";
-numericMatrixQ::usage = "numericMatrixQ[data] tests if data is a numeric matrix";
-numericVectorQ::usage = "numericVectorQ[data] tests if data is a numeric vector";
-empiricalDistributionToWeightedData::usage = "empiricalDistributionToWeightedData[dist] convert an empirical data distribution to a WeightedData object";
-matrixBlockInverse::usage = "matrixBlockInverse[mat, columns] gives Inverse[mat][[columns, colums]]";
-inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] gives Inverse[Inverse[mat][[columns, colums]]]. This function is faster than inverting the result of matrixBlockInverse[mat, columns]";
+passOptionsDown::usage = "passOptionsDown[mainFunction, subFunction, {opts}] passes options down correctly from the main function into a sub function, even when the default options for both functions are different.";
+quietCheck::usage = "quietCheck[expr, failexr, {msg1, msg2, ...}] combines the functionalities of Quiet and Check.";
+normalizeData::usage = "normalizeData[data] will center and scale the data and return an association containing the transformed data together with the scaling functions used.";
+normalizedDataQ::usage = "normalizedDataQ[data] tests if dat is an association produced by normalizedData.";
+dataNormalForm::usage = "dataNormalForm[data] brings the data to the standard form that is used throughout this package.";
+dataNormalFormQ::usage = "dataNormalFormQ[data] tests if the data are in the standard format produced by dataNormalForm.";
+regressionDataQ::usage = "regressionDataQ[data] test if the data are in a format suitable for regression problems.";
+takePosteriorFraction::usage = "takePosteriorFraction[obj, frac] drops the samples with the smallest weights from the posterior distribution, leaving fraction frac of the posterior mass.";
+logSumExp::usage = "logSumExp[list] calculates Log[Total[Exp[list]]], but in a numerically stable fashion. Does not thread automatically.";
+$MachineLogZero::usage = "A number that is used to represent the the log of zero probabilities in machine numbers.";
+checkCompiledFunction::usage = "checkCompiledFunction[cf] will check if cf has calls to MainEvaluate. If it does, it will issue a message and return False. It will return True for CompiledFunctions that pass the test and $Failed for any expression other than a CompiledFunction.";
+distributionDimension::usage = "distributionDimension[dist] checks the dimension of the domain of dist. Note that it returns {1} for 1D vector distributions like MultinormalDistribution[{{1}}].";
+inferenceObject::usage = "A wrapper for an Association containing all relevant information for an inference problem. Can be converted to an Association with Normal.";
+inferenceObjectQ::usage = "inferenceObjectQ[obj] returns True for valid inference objects.";
+posteriorDistribution::usage = "posteriorDistribution is a wrapper that typesets large MixtureDistributions.";
+varsToParamVector::usage = "varsToParamVector[expr, {sym1, sym2...} -> vectorSym] replaces instances of sym_i in expr with Indexed[vectorSym, i].";
+expressionToFunction::usage = "expressionToFunction[expr, {sym1, sym2...} -> vectorSym] returns the function Function[vectorSym, varsToParamVector[expr, {sym1, sym2...} -> vectorSym]].";
+simplifyLogPDF::usage = "simplifyLogPDF[pdf, assum] Attempts to simplify analytical log probability densities.";
+numericMatrixQ::usage = "numericMatrixQ[data] tests if data is a numeric matrix.";
+numericVectorQ::usage = "numericVectorQ[data] tests if data is a numeric vector.";
+empiricalDistributionToWeightedData::usage = "empiricalDistributionToWeightedData[dist] convert an empirical data distribution to a WeightedData object.";
+matrixBlockInverse::usage = "matrixBlockInverse[mat, columns] gives Inverse[mat][[columns, colums]].";
+inverseMatrixBlockInverse::usage = "inverseMatrixBlockInverse[mat, columns] gives Inverse[Inverse[mat][[columns, colums]]]. This function is faster than inverting the result of matrixBlockInverse[mat, columns].";
 $BayesianContexts;
-directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood";
-logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y - x]. Threads over lists";
-logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists";
+directLogLikelihoodFunction::usage = "directLogLikelihoodFunction[dist, data, vars] constructs a loglikelihood function directly using the built-in functionaly of LogLikilihood.";
+logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y - x]. Threads over lists.";
+logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists.";
 vectorRandomVariate;
-GeneralUtilities`SetUsage[conditionalProductDistribution, "conditionalProductDistribution[Distributed[var$1, dist$1], Distributed[var$2, dist$2], $$] represents a vector distribution where each dist$i can dependend on var$j for all i$ < j$"];
+GeneralUtilities`SetUsage[
+    conditionalProductDistribution,
+    "conditionalProductDistribution[Distributed[var$1, dist$1], Distributed[var$2, dist$2], $$] represents a vector distribution where each dist$i can dependend on var$j for all i$ < j$."
+];
 modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
 wrapArgsInList::usage = "wrapArgsInList[function, i] sets a downvalue to function to automatically wrap argument i in a list.";
-improperUniformDistribution::usage = "improperUniformDistribution[n] is an improper distribution with a constant PDF over all points in nD. It can be used for defining improper priors";
+improperUniformDistribution::usage = "improperUniformDistribution[n] is an improper distribution with a constant PDF over all points in nD. It can be used for defining improper priors.";
+GeneralUtilities`SetUsage[replaceFactorials,
+    "replaceFactorials[expr$] replaces all factorials and related functions (Binomial, Multinomial, etc.) in expr$, converting them to equivalent expressions using Gamma.
+This is useful for compiling expressions, since functions like Factorial do not compile while Gamma does."
+];
 
 Begin["`Private`"] (* Begin Private Context *)
 
@@ -415,7 +422,26 @@ expressionToFunction[expr_, rules : {({__Symbol} -> _Slot)..}, attributes___] :=
     {attributes}
 ];
 
-simplifyLogPDF[logPDF_, assum_] := PowerExpand[ (* PowerExpand helps converting expressions like Log[1. / x] to -Log[x]*)
+replaceFactorials[expr_] := ReplaceRepeated[
+    expr,
+    {
+        Factorial[n_] :> Gamma[n + 1],
+        Subfactorial[n_] :> Divide[Gamma[1 + n, -1], E],
+        Binomial[n_, k_] :> Divide[Gamma[1 + n], Gamma[Subtract[n + 1, k]] Gamma[1 + k]],
+        Pochhammer[a_, n_] :> Divide[Gamma[a + n], Gamma[a]],
+        HoldPattern[Multinomial[args___]] :> Divide[
+            Gamma[1 + Plus[args]],
+            Times @@ Map[Gamma, {args} + 1]
+        ],
+        FactorialPower[x_, n_] :> Divide[Gamma[1 + x], Gamma[Subtract[1 + x, n]]],
+        FactorialPower[x_, n_, h_] :> Divide[
+            x^n * Divide[x, h]^(-n) * Gamma[1 + Divide[x, h]],
+            Gamma[1 - n + x/h]
+        ]
+    }
+];
+
+simplifyLogPDF[logPDF_, assum_] := replaceFactorials @ PowerExpand[ (* PowerExpand helps converting expressions like Log[1. / x] to -Log[x]*)
     FullSimplify[
         logPDF,
         assum
