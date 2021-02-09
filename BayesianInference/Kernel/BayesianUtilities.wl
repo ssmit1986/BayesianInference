@@ -437,7 +437,8 @@ replaceFactorials[expr_] := ReplaceRepeated[
         FactorialPower[x_, n_, h_] :> Divide[
             x^n * Divide[x, h]^(-n) * Gamma[1 + Divide[x, h]],
             Gamma[1 - n + x/h]
-        ]
+        ],
+        Beta[a_, b_] :> Divide[Gamma[a] * Gamma[b], Gamma[a + b]]
     }
 ];
 

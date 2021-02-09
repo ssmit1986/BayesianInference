@@ -19,6 +19,12 @@ Begin["`Private`"] (* Begin Private Context *)
 ClearAll["BayesianNeuralNetworks`*"];
 ClearAll["BayesianNeuralNetworks`Private`*"];
 
+netInfo[args___] /; $VersionNumber <= 12 := NetInformation[args];
+netInfo[args___] := Information[args];
+
+constLayer[args___] /; $VersionNumber <= 12.1 := ConstantArrayLayer[args];
+constLayer[args___] := NetArrayLayer[args];
+
 (* Computes gaussian negative loglikelihood up to constants *)
 gaussianLossLayer[] := gaussianLossLayer["LogPrecision"];
 
@@ -101,7 +107,7 @@ regressionNet[
 ] := NetGraph[
     <|
         "reg1" -> regressionNet[{Automatic, {1}}, opts],
-        "const" -> ConstantArrayLayer["Output" -> {1}],
+        "const" -> constLayer["Output" -> {1}],
         "cat" -> CatenateLayer[]
     |>,
     {
@@ -260,7 +266,7 @@ alphaDivergenceLoss[layer_] := layer;
 extractRegressionNet[net_NetTrainResultsObject] := extractRegressionNet[net["TrainedNet"]];
 
 extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
-    layers = Keys @ NetInformation[net, "Layers"]
+    layers = Keys @ netInfo[net, "Layers"]
 },
     batchnormToChain @ Which[
         MemberQ[layers, {"regression", ___}],
@@ -273,7 +279,7 @@ extractRegressionNet[net : (_NetChain | _NetGraph)] := With[{
     ]
 ];
 
-netWeights[net_] := NetInformation[
+netWeights[net_] := netInfo[
     Quiet[NetReplace[net, _BatchNormalizationLayer -> Nothing], {NetReplace::norep}],
     "Arrays"
 ];
@@ -361,7 +367,7 @@ networkLogEvidence[net : (_NetChain | _NetGraph), data_?AssociationQ, lambda2_, 
     alpha = Replace[
         OptionValue["Alpha"],
         Automatic :> FirstCase[
-            Keys @ NetInformation[net, "Layers"],
+            Keys @ netInfo[net, "Layers"],
             layer : {___, "alphaDiv", "timesAlpha"} :> NetExtract[net, Append[layer, "Function"]][-1],
             0
         ]
