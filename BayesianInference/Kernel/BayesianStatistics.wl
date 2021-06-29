@@ -6,7 +6,7 @@ defineInferenceProblem::usage = "defineInferenceProblem[rules...] creates an inf
 directPosteriorDistribution::usage = "directPosteriorDistribution[data, dist, prior, variables] tries to find the posterior by direct integration";
 nestedSampling::usage = "nestedSampling[inferenceObject] performs the nested sampling algorithm on the inference problem defined by inferenceObject to find the log evidence and sample the posterior";
 combineRuns::usage = "combineRuns[obj1, obj2, ...] aggregate independent nested sambling runs on the same problem into one object";
-predictiveDistribution::usage = "predictiveDistribution[obj] and predictiveDistribution[obj, points] (for regression problems) gives the posterior predictive distribution of the data";
+predictiveDistribution::usage = "predictiveDistribution[obj] and predictiveDistribution[obj, points] (for regression problems) gives the posterior predictive distribution of the data. Note that obj should have the \"GeneratingDistribution\" property specified to calculate this.";
 calculationReport::usage = "calculationReport[obj] gives an overview of the nested sampling run, showing graphs such as Skilling's L(X) plot and the MCMC acceptance rate evolution";
 parallelNestedSampling::usage = "parallelNestedSampling[obj] uses parallel kernel to run independent nested sampling runs and combines them. This effectively raises the number of living points used, but with faster convergence";
 generateStartingPoints::usage = "generateStartingPoints[obj, n] generates n samples from the prior as a starting point for the inference procedure. The value of n will also be the number of living points used";
@@ -105,7 +105,7 @@ directPosteriorDistribution[
     pdf = Simplify[
         N[
             (* Use Flatten to make sure there are no lingering lists *)
-            First @ Flatten[{PDF[priorDistribution, variables[[All, 1]]] * likelihood}]
+            First @ Flatten[{Echo@PDF[priorDistribution, variables[[All, 1]]] * Echo@likelihood}]
         ],
         Assumptions -> And @@ Thread[LessEqual @@ Transpose[variables[[All, {2, 1, 3}]]]]
     ],
@@ -1379,7 +1379,8 @@ predictiveDistribution[
     $Failed
 );
 predictiveDistribution[
-    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]] && MissingQ[#["GeneratingDistribution"]]&)]
+    inferenceObject[result_?(AssociationQ[#] && !MissingQ[#["Samples"]] && MissingQ[#["GeneratingDistribution"]]&)],
+    ___
 ] := (
     Message[predictiveDistribution::MissGenDist];
     $Failed
