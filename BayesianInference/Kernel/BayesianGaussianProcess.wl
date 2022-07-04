@@ -273,7 +273,7 @@ defineGaussianProcess[
 					Automatic,
 						With[{
 							f = If[ nullKernelQ,
-									SparseArray @* DiagonalMatrix,
+									DiagonalMatrix @* SparseArray,
 									Identity
 								]
 						},
