@@ -23,12 +23,12 @@ naturalParametersCount[dist_Symbol[___]] := naturalParametersCount[dist];
 
 logPartition[dist_Symbol] := logPartition[dist, \[FormalEta]];
 logPartition[dist : specifiedDistributionPattern] := With[{
-    params = naturalParameters[dist]
+	params = naturalParameters[dist]
 },
-    ReplaceAll[
-        logPartition[Head @ dist],
-        \[FormalEta] -> params
-    ] /; ListQ[params]
+	ReplaceAll[
+		logPartition[Head @ dist],
+		\[FormalEta] -> params
+	] /; ListQ[params]
 ];
 
 baseMeasure[dist_] := baseMeasure[dist, \[FormalX]];
@@ -38,70 +38,70 @@ sufficientStatistic[dist_] := sufficientStatistic[dist, \[FormalX]];
 sufficientStatistic[dist_Symbol[___Symbol], rest__] := sufficientStatistic[dist, rest];
 
 cannonicalPDF[dist_Symbol] :=
-    baseMeasure[dist] * Exp[naturalParameters[dist] . sufficientStatistic[dist] - logPartition[dist]];
+	baseMeasure[dist] * Exp[naturalParameters[dist] . sufficientStatistic[dist] - logPartition[dist]];
 cannonicalPDF[dist : specifiedDistributionPattern, x : _ : \[FormalX]] :=
-    baseMeasure[Head @ dist, x] * Exp[naturalParameters[dist] . sufficientStatistic[Head @ dist, x] - logPartition[dist]];
+	baseMeasure[Head @ dist, x] * Exp[naturalParameters[dist] . sufficientStatistic[Head @ dist, x] - logPartition[dist]];
 
 conjugateKernel[dist_] := With[{
-    chi = Array[Indexed[\[FormalChi], #]&, naturalParametersCount[dist]]
+	chi = Array[Indexed[\[FormalChi], #]&, naturalParametersCount[dist]]
 },
-    ConditionalExpression[
-        Exp[naturalParameters[dist] . chi - \[FormalNu] * logPartition[dist]],
-        Element[chi, Reals] && \[FormalNu] > 0
-    ]
+	ConditionalExpression[
+		Exp[naturalParameters[dist] . chi - \[FormalNu] * logPartition[dist]],
+		Element[chi, Reals] && \[FormalNu] > 0
+	]
 ];
 
 conjugatePDF[dist_] := With[{
-    partition = conjugatePartition[dist],
-    kernel = conjugateKernel[dist]
+	partition = conjugatePartition[dist],
+	kernel = conjugateKernel[dist]
 },
-    partition * kernel /; Head[partition] =!= conjugatePartition && Head[kernel] =!= conjugateKernel
+	partition * kernel /; Head[partition] =!= conjugatePartition && Head[kernel] =!= conjugateKernel
 ];
 
 predictivePDF[dist_] := With[{
-    tsuff = sufficientStatistic[dist],
-    partition = conjugatePartition[dist]
+	tsuff = sufficientStatistic[dist],
+	partition = conjugatePartition[dist]
 },
-    FullSimplify[
-        baseMeasure[dist] * Divide[
-            partition,
-            ReplaceAll[
-                partition,
-                {
-                    \[FormalNu] :> \[FormalNu] + 1,
-                    Indexed[\[FormalChi], n_] :> Indexed[\[FormalChi], n] + Indexed[tsuff, n]
-                }
-            ]
-        ]
-    ] /; Head[partition] =!= conjugatePartition
+	FullSimplify[
+		baseMeasure[dist] * Divide[
+			partition,
+			ReplaceAll[
+				partition,
+				{
+					\[FormalNu] :> \[FormalNu] + 1,
+					Indexed[\[FormalChi], n_] :> Indexed[\[FormalChi], n] + Indexed[tsuff, n]
+				}
+			]
+		]
+	] /; Head[partition] =!= conjugatePartition
 ];
 
 naturalParametersAssumptions[dist : specifiedDistributionPattern] := With[{
-    eta = naturalParameters[Head @ dist]
+	eta = naturalParameters[Head @ dist]
 },
-    Simplify @ And[
-        FunctionRange[
-            {naturalParameters[dist], DistributionParameterAssumptions[dist]},
-            List @@ dist,
-            eta,
-            Reals
-        ],
-        Element[eta, Reals]
-    ]
+	Simplify @ And[
+		FunctionRange[
+			{naturalParameters[dist], DistributionParameterAssumptions[dist]},
+			List @@ dist,
+			eta,
+			Reals
+		],
+		Element[eta, Reals]
+	]
 ];
 
 naturalParametersRegion[dist : specifiedDistributionPattern] := With[{
-    assum = naturalParametersAssumptions[dist],
-    eta = naturalParameters[Head @ dist]
+	assum = naturalParametersAssumptions[dist],
+	eta = naturalParameters[Head @ dist]
 },
-    ImplicitRegion[assum, eta]
+	ImplicitRegion[assum, eta]
 ];
 
 parametersRegion[dist : specifiedDistributionPattern] := With[{
-    assum = DistributionParameterAssumptions[dist],
-    sym = List @@ dist
+	assum = DistributionParameterAssumptions[dist],
+	sym = List @@ dist
 },
-    ImplicitRegion[assum, sym]
+	ImplicitRegion[assum, sym]
 ];
 
 (* ExponentialDistribution *)
@@ -113,11 +113,11 @@ sufficientStatistic[ExponentialDistribution, x_] := {Indexed[x, 1]};
 logPartition[ExponentialDistribution, sym_] := - Log[- Indexed[sym, 1]];
 
 conjugatePartition[ExponentialDistribution | ExponentialDistribution[_]] = ConditionalExpression[
-    Indexed[\[FormalChi], {1}]^(1 + \[FormalNu]) / Gamma[1 + \[FormalNu]], 
-    \[FormalNu] > 0 && Indexed[\[FormalChi], {1}] > 0
+	Indexed[\[FormalChi], {1}]^(1 + \[FormalNu]) / Gamma[1 + \[FormalNu]], 
+	\[FormalNu] > 0 && Indexed[\[FormalChi], {1}] > 0
 ]; (* 
-    == 1 / Integrate[conjugateKernel[ExponentialDistribution], \[FormalEta] \[Element] naturalParametersRegion[ExponentialDistribution[l]]]
-    == 1 / Integrate[conjugateKernel[ExponentialDistribution[l]], {l} \[Element] parametersRegion[ExponentialDistribution[l]]]
+	== 1 / Integrate[conjugateKernel[ExponentialDistribution], \[FormalEta] \[Element] naturalParametersRegion[ExponentialDistribution[l]]]
+	== 1 / Integrate[conjugateKernel[ExponentialDistribution[l]], {l} \[Element] parametersRegion[ExponentialDistribution[l]]]
 *)
 
 
@@ -130,29 +130,29 @@ sufficientStatistic[NormalDistribution, x_] := {Indexed[x, 1], Indexed[x, 1]^2};
 logPartition[NormalDistribution, sym_] := - Indexed[sym, 1]^2 / (4 * Indexed[sym, 2]) - 1/2 * Log[-2 * Indexed[sym, 2]];
 
 conjugatePartition[NormalDistribution] = ConditionalExpression[
-    Divide[
-        2^(-1 - \[FormalNu]/2) * Sqrt[\[FormalNu]] (-(Indexed[\[FormalChi], {1}]^2/\[FormalNu]) + Indexed[\[FormalChi], {2}])^((3 + \[FormalNu])/2),
-        Sqrt[\[Pi]] Gamma[(3 + \[FormalNu])/2]
-    ],
-    \[FormalNu] > 0 && Indexed[\[FormalChi], {1}]^2 < \[FormalNu] Indexed[\[FormalChi], {2}]
+	Divide[
+		2^(-1 - \[FormalNu]/2) * Sqrt[\[FormalNu]] (-(Indexed[\[FormalChi], {1}]^2/\[FormalNu]) + Indexed[\[FormalChi], {2}])^((3 + \[FormalNu])/2),
+		Sqrt[\[Pi]] Gamma[(3 + \[FormalNu])/2]
+	],
+	\[FormalNu] > 0 && Indexed[\[FormalChi], {1}]^2 < \[FormalNu] Indexed[\[FormalChi], {2}]
 ]; (* 
-    == 1 / Integrate[conjugateKernel[NormalDistribution],
-        {Indexed[\[FormalEta], {2}], -\[Infinity], 0},
-        {Indexed[\[FormalEta], {1}], -\[Infinity], \[Infinity]}
-    ]
+	== 1 / Integrate[conjugateKernel[NormalDistribution],
+		{Indexed[\[FormalEta], {2}], -\[Infinity], 0},
+		{Indexed[\[FormalEta], {1}], -\[Infinity], \[Infinity]}
+	]
 *)
 
 conjugatePartition[NormalDistribution[_, _]] = ConditionalExpression[
-    Divide[
-        2^(3/2 - \[FormalNu]/2) Sqrt[\[FormalNu]] (\[FormalNu]/(-Indexed[\[FormalChi], {1}]^2 + \[FormalNu] Indexed[\[FormalChi], {2}]))^(1 - \[FormalNu]/2),
-        Sqrt[\[Pi]] Gamma[-1 + \[FormalNu]/2]
-    ],
-    (Indexed[\[FormalChi], {1}] | Indexed[\[FormalChi], {2}]) \[Element] Reals && \[FormalNu] > 2
+	Divide[
+		2^(3/2 - \[FormalNu]/2) Sqrt[\[FormalNu]] (\[FormalNu]/(-Indexed[\[FormalChi], {1}]^2 + \[FormalNu] Indexed[\[FormalChi], {2}]))^(1 - \[FormalNu]/2),
+		Sqrt[\[Pi]] Gamma[-1 + \[FormalNu]/2]
+	],
+	(Indexed[\[FormalChi], {1}] | Indexed[\[FormalChi], {2}]) \[Element] Reals && \[FormalNu] > 2
 ]; (* 
-    == 1 / Integrate[conjugateKernel[NormalDistribution],
-        {Indexed[\[FormalEta], {2}], -\[Infinity], 0},
-        {Indexed[\[FormalEta], {1}], -\[Infinity], \[Infinity]}
-    ]
+	== 1 / Integrate[conjugateKernel[NormalDistribution],
+		{Indexed[\[FormalEta], {2}], -\[Infinity], 0},
+		{Indexed[\[FormalEta], {1}], -\[Infinity], \[Infinity]}
+	]
 *)
 
 

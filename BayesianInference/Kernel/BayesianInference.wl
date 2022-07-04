@@ -1,11 +1,11 @@
 ClearAll[
-    "BayesianUtilities`*", "BayesianUtilities`Private`*",
-    "BayesianStatistics`*","BayesianStatistics`Private`*",
-    "BayesianGaussianProcess`*", "BayesianGaussianProcess`Private`*",
-    "BayesianVisualisations`*", "BayesianVisualisations`Private`*",
-    "BayesianNeuralNetworks`*", "BayesianNeuralNetworks`Private`*",
-    "BayesianConjugatePriors`*", "BayesianConjugatePriors`Private`*",
-    "LaplaceApproximation`*", "LaplaceApproximation`Private`*"
+	"BayesianUtilities`*", "BayesianUtilities`Private`*",
+	"BayesianStatistics`*","BayesianStatistics`Private`*",
+	"BayesianGaussianProcess`*", "BayesianGaussianProcess`Private`*",
+	"BayesianVisualisations`*", "BayesianVisualisations`Private`*",
+	"BayesianNeuralNetworks`*", "BayesianNeuralNetworks`Private`*",
+	"BayesianConjugatePriors`*", "BayesianConjugatePriors`Private`*",
+	"LaplaceApproximation`*", "LaplaceApproximation`Private`*"
 ];
 Needs["GeneralUtilities`"];
 Get["BayesianInference`BayesianUtilities`"];
