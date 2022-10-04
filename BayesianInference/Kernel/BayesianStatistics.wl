@@ -63,7 +63,7 @@ ignorancePrior[
 		]
 	];
 
-directPosteriorDistribution[data_NumericQ, generatingDistribution_, prior_, variables_, opts : OptionsPattern[]] :=
+directPosteriorDistribution[data_?NumericQ, generatingDistribution_, prior_, variables_, opts : OptionsPattern[]] :=
 	directPosteriorDistribution[{data}, generatingDistribution, prior, variables, opts];
 
 directPosteriorDistribution[data_List, generatingDistribution_, prior_,

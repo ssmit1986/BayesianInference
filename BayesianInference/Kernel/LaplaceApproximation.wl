@@ -606,9 +606,9 @@ fitPrecisionAtMax[path_?AssociationQ /; AllTrue[path, NumericQ]] := Module[{
 		Message[fitPrecisionAtMax::poorfit2, test]
 	];
 	fun = With[{
-		vec = Table[Indexed[Slot[1], i], {i, dim}]
+		vec = Table[Indexed[Inactive[Slot][1], i], {i, dim}]
 	},
-		Function[
+		Activate @ Function[
 			Evaluate @ Last @ Normal[
 				CoefficientArrays[vec . symCov . vec, covElements]
 			]
