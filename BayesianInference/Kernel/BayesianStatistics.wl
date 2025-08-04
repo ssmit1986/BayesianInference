@@ -105,7 +105,7 @@ directPosteriorDistribution[
 	pdf = Simplify[
 		N[
 			(* Use Flatten to make sure there are no lingering lists *)
-			First @ Flatten[{Echo@PDF[priorDistribution, variables[[All, 1]]] * Echo@likelihood}]
+			First @ Flatten[{PDF[priorDistribution, variables[[All, 1]]] * likelihood}]
 		],
 		Assumptions -> And @@ Thread[LessEqual @@ Transpose[variables[[All, {2, 1, 3}]]]]
 	],
