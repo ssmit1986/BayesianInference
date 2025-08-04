@@ -31,14 +31,14 @@ logSubtract::usage = "logSubtract[Log[y], Log[x]] (with y > x > 0) gives Log[y -
 logAdd::usage = "logAdd[Log[y], Log[x]] gives Log[y + x]. Threads over lists.";
 vectorRandomVariate;
 GeneralUtilities`SetUsage[
-    conditionalProductDistribution,
-    "conditionalProductDistribution[Distributed[var$1, dist$1], Distributed[var$2, dist$2], $$] represents a vector distribution where each dist$i can dependend on var$j for all i$ < j$."
+	conditionalProductDistribution,
+	"conditionalProductDistribution[Distributed[var$1, dist$1], Distributed[var$2, dist$2], $$] represents a vector distribution where each dist$i can dependend on var$j for all i$ < j$."
 ];
 modelGraph::usage = "modelGraph[{var1 \[Distributed] dist1, ...}, {varIn1, ...} -> {varOut1, ...}] gives a graph of a probalistic model."
 wrapArgsInList::usage = "wrapArgsInList[function, i] sets a downvalue to function to automatically wrap argument i in a list.";
 improperUniformDistribution::usage = "improperUniformDistribution[n] is an improper distribution with a constant PDF over all points in nD. It can be used for defining improper priors.";
 GeneralUtilities`SetUsage[replaceFactorials,
-    "replaceFactorials[expr$] replaces all factorials and related functions (Binomial, Multinomial, etc.) in expr$, converting them to equivalent expressions using Gamma.
+	"replaceFactorials[expr$] replaces all factorials and related functions (Binomial, Multinomial, etc.) in expr$, converting them to equivalent expressions using Gamma.
 This is useful for compiling expressions, since functions like Factorial do not compile while Gamma does."
 ];
 
@@ -47,19 +47,19 @@ Begin["`Private`"] (* Begin Private Context *)
 $MachineLogZero = - Statistics`Library`MachineInfinity;
 
 $BayesianContexts = Flatten[
-    {
-        Map[
-            {#, # <> "Private`"}&,
-            {
-                "BayesianUtilities`",
-                "BayesianStatistics`",
-                "BayesianGaussianProcess`",
-                "BayesianVisualisations`",
-                "BayesianConjugatePriors`"
-            }
-        ],
-        "Global`"
-    }
+	{
+		Map[
+			{#, # <> "Private`"}&,
+			{
+				"BayesianUtilities`",
+				"BayesianStatistics`",
+				"BayesianGaussianProcess`",
+				"BayesianVisualisations`",
+				"BayesianConjugatePriors`"
+			}
+		],
+		"Global`"
+	}
 ];
 
 numericMatrixQ = Function[MatrixQ[#, NumericQ]];
@@ -71,18 +71,18 @@ MixtureDistribution[{1, 2}, {NormalDistribution[], ExponentialDistribution[1]}];
 Unprotect[MixtureDistribution];
 
 MixtureDistribution /: MakeBoxes[MixtureDistribution[list1_List, list2_List], form_] /; Length[list1] === Length[list2] := BoxForm`ArrangeSummaryBox[
-    MixtureDistribution,
-    MixtureDistribution[list1, list2],
-    BoxForm`GenericIcon[KernelMixtureDistribution],
-    {
-        BoxForm`SummaryItem[{"Mixture of distributions"}],
-        BoxForm`SummaryItem[{"Distributions: ", Length[list1]}]
-    },
-    Join[
-        {"Counts by distribution type:"},
-        KeyValueMap[BoxForm`SummaryItem[{ToString[#1] <> ": ", #2}]&] @ CountsBy[list2, Head]
-    ],
-    form
+	MixtureDistribution,
+	MixtureDistribution[list1, list2],
+	BoxForm`GenericIcon[KernelMixtureDistribution],
+	{
+		BoxForm`SummaryItem[{"Mixture of distributions"}],
+		BoxForm`SummaryItem[{"Distributions: ", Length[list1]}]
+	},
+	Join[
+		{"Counts by distribution type:"},
+		KeyValueMap[BoxForm`SummaryItem[{ToString[#1] <> ": ", #2}]&] @ CountsBy[list2, Head]
+	],
+	form
 ];
 
 Protect[MixtureDistribution];
@@ -91,35 +91,35 @@ summaryForm[list_List] := ToString @ StringForm["List (``)", StringRiffle[ToStri
 summaryForm[KeyValuePattern[{"Mean" -> mean_, "StandardError" -> err_}]] := ToString[mean \[PlusMinus] err];
 summaryForm[assoc_?AssociationQ] := ToString @ StringForm["Association (`` keys)", Length[assoc]];
 summaryForm[dist_?DistributionParameterQ] := With[{dim = distributionDimension[dist]},
-    ToString @ Switch[dim,
-        1,
-            "Distribution (1D, Scalar)",
-        {_Integer},
-            StringForm["Distribution (``D, Vector)", First[dim]],
-        _,
-            "Distribution"
-    ]
+	ToString @ Switch[dim,
+		1,
+			"Distribution (1D, Scalar)",
+		{_Integer},
+			StringForm["Distribution (``D, Vector)", First[dim]],
+		_,
+			"Distribution"
+	]
 ];
 summaryForm[atom : (_?NumericQ | _String)] := ToString[Short[atom]];
 summaryForm[ts_TemporalData] := ToString @ StringForm["TimeSeries (`1` data points)", ts["PathLength"]]
 summaryForm[other_] := ToString[StringForm["``[...]", Head[other]]];
 
 inferenceObject /: MakeBoxes[inferenceObject[assoc_?AssociationQ], form_] := With[{
-    notMissing = DeleteMissing @ assoc
+	notMissing = DeleteMissing @ assoc
 },
-    BoxForm`ArrangeSummaryBox[
-        "inferenceObject",
-        inferenceObject[assoc],
-        BoxForm`GenericIcon[WeightedData],
-        Sequence @@ TakeDrop[
-            Prepend[
-                KeyValueMap[BoxForm`SummaryItem[{ToString[#1] <> ": ", summaryForm[#2]}]&, notMissing],
-                BoxForm`SummaryItem[{"Defined properties: ", Length[notMissing]}]
-            ],
-            UpTo[3]
-        ],
-        form
-    ]
+	BoxForm`ArrangeSummaryBox[
+		"inferenceObject",
+		inferenceObject[assoc],
+		BoxForm`GenericIcon[WeightedData],
+		Sequence @@ TakeDrop[
+			Prepend[
+				KeyValueMap[BoxForm`SummaryItem[{ToString[#1] <> ": ", summaryForm[#2]}]&, notMissing],
+				BoxForm`SummaryItem[{"Defined properties: ", Length[notMissing]}]
+			],
+			UpTo[3]
+		],
+		form
+	]
 ]
 
 inferenceObject /: Normal[inferenceObject[assoc_?AssociationQ]] := assoc;
@@ -139,65 +139,65 @@ inferenceObjectQ[___] := False;
 
 SetAttributes[quietCheck, {HoldAll}];
 quietCheck[expr_, failexpr_, msgs : {__MessageName}] :=
-    Quiet[
-        Check[
-            expr,
-            failexpr,
-            msgs
-        ],
-        msgs
-    ];
+	Quiet[
+		Check[
+			expr,
+			failexpr,
+			msgs
+		],
+		msgs
+	];
 quietCheck[expr_, failexpr_] :=
-    Quiet[
-        Check[
-            expr,
-            failexpr
-        ]
-    ];
+	Quiet[
+		Check[
+			expr,
+			failexpr
+		]
+	];
 
 passOptionsDown[functionName_Symbol, {opts : OptionsPattern[]}] := passOptionsDown[functionName, functionName, {opts}];
 
 passOptionsDown[mainFunctionName_Symbol, subFunctionName_Symbol, {opts : OptionsPattern[]}] :=
-    FilterRules[
-        Thread[
-            Rule[
-                Options[mainFunctionName][[All, 1]],
-                OptionValue[
-                    mainFunctionName,
-                    Join[
-                        {opts},
-                        Options[mainFunctionName]
-                    ],
-                    Options[mainFunctionName][[All, 1]]
-                ]
-            ]
-        ],
-        Options[subFunctionName]
-    ];
+	FilterRules[
+		Thread[
+			Rule[
+				Options[mainFunctionName][[All, 1]],
+				OptionValue[
+					mainFunctionName,
+					Join[
+						{opts},
+						Options[mainFunctionName]
+					],
+					Options[mainFunctionName][[All, 1]]
+				]
+			]
+		],
+		Options[subFunctionName]
+	];
 
 xLogx := Compile[{
-    {x, _Real}
+	{x, _Real}
 },
-    If[ x == 0. || x == 1.,
-        0.,
-        x * Log[x]
-    ],
-    RuntimeAttributes -> {Listable}
+	If[ x == 0. || x == 1.,
+		0.,
+		x * Log[x]
+	],
+	RuntimeAttributes -> {Listable}
 ];
 
 xLogy := Compile[{
-    {x, _Real},
-    {y, _Real}
+	{x, _Real},
+	{y, _Real}
 },
-    Which[
-        x == 0.,
-            0.,
-        y == 0.,
-            - Sign[x] * $MaxMachineNumber,
-        True,
-            x * Log[y]
-    ],
-    RuntimeAttributes -> {Listable}
+	Which[
+		x == 0.,
+			0.,
+		y == 0.,
+			- Sign[x] * $MaxMachineNumber,
+		True,
+			x * Log[y]
+	],
+	RuntimeAttributes -> {Listable}
 ];
 
 dataNormalForm[miss_Missing] := miss;
@@ -206,320 +206,321 @@ dataNormalForm[data_List?numericMatrixQ] := data;
 dataNormalForm[data_List?numericVectorQ] := List /@ data;
 dataNormalForm[data : {__Rule}] := dataNormalForm[Thread[data, Rule]];
 dataNormalForm[in_List -> out_List] := With[{
-    input = dataNormalForm[in],
-    output = dataNormalForm[out]
+	input = dataNormalForm[in],
+	output = dataNormalForm[out]
 },
-    (input -> output) /; Length[input] === Length[output]
+	(input -> output) /; Length[input] === Length[output]
 ];
 dataNormalForm[___] := $Failed;
 dataNormalFormQ = Function[
-    Or[
-        numericMatrixQ[#],
-        Head[#] === TemporalData,
-        Head[#] === Rule && AllTrue[#, numericMatrixQ]
-    ]
+	Or[
+		numericMatrixQ[#],
+		Head[#] === TemporalData,
+		Head[#] === Rule && AllTrue[#, numericMatrixQ]
+	]
 ];
 regressionDataQ = Function[
-    And[
-        dataNormalFormQ[#],
-        Or[
-            Head[#] === TemporalData,
-            Head[#] === Rule
-        ]
-    ]
+	And[
+		dataNormalFormQ[#],
+		Or[
+			Head[#] === TemporalData,
+			Head[#] === Rule
+		]
+	]
 ];
 
 normalizeData[data : {__Rule}] := normalizeData[
-    Developer`ToPackedArray[data[[All, 1]]],
-    Developer`ToPackedArray[data[[All, 2]]]
+	Developer`ToPackedArray[data[[All, 1]]],
+	Developer`ToPackedArray[data[[All, 2]]]
 ];
 
 normalizeData[data : Rule[_List, _List]] := normalizeData[data[[1]], data[[2]]];
 
 normalizeData[dataIn_List, dataOut_List] := AssociationThread[
-    {"Input", "Output"},
-    normalizeData /@ {dataIn, dataOut}
+	{"Input", "Output"},
+	normalizeData /@ {dataIn, dataOut}
 ];
 
 normalizeData[dataSequence : Repeated[_List, {3, Infinity}]] := AssociationThread[
-    Range[Length[{dataSequence}]],
-    normalizeData /@ {dataSequence}
+	Range[Length[{dataSequence}]],
+	normalizeData /@ {dataSequence}
 ];
 
 normalizeData[data_List?numericVectorQ] := normalizeData[dataNormalForm[data]];
 
 normalizeData[data_List?numericMatrixQ] := With[{
-    fe = FeatureExtraction[data, "StandardizedVector"]
+	fe = FeatureExtraction[data, "StandardizedVector"]
 },
-    With[{
-        inv = Function[
-            fe[#, "OriginalData"]
-        ]
-    },
-        <|
-            "NormalizedData" -> Developer`ToPackedArray[fe[data]],
-            "Function" -> fe,
-            "InverseFunction" -> inv
-        |>
-    ]
+	With[{
+		inv = Function[
+			fe[#, "OriginalData"]
+		]
+	},
+		<|
+			"NormalizedData" -> Developer`ToPackedArray[fe[data]],
+			"Function" -> fe,
+			"InverseFunction" -> inv
+		|>
+	]
 ];
 
 normalizedDataQ = With[{
-    test = Function[
-        And[
-            AssociationQ[#],
-            SubsetQ[Keys[#], {"NormalizedData", "Function", "InverseFunction"}],
-            numericMatrixQ[#["NormalizedData"]]
-        ]
-    ]
+	test = Function[
+		And[
+			AssociationQ[#],
+			SubsetQ[Keys[#], {"NormalizedData", "Function", "InverseFunction"}],
+			numericMatrixQ[#["NormalizedData"]]
+		]
+	]
 },
-    Function[
-        Or[
-            test[#],
-            And[
-                AssociationQ[#],
-                Sort @ Keys[#] === Sort @ {"Input", "Output"},
-                AllTrue[#, test]
-            ]
-        ]
-    ]
+	Function[
+		Or[
+			test[#],
+			And[
+				AssociationQ[#],
+				Sort @ Keys[#] === Sort @ {"Input", "Output"},
+				AllTrue[#, test]
+			]
+		]
+	]
 ];
 
 takePosteriorFraction[inferenceObject[assoc_?AssociationQ], rest___] := inferenceObject @ takePosteriorFraction[assoc, rest];
 
 takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), 1] := MapAt[
-    SortBy[-#CrudeLogPosteriorWeight &],
-    result,
-    {"Samples"}
+	SortBy[-#CrudeLogPosteriorWeight &],
+	result,
+	{"Samples"}
 ];
 
 takePosteriorFraction[result_?(AssociationQ[#] && KeyExistsQ[#, "Samples"]&), frac_?NumericQ] /; 0 <= frac < 1 := Module[{
-    count = 0
+	count = 0
 },
-    MapAt[
-        Function[ samples,
-            TakeWhile[
-                SortBy[samples, -#CrudeLogPosteriorWeight &],
-                Function[
-                    With[{
-                        boole = count <= frac
-                    },
-                        count += #CrudePosteriorWeight;
-                        boole
-                    ]
-                ]
-            ]
-        ],
-        result,
-        {"Samples"}
-    ]
+	MapAt[
+		Function[ samples,
+			TakeWhile[
+				SortBy[samples, -#CrudeLogPosteriorWeight &],
+				Function[
+					With[{
+						boole = count <= frac
+					},
+						count += #CrudePosteriorWeight;
+						boole
+					]
+				]
+			]
+		],
+		result,
+		{"Samples"}
+	]
 ];
 
 logSumExp = Composition[
-    Compile[{
-        {list, _Real, 1}
-    },
-        Module[{
-            max = Max[list]
-        },
-            Plus[
-                max,
-                Log @ Total[
-                    Exp[Subtract[list, max]]
-                ]
-            ] 
-        ]
-    ],
-    Select[NumericQ] (* Get rid of -Infinity *),
-    Replace[assoc_?AssociationQ :> Values[assoc]]
+	Compile[{
+		{list, _Real, 1}
+	},
+		Module[{
+			max = Max[list]
+		},
+			Plus[
+				max,
+				Log @ Total[
+					Exp[Subtract[list, max]]
+				]
+			] 
+		]
+	],
+	Select[NumericQ] (* Get rid of -Infinity *),
+	Replace[assoc_?AssociationQ :> Values[assoc]]
 ];
 
 logSubtract = Compile[{
-    {logy, _Real},
-    {logx, _Real}
+	{logy, _Real},
+	{logx, _Real}
 },
-    logy + Log @ Subtract[1, Exp[Subtract[logx, logy]]],
-    RuntimeAttributes -> {Listable}
+	logy + Log @ Subtract[1, Exp[Subtract[logx, logy]]],
+	RuntimeAttributes -> {Listable}
 ];
 
 logAdd = Compile[{
-    {logy, _Real},
-    {logx, _Real}
+	{logy, _Real},
+	{logx, _Real}
 },
-    With[{
-        max = Max[logx, logy],
-        min = Min[logx, logy]
-    },
-    max + Log @ Plus[1, Exp[Subtract[min, max]]]
-    ],
-    RuntimeAttributes -> {Listable}
+	With[{
+		max = Max[logx, logy],
+		min = Min[logx, logy]
+	},
+	max + Log @ Plus[1, Exp[Subtract[min, max]]]
+	],
+	RuntimeAttributes -> {Listable}
 ]
 
 checkCompiledFunction::mainEval = "CompiledFunction `1` has calls to MainEvaluate and may not perform optimally";
 checkCompiledFunction[cf_CompiledFunction, name : _ : Automatic] /; StringContainsQ[CompilePrint[cf], "MainEvaluate"] := (
-    Message[checkCompiledFunction::mainEval, Replace[name, Automatic :> Short[cf]]];
-    False
+	Message[checkCompiledFunction::mainEval, Replace[name, Automatic :> Short[cf]]];
+	False
 );
 checkCompiledFunction[_CompiledFunction, ___] := True;
 checkCompiledFunction[___] := $Failed;
 
 randomDomainPointDistribution[
-    list : {{_?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..},
-    width : (_?NumericQ) : 100
+	list : {{_?NumericQ | DirectedInfinity[-1], _?NumericQ | DirectedInfinity[1]}..},
+	width : (_?NumericQ) : 100
 ] := TruncatedDistribution[
-    list,
-    ProductDistribution[{CauchyDistribution[0, width], Length[list]}]
+	list,
+	ProductDistribution[{CauchyDistribution[0, width], Length[list]}]
 ];
 
 distributionDimension[dist_?DistributionParameterQ] := With[{dom = DistributionDomain[dist]},
-    Switch[ dom,
-        {__},
-            {Length[dom]},
-        _Interval | _Span,
-            1,
-        _,
-            $Failed
-    ]
+	Switch[ dom,
+		{__},
+			{Length[dom]},
+		_Interval | _Span,
+			1,
+		_,
+			$Failed
+	]
 ];
 
 varsToParamVector::duplicateSym = "Warning: symbol `1` already present in expression";
 varsToParamVector[expr_, rules : {({__Symbol} -> (_Symbol | _Slot))..}] := Fold[
-    varsToParamVector[#1, #2]&,
-    expr,
-    rules
+	varsToParamVector[#1, #2]&,
+	expr,
+	rules
 ];
 
 varsToParamVector[expr_, (vars : {__Symbol}) -> (paramVectorSymbol : (_Symbol | _Slot))] := (
-    If[ !FreeQ[expr, paramVectorSymbol],
-        Message[varsToParamVector::duplicateSym, paramVectorSymbol]
-    ];
-    ReplaceAll[
-        expr,
-        Thread[
-            vars -> Table[
-                Indexed[paramVectorSymbol, i],
-                {i, Length[vars]}
-            ]
-        ]
-    ]
+	If[ !FreeQ[expr, paramVectorSymbol],
+		Message[varsToParamVector::duplicateSym, paramVectorSymbol]
+	];
+	ReplaceAll[
+		expr,
+		Thread[
+			vars -> Table[
+				Indexed[paramVectorSymbol, i],
+				{i, Length[vars]}
+			]
+		]
+	]
 );
 
 expressionToFunction[expr_, rule_Rule, attributes___] := expressionToFunction[expr, {rule}, attributes];
 expressionToFunction[expr_, var_Symbol, attributes___] := expressionToFunction[expr, {{var}}, attributes]
 expressionToFunction[expr_, vars : {__Symbol}, attributes___] := expressionToFunction[expr, {vars}, attributes];
 expressionToFunction[expr_, vars : {{__Symbol}..}, attributes___] := 
-    expressionToFunction[expr, Thread[vars -> Array[Slot, Length[vars]]], attributes];
+	expressionToFunction[expr, Thread[vars -> Array[Slot, Length[vars]]], attributes];
 
 expressionToFunction[expr_, rules : {({__Symbol} -> _Symbol)..}, attributes___] := Function[
-    Evaluate @ rules[[All, 2]],
-    Evaluate @ varsToParamVector[expr, rules],
-    {attributes}
+	Evaluate @ rules[[All, 2]],
+	Evaluate @ varsToParamVector[expr, rules],
+	{attributes}
 ];
 
 expressionToFunction[expr_, rules : {({__Symbol} -> _Slot)..}, attributes___] := Function[
-    Null,
-    Evaluate @ varsToParamVector[expr, rules],
-    {attributes}
+	Null,
+	Evaluate @ varsToParamVector[expr, rules],
+	{attributes}
 ];
 
 replaceFactorials[expr_] := ReplaceRepeated[
-    expr,
-    {
-        Factorial[n_] :> Gamma[n + 1],
-        Subfactorial[n_] :> Divide[Gamma[1 + n, -1], E],
-        Binomial[n_, k_] :> Divide[Gamma[1 + n], Gamma[Subtract[n + 1, k]] Gamma[1 + k]],
-        Pochhammer[a_, n_] :> Divide[Gamma[a + n], Gamma[a]],
-        HoldPattern[Multinomial[args___]] :> Divide[
-            Gamma[1 + Plus[args]],
-            Times @@ Map[Gamma, {args} + 1]
-        ],
-        FactorialPower[x_, n_] :> Divide[Gamma[1 + x], Gamma[Subtract[1 + x, n]]],
-        FactorialPower[x_, n_, h_] :> Divide[
-            x^n * Divide[x, h]^(-n) * Gamma[1 + Divide[x, h]],
-            Gamma[1 - n + x/h]
-        ]
-    }
+	expr,
+	{
+		Factorial[n_] :> Gamma[n + 1],
+		Subfactorial[n_] :> Divide[Gamma[1 + n, -1], E],
+		Binomial[n_, k_] :> Divide[Gamma[1 + n], Gamma[Subtract[n + 1, k]] Gamma[1 + k]],
+		Pochhammer[a_, n_] :> Divide[Gamma[a + n], Gamma[a]],
+		HoldPattern[Multinomial[args___]] :> Divide[
+			Gamma[1 + Plus[args]],
+			Times @@ Map[Gamma, {args} + 1]
+		],
+		FactorialPower[x_, n_] :> Divide[Gamma[1 + x], Gamma[Subtract[1 + x, n]]],
+		FactorialPower[x_, n_, h_] :> Divide[
+			x^n * Divide[x, h]^(-n) * Gamma[1 + Divide[x, h]],
+			Gamma[1 - n + x/h]
+		],
+		Beta[a_, b_] :> Divide[Gamma[a] * Gamma[b], Gamma[a + b]]
+	}
 ];
 
 simplifyLogPDF[logPDF_, assum_] := replaceFactorials @ PowerExpand[ (* PowerExpand helps converting expressions like Log[1. / x] to -Log[x]*)
-    FullSimplify[
-        logPDF,
-        assum
-    ] /. DirectedInfinity[-1] -> $MachineLogZero,
-    Assumptions -> assum
+	FullSimplify[
+		logPDF,
+		assum
+	] /. DirectedInfinity[-1] -> $MachineLogZero,
+	Assumptions -> assum
 ];
 
 empiricalDistributionToWeightedData[dist_DataDistribution /; dist["Type"] === EmpiricalDistribution] := WeightedData[
-    Replace[dist["Domain"], mat_?MatrixQ :> Transpose[mat]],
-    dist["Weights"]
+	Replace[dist["Domain"], mat_?MatrixQ :> Transpose[mat]],
+	dist["Weights"]
 ];
 
 matrixBlockInverse[
-    mat_?SquareMatrixQ,
-    columns : {__Integer}
+	mat_?SquareMatrixQ,
+	columns : {__Integer}
 ] /; DuplicateFreeQ[columns] && Max[columns] <= Length[mat] && MatrixQ[mat, NumericQ] := LinearSolve[
-    inverseMatrixBlockInverse[mat, columns],
-    IdentityMatrix[Length[columns]]
+	inverseMatrixBlockInverse[mat, columns],
+	IdentityMatrix[Length[columns]]
 ];
 
 inverseMatrixBlockInverse[
-    mat_?SquareMatrixQ,
-    columns : {__Integer}
+	mat_?SquareMatrixQ,
+	columns : {__Integer}
 ] /; DuplicateFreeQ[columns] && Max[columns] <= Length[mat] && MatrixQ[mat, NumericQ] := Block[{
-    droppedColumns = Complement[Range[Length[mat]], columns],
-    splitMatrix
+	droppedColumns = Complement[Range[Length[mat]], columns],
+	splitMatrix
 },
-    splitMatrix = Table[
-        mat[[i, j]],
-        {i, {droppedColumns, columns}},
-        {j, {droppedColumns, columns}}
-    ];
-    Subtract[
-        splitMatrix[[2, 2]],
-        splitMatrix[[2, 1]] . LinearSolve[splitMatrix[[1, 1]], splitMatrix[[1, 2]]]
-    ]
+	splitMatrix = Table[
+		mat[[i, j]],
+		{i, {droppedColumns, columns}},
+		{j, {droppedColumns, columns}}
+	];
+	Subtract[
+		splitMatrix[[2, 2]],
+		splitMatrix[[2, 1]] . LinearSolve[splitMatrix[[1, 1]], splitMatrix[[1, 2]]]
+	]
 ];
 
 directLogLikelihoodFunction[dist_, data_, vars_] := ReleaseHold[
-    expressionToFunction[
-        Hold[
-            Replace[
-                Quiet @ LogLikelihood[dist, data],
-                Except[_?NumericQ] -> $MachineLogZero
-            ]
-        ],
-        vars
-    ]
+	expressionToFunction[
+		Hold[
+			Replace[
+				Quiet @ LogLikelihood[dist, data],
+				Except[_?NumericQ] -> $MachineLogZero
+			]
+		],
+		vars
+	]
 ];
 
 (* code for conditionalProductDistribution *)
 randomVariables[dists__Distributed] := Flatten @ {dists}[[All, 1]];
 
 dependencyOrderedQ[dists : Distributed[_, _]..] := With[{
-    ndists = Length[{dists}],
-    vars = randomVariables[dists],
-    list = {dists}
+	ndists = Length[{dists}],
+	vars = randomVariables[dists],
+	list = {dists}
 },
-    Which[
-        !DuplicateFreeQ[vars],
-            Message[
-                conditionalProductDistribution::duplicates,
-                Keys @ Select[Counts[vars], GreaterThan[1]]
-            ];
-            False,
-        !TrueQ[
-            And @@ Map[
-                FreeQ[ (* test if the nth distribution does not depend on any of the first n variables *)
-                    list[[#, 2]],
-                    Alternatives @@ DeleteDuplicates @ Flatten[list[[;; #, 1]]]
-                ]&,
-                Range[1, ndists]
-            ]
-        ],
-            Message[conditionalProductDistribution::depend];
-            False,
-        True, True
-    ]
+	Which[
+		!DuplicateFreeQ[vars],
+			Message[
+				conditionalProductDistribution::duplicates,
+				Keys @ Select[Counts[vars], GreaterThan[1]]
+			];
+			False,
+		!TrueQ[
+			And @@ Map[
+				FreeQ[ (* test if the nth distribution does not depend on any of the first n variables *)
+					list[[#, 2]],
+					Alternatives @@ DeleteDuplicates @ Flatten[list[[;; #, 1]]]
+				]&,
+				Range[1, ndists]
+			]
+		],
+			Message[conditionalProductDistribution::depend];
+			False,
+		True, True
+	]
 ];
 dependencyOrderedQ[___] := False;
 
@@ -527,101 +528,101 @@ conditionalProductDistribution::depend = "Dependency of distributions is circula
 conditionalProductDistribution::duplicates = "Duplicate variables `1` found.";
 
 conditionalProductDistribution /: Graph[conditionalProductDistribution[dists__Distributed], rest___] := Module[{
-    vars = randomVariables[dists],
-    edges
+	vars = randomVariables[dists],
+	edges
 },
-    edges = Flatten @ Map[
-        Outer[
-            DirectedEdge,
-            Cases[#[[2]], Alternatives @@ vars, {0, DirectedInfinity[1]}],
-            Intersection[vars, Flatten @ {#[[1]]}]
-        ]&,
-        {dists}
-    ];
-    Graph[vars, edges, rest, VertexLabels -> Automatic]
+	edges = Flatten @ Map[
+		Outer[
+			DirectedEdge,
+			Cases[#[[2]], Alternatives @@ vars, {0, DirectedInfinity[1]}],
+			Intersection[vars, Flatten @ {#[[1]]}]
+		]&,
+		{dists}
+	];
+	Graph[vars, edges, rest, VertexLabels -> Automatic]
 ];
 
 conditionalMap[f_, agg_, dists : {__Distributed}] := agg @ Map[
-    f[#[[2]], #[[1]]]&,
-    dists
+	f[#[[2]], #[[1]]]&,
+	dists
 ];
 conditionalMap[f_, agg_, dists : {__Distributed}, wrapper_] := agg @ Map[
-    f[#[[2]], wrapper @ #[[1]]]&,
-    dists
+	f[#[[2]], wrapper @ #[[1]]]&,
+	dists
 ];
 conditionalMap[f_, agg_, dists : {{__Distributed}..}, rest___] := Map[
-    conditionalMap[f, agg, #, rest]&,
-    dists
+	conditionalMap[f, agg, #, rest]&,
+	dists
 ];
 conditionalMap[___] := $Failed
 
 MapThread[
-    Function[{fun, wrapper, aggregator},
-        conditionalProductDistribution /: fun[
-            conditionalProductDistribution[dists__Distributed],
-            coords_List
-        ] := Module[{
-            vars = randomVariables[dists],
-            assoc,
-            nvars
-        },
-            nvars = Length[vars];
-            Which[
-                MatchQ[Replace[coords, {l_List :> Length[l], _ -> $Failed}, {1}], {nvars..}],
-                    assoc = AssociationThread[vars, #]& /@ coords,
-                Length[coords] === nvars,
-                    assoc = AssociationThread[vars, coords],
-                True,
-                    Return[$Failed, Module]
-            ];
-            Replace[fun,
-                {
-                    Likelihood | LogLikelihood :> aggregator,
-                    _ :> Identity
-                }
-            ] @ conditionalMap[fun, aggregator, {dists} /. assoc, Replace[wrapper, None :> Sequence[]]]
-        ]
-    ],
-    {
-        {PDF,           Likelihood,     LogLikelihood   },
-        {None,          List,           List            },
-        {Apply[Times],  Apply[Times],   Total           }
-    }
+	Function[{fun, wrapper, aggregator},
+		conditionalProductDistribution /: fun[
+			conditionalProductDistribution[dists__Distributed],
+			coords_List
+		] := Module[{
+			vars = randomVariables[dists],
+			assoc,
+			nvars
+		},
+			nvars = Length[vars];
+			Which[
+				MatchQ[Replace[coords, {l_List :> Length[l], _ -> $Failed}, {1}], {nvars..}],
+					assoc = AssociationThread[vars, #]& /@ coords,
+				Length[coords] === nvars,
+					assoc = AssociationThread[vars, coords],
+				True,
+					Return[$Failed, Module]
+			];
+			Replace[fun,
+				{
+					Likelihood | LogLikelihood :> aggregator,
+					_ :> Identity
+				}
+			] @ conditionalMap[fun, aggregator, {dists} /. assoc, Replace[wrapper, None :> Sequence[]]]
+		]
+	],
+	{
+		{PDF,			Likelihood,		LogLikelihood	},
+		{None,			List,			List			},
+		{Apply[Times],	Apply[Times],	Total			}
+	}
 ];
 
 conditionalProductDistribution /: RandomVariate[
-    conditionalProductDistribution[dists__Distributed],
-    opts : OptionsPattern[]
+	conditionalProductDistribution[dists__Distributed],
+	opts : OptionsPattern[]
 ] := Catch[
-    Values @ Fold[
-        Function[
-            Prepend[#1, 
-                Replace[
-                    {#2[[1]], RandomVariate[#2[[2]] /. #1, opts]},
-                    {
-                        {var : Except[_List], num : Except[_RandomVariate]} :> var -> num,
-                        {var_List, num_List} /; Length[var] === Length[num] :> AssociationThread[var, num],
-                        _ :> Throw[$Failed, rvNoNum]
-                    }
-                ]
-            ]
-        ],
-        <||>,
-        Reverse @ {dists}
-    ],
-    rvNoNum
+	Values @ Fold[
+		Function[
+			Prepend[#1, 
+				Replace[
+					{#2[[1]], RandomVariate[#2[[2]] /. #1, opts]},
+					{
+						{var : Except[_List], num : Except[_RandomVariate]} :> var -> num,
+						{var_List, num_List} /; Length[var] === Length[num] :> AssociationThread[var, num],
+						_ :> Throw[$Failed, rvNoNum]
+					}
+				]
+			]
+		],
+		<||>,
+		Reverse @ {dists}
+	],
+	rvNoNum
 ];
 
 conditionalProductDistribution /: RandomVariate[
-    pdist_conditionalProductDistribution,
-    n_Integer,
-    opts : OptionsPattern[]
+	pdist_conditionalProductDistribution,
+	n_Integer,
+	opts : OptionsPattern[]
 ] := Table[RandomVariate[pdist, opts], n];
 
 conditionalProductDistribution /: RandomVariate[
-    pdist_conditionalProductDistribution,
-    spec : {__Integer},
-    opts : OptionsPattern[]
+	pdist_conditionalProductDistribution,
+	spec : {__Integer},
+	opts : OptionsPattern[]
 ] := Table[RandomVariate[pdist, opts], Evaluate[Sequence @@ Map[List, spec]]];
 
 conditionalProductDistribution[dists : Distributed[_, _]..] /; !dependencyOrderedQ[dists] := $Failed;
@@ -631,16 +632,16 @@ conditionalProductDistribution[___, Except[Distributed[_, _]], ___] := $Failed;
 vectorRandomVariate[conditionalProductDistribution[], _] := {};
 
 vectorRandomVariate[conditionalProductDistribution[first___, last_], n_Integer] := With[{
-    rules = Cases[
-        last,
-        Distributed[sym_, dist_] :> Rule[sym, vectorRandomVariate[dist, n]],
-        {0, 1}
-    ]
+	rules = Cases[
+		last,
+		Distributed[sym_, dist_] :> Rule[sym, vectorRandomVariate[dist, n]],
+		{0, 1}
+	]
 },
-    {
-        vectorRandomVariate[conditionalProductDistribution[first] /. rules, n],
-        rules
-    }
+	{
+		vectorRandomVariate[conditionalProductDistribution[first] /. rules, n],
+		rules
+	}
 ];
 
 vectorRandomVariate[NormalDistribution[m_, s_], n_Integer] := Abs[s] * RandomVariate[NormalDistribution[], n] + m;
@@ -648,70 +649,70 @@ vectorRandomVariate[NormalDistribution[m_, s_], n_Integer] := Abs[s] * RandomVar
 vectorRandomVariate[StudentTDistribution[nu_], n_Integer] := vectorRandomVariate[StudentTDistribution[0, 1, nu], n];
 vectorRandomVariate[StudentTDistribution[m_, s_, nu_?NumericQ], n_Integer] := Abs[s] * RandomVariate[StudentTDistribution[nu], n] + m;
 vectorRandomVariate[StudentTDistribution[m_, s_, nu : {__?NumericQ}], n_Integer] := 
-    Abs[s] * RandomVariate /@ Thread[StudentTDistribution[nu]] + m;
+	Abs[s] * RandomVariate /@ Thread[StudentTDistribution[nu]] + m;
 
 vectorRandomVariate[ExponentialDistribution[l_], n_Integer] := Divide[RandomVariate[ExponentialDistribution[1], n], l];
 
 vectorRandomVariate[
-    (d : GammaDistribution | InverseGammaDistribution)[a_?NumericQ, b_List],
-    n_Integer
+	(d : GammaDistribution | InverseGammaDistribution)[a_?NumericQ, b_List],
+	n_Integer
 ] := b * RandomVariate[d[a, 1], n];
 
 vectorRandomVariate[
-    MultivariateTDistribution[mu_, sigma_, nu_List],
-    n_Integer
+	MultivariateTDistribution[mu_, sigma_, nu_List],
+	n_Integer
 ] := Plus[
-    MapThread[
-        Dot,
-        {
-            RandomVariate[#, n]& /@ Thread[StudentTDistribution[nu]],
-            Replace[
-                sigma,
-                {
-                    mat_?MatrixQ :> ConstantArray[CholeskyDecomposition[mat], n],
-                    matArray_ :> CholeskyDecomposition /@ matArray
-                } 
-            ]
-        }
-    ],
-    Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
+	MapThread[
+		Dot,
+		{
+			RandomVariate[#, n]& /@ Thread[StudentTDistribution[nu]],
+			Replace[
+				sigma,
+				{
+					mat_?MatrixQ :> ConstantArray[CholeskyDecomposition[mat], n],
+					matArray_ :> CholeskyDecomposition /@ matArray
+				} 
+			]
+		}
+	],
+	Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
 ];
 
 vectorRandomVariate[
-    (dist : MultinormalDistribution | MultivariateTDistribution)[mu_, sigma_?MatrixQ, rest___],
-    n_Integer
+	(dist : MultinormalDistribution | MultivariateTDistribution)[mu_, sigma_?MatrixQ, rest___],
+	n_Integer
 ] := Plus[
-    RandomVariate[dist[sigma, rest], n],
-    Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
+	RandomVariate[dist[sigma, rest], n],
+	Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
 ];
 vectorRandomVariate[
-    (dist : MultinormalDistribution | MultivariateTDistribution)[mu_, sigma_List, rest___],
-    n_Integer
+	(dist : MultinormalDistribution | MultivariateTDistribution)[mu_, sigma_List, rest___],
+	n_Integer
 ] /; Length[sigma] === n := Plus[
-    Developer`ToPackedArray @ MapThread[
-        Dot,
-        {
-            RandomVariate[dist[IdentityMatrix[Length @ sigma[[1]]], rest], n],
-            CholeskyDecomposition /@ sigma
-        }
-    ],
-    Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
+	Developer`ToPackedArray @ MapThread[
+		Dot,
+		{
+			RandomVariate[dist[IdentityMatrix[Length @ sigma[[1]]], rest], n],
+			CholeskyDecomposition /@ sigma
+		}
+	],
+	Replace[mu, v_?VectorQ :> ConstantArray[v, n]]
 ];
 
 vectorRandomVariate[
-    (dist : InverseWishartMatrixDistribution | WishartMatrixDistribution)[nu_?NumericQ, sigma_?MatrixQ],
-    n_Integer
+	(dist : InverseWishartMatrixDistribution | WishartMatrixDistribution)[nu_?NumericQ, sigma_?MatrixQ],
+	n_Integer
 ] := RandomVariate[dist[nu, sigma], n];
 
 vectorRandomVariate[
-    (dist : InverseWishartMatrixDistribution | WishartMatrixDistribution)[nu_, sigma_],
-    n_Integer
+	(dist : InverseWishartMatrixDistribution | WishartMatrixDistribution)[nu_, sigma_],
+	n_Integer
 ] := Developer`ToPackedArray @ MapThread[
-    RandomVariate[dist[##]]&,
-    {
-        nu,
-        Replace[sigma, mat_?MatrixQ :> ConstantArray[mat, n]]
-    }
+	RandomVariate[dist[##]]&,
+	{
+		nu,
+		Replace[sigma, mat_?MatrixQ :> ConstantArray[mat, n]]
+	}
 ]; 
 
 vectorRandomVariate[d_ /; MemberQ[d, _List], n_Integer] := RandomVariate /@ Thread[d];
@@ -723,55 +724,55 @@ modelGraph[dist_, other : Except[_Rule], rest___] := modelGraph[dist, {} -> othe
 modelGraph[dist_, opts : OptionsPattern[Graph]] := modelGraph[dist, {} -> {}, opts];
 
 modelGraph[fullModel : {__Distributed}, varsIn_?VectorQ -> varsOut_?VectorQ, opts : OptionsPattern[Graph]] := Module[{
-    allSymbols = Union @ Join[
-        varsIn, varsOut,
-        Flatten @ fullModel[[All, 1]]
-    ],
-    edges
+	allSymbols = Union @ Join[
+		varsIn, varsOut,
+		Flatten @ fullModel[[All, 1]]
+	],
+	edges
 },
-    edges = DeleteDuplicates @ Flatten @ Map[
-        Function[dist,
-            Thread @ DirectedEdge[
-                Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}],
-                #
-            ]& /@ Flatten[{dist[[1]]}]
-        ],
-        fullModel
-    ];
-    Graph[edges,
-        opts,
-        VertexLabels -> "Name",
-        VertexStyle -> Flatten[Thread /@ {
-            varsIn -> Red,
-            varsOut -> Green
-        }],
-        VertexSize -> Medium
-    ]
+	edges = DeleteDuplicates @ Flatten @ Map[
+		Function[dist,
+			Thread @ DirectedEdge[
+				Cases[dist[[2]], Alternatives @@ allSymbols, {0, Infinity}],
+				#
+			]& /@ Flatten[{dist[[1]]}]
+		],
+		fullModel
+	];
+	Graph[edges,
+		opts,
+		VertexLabels -> "Name",
+		VertexStyle -> Flatten[Thread /@ {
+			varsIn -> Red,
+			varsOut -> Green
+		}],
+		VertexSize -> Medium
+	]
 ];
 
 dependencyData[gr_?DirectedGraphQ] /; AcyclicGraphQ[gr] := AssociationMap[
-    <|
-        "InfluencedBy" ->  DeleteCases[VertexInComponent[gr, {#}], #],
-        "Influences" -> DeleteCases[VertexOutComponent[gr, {#}], #]
-    |>&,
-    VertexList[gr]
+	<|
+		"InfluencedBy" ->  DeleteCases[VertexInComponent[gr, {#}], #],
+		"Influences" -> DeleteCases[VertexOutComponent[gr, {#}], #]
+	|>&,
+	VertexList[gr]
 ];
 
 wrapArgsInList[funs_List, rest___] := (
-    Scan[wrapArgsInList[#, rest]&, funs];
-    Flatten @ funs
+	Scan[wrapArgsInList[#, rest]&, funs];
+	Flatten @ funs
 );
 wrapArgsInList[fun : Except[_List], slot_Integer?Positive] := (
-    fun[first : Repeated[_, {slot - 1}], arg : Except[_List], rest___] := fun[first, {arg}, rest];
-    fun
+	fun[first : Repeated[_, {slot - 1}], arg : Except[_List], rest___] := fun[first, {arg}, rest];
+	fun
 );
 wrapArgsInList[fun : Except[_List], slots : {__Integer}] := (
-    Scan[wrapArgsInList[fun, #]&, slots];
-    fun
+	Scan[wrapArgsInList[fun, #]&, slots];
+	fun
 );
 
 improperUniformDistribution[n : _Integer?Positive : 1] := ProbabilityDistribution[1,
-    Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
+	Sequence @@ ConstantArray[{\[FormalX], DirectedInfinity[-1], DirectedInfinity[1]}, n]
 ];
 
 End[] (* End Private Context *)
