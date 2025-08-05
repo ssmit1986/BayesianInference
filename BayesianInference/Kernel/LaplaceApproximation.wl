@@ -265,7 +265,7 @@ approximateEvidence[
 			OptionValue["HyperParameterOptimizationMethod"],
 			{
 				{method : FixedPoint | NMaximize, spec___} /; MatchQ[{spec}, KeyValuePattern[{}]] :> {method, {spec}},
-				method : FixedPoint | NMaximize -> {method, {}},
+				method : FixedPoint | NMaximize :> {method, {}},
 				_ -> {NMaximize, {}}
 			}
 		],
